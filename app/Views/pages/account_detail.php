@@ -176,7 +176,7 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($accountTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada mutasi dummy untuk rekening atau dompet ini pada filter saat ini.</div>
+                <div class="py-6 text-sm text-zinc-500">Belum ada mutasi untuk rekening atau dompet ini pada filter saat ini.</div>
             <?php endif; ?>
             <?php foreach ($accountTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

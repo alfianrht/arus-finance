@@ -21,10 +21,7 @@ class HomeController extends BaseController
         $institution = $this->currentInstitution();
         $institutionId = (int) ($institution['id'] ?? 1);
         
-        $period = (new BookPeriodModel())
-            ->where('institution_id', $institutionId)
-            ->where('is_active', 1)
-            ->first();
+        $period = $this->activeBookPeriod();
         $bookPeriodId = is_array($period) ? (int) $period['id'] : 0;
 
         $units = $this->loadUnitsWithActivities($institutionId);
@@ -89,7 +86,7 @@ class HomeController extends BaseController
             
             $uFirstAct = $u['activities'][0] ?? null;
             $u['quick_activity_name'] = $uFirstAct['name'] ?? 'Belum ada kegiatan';
-            $u['detail_url'] = '#';
+            $u['detail_url'] = site_url('unit/' . $u['slug']);
             $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
             $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
         }
@@ -109,9 +106,9 @@ class HomeController extends BaseController
                 'kegiatan' => $contextSelection['activity_slug'] ?: null,
             ],
             'switch_url' => site_url('konteks-aktif'),
-            'switch_redirect' => site_url('beranda'),
+            'switch_redirect' => site_url('catat'),
             'switch_params' => [],
-            'activity_url' => $contextSelection['activity_slug'] !== '' ? site_url('kegiatan/' . $contextSelection['activity_slug']) : site_url('beranda'),
+            'activity_url' => $contextSelection['activity_slug'] !== '' ? site_url('kegiatan/' . $contextSelection['activity_slug']) : site_url('catat'),
             'masuk_url' => site_url('catat/masuk'),
             'keluar_url' => site_url('catat/keluar'),
         ];
@@ -127,6 +124,7 @@ class HomeController extends BaseController
             'institutionName'  => $institution['name'],
             'pageTitle'        => 'Beranda',
             'activeNav'        => 'beranda',
+            'bookPeriodLabel'  => $this->activeBookPeriodLabel(),
             'activeContext'    => $activeContext,
             'summary'          => [
                 'balance' => $balance,

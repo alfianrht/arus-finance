@@ -27,7 +27,7 @@ foreach ($selectorUnits as $selectorUnit) {
 ?>
 
 <section class="space-y-3" data-context-shell>
-    <div class="rounded-3xl border border-zinc-950 bg-white px-4 py-3 text-zinc-900 shadow-sm" data-context-status>
+    <div class="rounded-3xl bg-white px-4 py-3 text-zinc-900 shadow-sm" data-context-status>
         <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks Aktif</p>

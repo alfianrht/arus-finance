@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\BookPeriodModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\CLIRequest;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -56,6 +57,7 @@ abstract class BaseController extends Controller
         // Preload any models, libraries, etc, here.
 
         $this->session = service('session');
+        service('renderer')->setVar('bookPeriodLabel', $this->activeBookPeriodLabel());
     }
 
     /**
@@ -132,5 +134,36 @@ abstract class BaseController extends Controller
         if ($payload['unit_id'] > 0 || $payload['activity_id'] > 0) {
             $this->session->set(self::ACTIVE_CONTEXT_SESSION_KEY, $payload);
         }
+    }
+
+    protected function currentInstitutionId(): int
+    {
+        return (int) ($this->session->get('auth_institution_id') ?? 1);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function activeBookPeriod(): ?array
+    {
+        $period = (new BookPeriodModel())
+            ->where('institution_id', $this->currentInstitutionId())
+            ->where('is_active', 1)
+            ->first();
+
+        return is_array($period) ? $period : null;
+    }
+
+    protected function activeBookPeriodLabel(): string
+    {
+        $period = $this->activeBookPeriod();
+        if ($period === null) {
+            return 'Tahun Buku Aktif';
+        }
+
+        $startYear = date('Y', strtotime((string) $period['start_date']));
+        $endYear = date('Y', strtotime((string) $period['end_date']));
+
+        return trim('TB ' . $startYear . '/' . $endYear . ((int) ($period['is_active'] ?? 0) === 1 ? ' Aktif' : ''));
     }
 }

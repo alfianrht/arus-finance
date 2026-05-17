@@ -9,7 +9,7 @@
                 <span class="text-2xl font-bold tracking-tight text-zinc-950"><?= esc($appName) ?></span>
             </div>
             <div class="flex items-center gap-2">
-                <span class="shrink-0 whitespace-nowrap rounded-full border border-lime-200 bg-lime-100 px-2 py-1 text-[10px] font-medium text-lime-950 shadow-sm">Tahun Buku 2026</span>
+                <span class="shrink-0 whitespace-nowrap rounded-full border border-lime-200 bg-lime-100 px-2 py-1 text-[10px] font-medium text-lime-950 shadow-sm"><?= esc($bookPeriodLabel ?? 'Tahun Buku Aktif') ?></span>
                 <a href="<?= site_url('pengaturan') ?>" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm" aria-label="Buka pengaturan">
                     <span class="material-symbols-rounded text-base" style="font-size: 1.2rem;" aria-hidden="true">settings</span>
                 </a>

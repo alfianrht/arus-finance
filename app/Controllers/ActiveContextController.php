@@ -74,12 +74,12 @@ class ActiveContextController extends BaseController
         $target = trim((string) $this->request->getPost('redirect_to'));
 
         if ($target === '') {
-            return site_url('beranda');
+            return site_url('catat');
         }
 
         $path = parse_url($target, PHP_URL_PATH);
         if (! is_string($path) || $path === '') {
-            return site_url('beranda');
+            return site_url('catat');
         }
 
         return site_url(ltrim($path, '/'));

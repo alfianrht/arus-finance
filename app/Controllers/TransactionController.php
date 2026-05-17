@@ -109,7 +109,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Uang masuk berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Uang masuk berhasil dicatat.');
+        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Uang masuk berhasil dicatat.');
     }
 
     public function keluar(): string
@@ -176,7 +176,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Biaya berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Biaya berhasil dicatat.');
+        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Biaya berhasil dicatat.');
     }
 
     public function honor(): string
@@ -234,7 +234,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Honor & gaji berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Honor & gaji berhasil dicatat.');
+        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Honor & gaji berhasil dicatat.');
     }
 
     public function pindahDana(): string
@@ -291,7 +291,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Pindah dana berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Pindah dana berhasil dicatat.');
+        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Pindah dana berhasil dicatat.');
     }
 
     public function detail(string $id): string
@@ -380,13 +380,8 @@ class TransactionController extends BaseController
 
         (new TransactionModel())->update((int) $existing['id'], $payload);
 
-        return redirect()->to($this->resolveBackUrl(site_url('beranda')))
+        return redirect()->to($this->resolveBackUrl(site_url('catat')))
             ->with('success', 'Transaksi berhasil diperbarui.');
-    }
-
-    private function currentInstitutionId(): int
-    {
-        return (int) ($this->session->get('auth_institution_id') ?? 1);
     }
 
     private function currentUserId(): int

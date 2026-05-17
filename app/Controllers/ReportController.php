@@ -44,53 +44,53 @@ class ReportController extends BaseController
         }
 
         $units = $this->loadUnitProgramRows($institutionId);
+        $unitMap = $this->indexById($units);
+        $allUnitIds = array_column($units, 'id');
+        $allActivities = $allUnitIds === []
+            ? []
+            : $db->table('activities')
+                ->whereIn('unit_id', $allUnitIds)
+                ->where('deleted_at', null)
+                ->get()->getResultArray();
+        $activityMap = $this->indexById($allActivities);
+        $filterUnitId = $this->resolveUnitId($selectedUnitSlug, $units);
+        $filterActivityId = $this->resolveActivityId($selectedActivitySlug, $allActivities);
         
         $filterActivities = [];
-        if ($selectedUnitSlug !== 'semua') {
-            $unitId = (int) str_replace('unit-', '', $selectedUnitSlug);
+        if ($filterUnitId !== null) {
+            $unitId = $filterUnitId;
             $filterActivities = $db->table('activities')
                 ->where('unit_id', $unitId)
                 ->where('deleted_at', null)
                 ->get()->getResultArray();
         } else {
-            $unitIds = array_column($units, 'id');
-            if (empty($unitIds)) {
+            if (empty($allUnitIds)) {
                 $filterActivities = [];
             } else {
                 $filterActivities = $db->table('activities')
-                    ->whereIn('unit_id', $unitIds)
+                    ->whereIn('unit_id', $allUnitIds)
                     ->where('deleted_at', null)
                     ->get()->getResultArray();
             }
         }
         
         foreach ($filterActivities as &$fa) {
-            $faUnit = $db->table('units')->where('id', $fa['unit_id'])->get()->getRowArray();
-            $fa['slug'] = 'act-' . $fa['id'];
+            $faUnit = $unitMap[(int) $fa['unit_id']] ?? null;
             $fa['unit_name'] = $faUnit['name'] ?? '';
         }
         unset($fa);
 
-        $dropdownActivities = [];
-        $allUnitIds = array_column($units, 'id');
-        if (!empty($allUnitIds)) {
-            $dropdownActivities = $db->table('activities')
-                ->whereIn('unit_id', $allUnitIds)
-                ->where('deleted_at', null)
-                ->get()->getResultArray();
-        }
+        $dropdownActivities = $allActivities;
         foreach ($dropdownActivities as &$da) {
-            $daUnit = $db->table('units')->where('id', $da['unit_id'])->get()->getRowArray();
-            $da['slug'] = 'act-' . $da['id'];
-            $da['unit_slug'] = 'unit-' . $da['unit_id'];
+            $daUnit = $unitMap[(int) $da['unit_id']] ?? null;
+            $da['slug'] = (string) ($da['slug'] ?? '');
+            $da['unit_slug'] = (string) ($daUnit['slug'] ?? '');
             $da['unit_name'] = $daUnit['name'] ?? '';
         }
         unset($da);
 
         // Map selected slugs to IDs
         $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
-        $filterUnitId = $selectedUnitSlug !== 'semua' ? (int) str_replace('unit-', '', $selectedUnitSlug) : null;
-        $filterActivityId = $selectedActivitySlug !== 'semua' ? (int) str_replace('act-', '', $selectedActivitySlug) : null;
 
         // Base Query builder for transactions
         $tBuilder = $db->table('transactions')
@@ -176,11 +176,13 @@ class ReportController extends BaseController
                 'balance' => $accOb + $accInc - $accExp,
                 'income' => $accInc,
                 'expense' => $accExp,
+                'transfer_in' => $accIncPindah,
+                'transfer_out' => $accExpPindah,
                 'preview_activity' => 'Rekapitulasi Saldo',
                 'movement_count' => 0,
                 'icon' => 'account_balance_wallet',
                 'color' => 'emerald',
-                'detail_url' => route_query('rekening/acc-' . $acc['id']),
+                'detail_url' => route_query('rekening/' . ($acc['slug'] ?? ('acc-' . $acc['id']))),
             ];
         }
 
@@ -201,18 +203,17 @@ class ReportController extends BaseController
             
             if ($uInc == 0 && $uExp == 0) continue; // Only units with transactions in this filter
             
-            $uActCount = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->countAllResults();
-            $uFirstAct = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getRowArray();
-            
-            $u['slug'] = 'unit-' . $u['id'];
+            $uActRows = array_values(array_filter($allActivities, static fn(array $activity): bool => (int) $activity['unit_id'] === (int) $u['id']));
+            $uActCount = count($uActRows);
+            $uFirstAct = $uActRows[0] ?? null;
             $u['income'] = $uInc;
             $u['expense'] = $uExp;
             $u['surplus'] = $uInc - $uExp;
-            $u['activities'] = array_fill(0, $uActCount, 1);
+            $u['activities'] = $uActRows;
             $u['quick_activity_name'] = $uFirstAct['name'] ?? '-';
             $u['detail_url'] = route_query('unit/' . $u['slug'], ['periode' => $selectedPeriodSlug, 'kegiatan' => $selectedActivitySlug]);
-            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug']]);
-            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug']]);
+            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
+            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
             $rekapUnits[] = $u;
         }
 
@@ -260,7 +261,7 @@ class ReportController extends BaseController
             'activeNav' => 'rekap',
             'periods' => $periods,
             'selectedPeriodSlug' => $selectedPeriodSlug,
-            'units' => array_map(function($u) { $u['slug'] = 'unit-'.$u['id']; return $u; }, $units),
+            'units' => $units,
             'selectedUnitSlug' => $selectedUnitSlug,
             'filterActivities' => $filterActivities,
             'dropdownActivities' => $dropdownActivities,
@@ -275,11 +276,6 @@ class ReportController extends BaseController
         ];
 
         return view('pages/rekap', $data);
-    }
-
-    private function currentInstitutionId(): int
-    {
-        return (int) (service('session')->get('auth_institution_id') ?? 1);
     }
 
     private function loadUnitProgramRows(int $institutionId): array
@@ -300,20 +296,34 @@ class ReportController extends BaseController
         $db = \Config\Database::connect();
         $request = service('request');
 
-        $accountId = (int) str_replace('acc-', '', $slug);
-        $acc = $db->table('accounts')->where('id', $accountId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+        $acc = $db->table('accounts')
+            ->groupStart()
+                ->where('slug', $slug)
+                ->orWhere('id', (int) str_replace('acc-', '', $slug))
+            ->groupEnd()
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->get()->getRowArray();
         
         if (! $acc) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
+        $accountId = (int) $acc['id'];
 
         $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
         $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
         $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
 
         $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
-        $filterUnitId = $selectedUnitSlug !== 'semua' ? (int) str_replace('unit-', '', $selectedUnitSlug) : null;
-        $filterActivityId = $selectedActivitySlug !== 'semua' ? (int) str_replace('act-', '', $selectedActivitySlug) : null;
+        $units = $this->loadUnitProgramRows($institutionId);
+        $allUnitIds = array_column($units, 'id');
+        $allActivities = $allUnitIds === []
+            ? []
+            : $db->table('activities')->whereIn('unit_id', $allUnitIds)->where('deleted_at', null)->get()->getResultArray();
+        $unitMap = $this->indexById($units);
+        $activityMap = $this->indexById($allActivities);
+        $filterUnitId = $this->resolveUnitId($selectedUnitSlug, $units);
+        $filterActivityId = $this->resolveActivityId($selectedActivitySlug, $allActivities);
 
         $tBuilder = $db->table('transactions')
             ->where('institution_id', $institutionId)
@@ -344,12 +354,12 @@ class ReportController extends BaseController
             'balance' => $accOb + $accInc - $accExp,
             'income' => $accInc,
             'expense' => $accExp,
-            'transfer_in' => 0,
-            'transfer_out' => 0,
+            'transfer_in' => $accIncPindah,
+            'transfer_out' => $accExpPindah,
             'icon' => 'account_balance_wallet',
             'color' => 'emerald',
             'surplus' => $accInc - $accExp,
-            'slug' => 'acc-' . $accountId,
+            'slug' => $acc['slug'] ?? ('acc-' . $accountId),
             'kind' => $acc['kind'] ?? 'Tunai',
             'mark' => $acc['mark'] ?? '',
             'note' => 'Rekening aktif',
@@ -364,21 +374,27 @@ class ReportController extends BaseController
             $actId = $row['activity_id'];
             if ($actId) {
                 if (!isset($accountActivities[$actId])) {
-                    $a = $db->table('activities')->where('id', $actId)->get()->getRowArray();
-                    $u = $db->table('units')->where('id', $a['unit_id'])->get()->getRowArray();
+                    $a = $activityMap[(int) $actId] ?? null;
+                    $u = is_array($a) ? ($unitMap[(int) $a['unit_id']] ?? null) : null;
                     $accountActivities[$actId] = [
-                        'name' => $a['name'],
-                        'unit_name' => $u['name'],
+                        'name' => $a['name'] ?? 'Tanpa Kegiatan',
+                        'unit_name' => $u['name'] ?? 'Tanpa Unit',
                         'amount' => 0,
                         'income' => 0,
                         'expense' => 0,
                         'transfer_in' => 0,
                         'transfer_out' => 0,
-                        'detail_url' => route_query('kegiatan/act-' . $actId),
+                        'detail_url' => is_array($a) ? route_query('kegiatan/' . ($a['slug'] ?? ('act-' . $actId))) : site_url('rekap'),
                     ];
                 }
                 $accountActivities[$actId]['amount'] += ($isIncome ? $amount : -$amount);
-                if ($isIncome) {
+                if ((string) $row['type'] === 'pindah') {
+                    if ($isIncome) {
+                        $accountActivities[$actId]['transfer_in'] += (float) $row['amount'];
+                    } else {
+                        $accountActivities[$actId]['transfer_out'] += (float) $row['amount'] + (float) $row['admin_fee'];
+                    }
+                } elseif ($isIncome) {
                     $accountActivities[$actId]['income'] += $amount;
                 } else {
                     $accountActivities[$actId]['expense'] += $amount;
@@ -410,9 +426,11 @@ class ReportController extends BaseController
     {
         $institutionId = $this->currentInstitutionId();
         $db = \Config\Database::connect();
-
-        $unitId = (int) str_replace('unit-', '', $slug);
-        $u = $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+        $units = $this->loadUnitProgramRows($institutionId);
+        $unitId = $this->resolveUnitId($slug, $units);
+        $u = $unitId === null
+            ? null
+            : $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
         
         if (! $u) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
@@ -423,7 +441,8 @@ class ReportController extends BaseController
         $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
 
         $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
-        $filterActivityId = $selectedActivitySlug !== 'semua' ? (int) str_replace('act-', '', $selectedActivitySlug) : null;
+        $allActivities = $db->table('activities')->where('unit_id', $unitId)->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getResultArray();
+        $filterActivityId = $this->resolveActivityId($selectedActivitySlug, $allActivities);
 
         $tBuilder = $db->table('transactions')
             ->where('institution_id', $institutionId)
@@ -438,7 +457,7 @@ class ReportController extends BaseController
         $uExpPindah = (float) (clone $tBuilder)->where('type', 'pindah')->selectSum('admin_fee')->get()->getRow()->admin_fee ?? 0;
         $uExp = $uExpMain + $uExpPindah;
         
-        $uActivities = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getResultArray();
+        $uActivities = $allActivities;
         $formattedActivities = [];
 
         foreach ($uActivities as $act) {
@@ -451,19 +470,19 @@ class ReportController extends BaseController
 
             $formattedActivities[] = [
                 'id' => $act['id'],
-                'slug' => 'act-' . $act['id'],
+                'slug' => $act['slug'] ?? ('act-' . $act['id']),
                 'name' => $act['name'],
                 'short_name' => substr($act['name'], 0, 4),
                 'unit_name' => $u['name'],
                 'income' => $actInc,
                 'expense' => $actExp,
                 'surplus' => $actInc - $actExp,
-                'detail_url' => route_query('kegiatan/act-' . $act['id'], ['periode' => $selectedPeriodSlug, 'unit' => 'unit-' . $u['id']]),
+                'detail_url' => route_query('kegiatan/' . ($act['slug'] ?? ('act-' . $act['id'])), ['periode' => $selectedPeriodSlug, 'unit' => $u['slug']]),
             ];
         }
 
         $unit = [
-            'slug' => 'unit-' . $u['id'],
+            'slug' => $u['slug'],
             'name' => $u['name'],
             'short_name' => substr($u['name'], 0, 4),
             'income' => $uInc,
@@ -471,9 +490,9 @@ class ReportController extends BaseController
             'surplus' => $uInc - $uExp,
             'activities' => $formattedActivities,
             'quick_activity_name' => $uActivities[0]['name'] ?? '-',
-            'detail_url' => '#',
-            'masuk_url' => route_query('catat/masuk', ['unit' => 'unit-' . $u['id']]),
-            'keluar_url' => route_query('catat/keluar', ['unit' => 'unit-' . $u['id']]),
+            'detail_url' => site_url('unit/' . $u['slug']),
+            'masuk_url' => route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $uActivities[0]['slug'] ?? null]),
+            'keluar_url' => route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $uActivities[0]['slug'] ?? null]),
         ];
 
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
@@ -494,9 +513,15 @@ class ReportController extends BaseController
     {
         $institutionId = $this->currentInstitutionId();
         $db = \Config\Database::connect();
-        
-        $activityId = (int) str_replace('act-', '', $slug);
-        $act = $db->table('activities')->where('id', $activityId)->where('deleted_at', null)->get()->getRowArray();
+        $units = $this->loadUnitProgramRows($institutionId);
+        $allUnitIds = array_column($units, 'id');
+        $allActivities = $allUnitIds === []
+            ? []
+            : $db->table('activities')->whereIn('unit_id', $allUnitIds)->where('deleted_at', null)->get()->getResultArray();
+        $activityId = $this->resolveActivityId($slug, $allActivities);
+        $act = $activityId === null
+            ? null
+            : $db->table('activities')->where('id', $activityId)->where('deleted_at', null)->get()->getRowArray();
         
         if (! $act) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
@@ -512,7 +537,7 @@ class ReportController extends BaseController
         $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
 
         $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
-        $filterUnitId = $selectedUnitSlug !== 'semua' ? (int) str_replace('unit-', '', $selectedUnitSlug) : null;
+        $filterUnitId = $this->resolveUnitId($selectedUnitSlug, $units);
 
         $tBuilder = $db->table('transactions')
             ->where('institution_id', $institutionId)
@@ -607,5 +632,69 @@ class ReportController extends BaseController
         }
         usort($receivers, fn($a, $b) => $b['total_received'] <=> $a['total_received']);
         return $receivers;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function indexById(array $rows): array
+    {
+        $indexed = [];
+        foreach ($rows as $row) {
+            if (isset($row['id'])) {
+                $indexed[(int) $row['id']] = $row;
+            }
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $units
+     */
+    private function resolveUnitId(string $value, array $units): ?int
+    {
+        if ($value === '' || $value === 'semua') {
+            return null;
+        }
+
+        if (str_starts_with($value, 'unit-')) {
+            $id = (int) str_replace('unit-', '', $value);
+            return $id > 0 ? $id : null;
+        }
+
+        foreach ($units as $unit) {
+            if (($unit['slug'] ?? '') === $value) {
+                return (int) $unit['id'];
+            }
+        }
+
+        $id = (int) $value;
+        return $id > 0 ? $id : null;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $activities
+     */
+    private function resolveActivityId(string $value, array $activities): ?int
+    {
+        if ($value === '' || $value === 'semua') {
+            return null;
+        }
+
+        if (str_starts_with($value, 'act-')) {
+            $id = (int) str_replace('act-', '', $value);
+            return $id > 0 ? $id : null;
+        }
+
+        foreach ($activities as $activity) {
+            if (($activity['slug'] ?? '') === $value) {
+                return (int) $activity['id'];
+            }
+        }
+
+        $id = (int) $value;
+        return $id > 0 ? $id : null;
     }
 }

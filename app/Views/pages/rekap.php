@@ -216,7 +216,7 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($rekapTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi dummy untuk kombinasi filter ini.</div>
+                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk kombinasi filter ini.</div>
             <?php endif; ?>
             <?php foreach ($rekapTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

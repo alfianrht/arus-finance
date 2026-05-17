@@ -91,7 +91,7 @@
                 </div>
             <?php endforeach; ?>
             <?php if (! $hasCategoryCost): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada biaya dummy untuk kegiatan ini.</div>
+                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada biaya untuk kegiatan ini.</div>
             <?php endif; ?>
         </div>
     </section>
@@ -156,7 +156,7 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($activityTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi dummy untuk kegiatan ini.</div>
+                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk kegiatan ini.</div>
             <?php endif; ?>
             <?php foreach ($activityTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
