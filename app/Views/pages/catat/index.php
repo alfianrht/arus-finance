@@ -42,7 +42,7 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($recentTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi dummy untuk konteks ini.</div>
+                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk konteks ini.</div>
             <?php endif; ?>
             <?php foreach ($recentTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

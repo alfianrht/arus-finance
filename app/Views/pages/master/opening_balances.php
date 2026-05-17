@@ -27,13 +27,6 @@
     </section>
 
     <section class="space-y-3">
-        <?php if (session()->getFlashdata('error')): ?>
-            <div class="rounded-3xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-950"><?= (string) session()->getFlashdata('error') ?></div>
-        <?php endif; ?>
-        <?php if (session()->getFlashdata('success')): ?>
-            <div class="rounded-3xl border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-medium text-lime-950"><?= (string) session()->getFlashdata('success') ?></div>
-        <?php endif; ?>
-
         <?php if (empty($openingBalances)): ?>
             <?= view('partials/empty_state', [
                 'icon' => 'account_balance_wallet', 'title' => 'Belum Ada Saldo Awal',

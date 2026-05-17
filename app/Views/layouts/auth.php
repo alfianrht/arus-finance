@@ -57,10 +57,29 @@
     </style>
 </head>
 <body class="bg-zinc-50 text-zinc-950 flex flex-col min-h-[100dvh]">
+    <?= $this->include('partials/flash_toast') ?>
     <div class="flex-1 flex flex-col justify-center py-12">
         <main class="mx-auto w-full max-w-md px-4 sm:px-6">
             <?= $this->renderSection('content') ?>
         </main>
     </div>
+
+    <script>
+    document.querySelectorAll('[data-flash-toast]').forEach(function(toast) {
+        var hideToast = function() {
+            toast.classList.add('translate-y-[-0.5rem]', 'opacity-0');
+            setTimeout(function() {
+                toast.remove();
+            }, 250);
+        };
+
+        var closeButton = toast.querySelector('[data-flash-close]');
+        if (closeButton) {
+            closeButton.addEventListener('click', hideToast);
+        }
+
+        setTimeout(hideToast, 3500);
+    });
+    </script>
 </body>
 </html>

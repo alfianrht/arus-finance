@@ -21,6 +21,25 @@ class TransactionService
 
     public function getAccountBalance(int $accountId, ?string $untilDate = null): float
     {
+        $account = $this->db->table('accounts')
+            ->select('report_position_id')
+            ->where('id', $accountId)
+            ->get()
+            ->getRowArray();
+
+        $openingBalance = 0.0;
+        $reportPositionId = (int) ($account['report_position_id'] ?? 0);
+
+        if ($reportPositionId > 0) {
+            $openingRow = $this->db->table('opening_balances')
+                ->selectSum('amount', 'balance')
+                ->where('report_position_id', $reportPositionId)
+                ->get()
+                ->getRowArray();
+
+            $openingBalance = (float) ($openingRow['balance'] ?? 0);
+        }
+
         $builder = $this->db->table('transactions');
         $builder->select(
             "SUM(CASE
@@ -44,7 +63,7 @@ class TransactionService
 
         $row = $builder->get()->getRowArray();
 
-        return (float) ($row['balance'] ?? 0);
+        return $openingBalance + (float) ($row['balance'] ?? 0);
     }
 
     public function assertSufficientBalance(int $accountId, float $amount, float $adminFee = 0): void

@@ -8,8 +8,6 @@
         'backUrl' => $backUrl,
     ]) ?>
 
-    <?= $this->include('partials/active_context') ?>
-
     <div class="space-y-3">
         <a href="<?= esc($activeContext['pindah_dana_url']) ?>" class="relative block rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
             <div class="flex items-start justify-between gap-3">

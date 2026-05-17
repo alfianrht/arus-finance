@@ -17,7 +17,7 @@
         'autoFields' => ['Nominal', 'Kategori', 'Rekening', 'Tanggal', 'Keterangan'],
     ]) ?>
 
-    <form action="<?= route_to('Arus::simpanBiaya') ?>" method="post" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
+    <form action="<?= esc(site_url('catat/keluar/biaya')) ?>" method="post" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
         <?= csrf_field() ?>
         <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
             <div>
@@ -29,7 +29,7 @@
 
         <div class="rounded-3xl bg-zinc-50 p-5 text-center">
             <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Nominal</p>
-            <input type="text" name="amount" placeholder="Rp 0" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
+            <input type="text" name="amount" value="<?= esc(old('amount', '')) ?>" placeholder="Rp 0" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
             
             <div class="mt-6 flex items-center justify-center gap-2 w-full overflow-hidden">
                 <p class="shrink-0 text-sm font-medium text-zinc-700">Biaya Admin:</p>
@@ -49,7 +49,7 @@
             <div class="flex flex-wrap gap-2">
                 <?php foreach ($expenseCategories as $category): ?>
                     <label class="cursor-pointer">
-                        <input type="radio" name="category_id" value="<?= esc($category['id']) ?>" <?= $selectedCategory === $category['name'] ? 'checked' : '' ?> class="peer sr-only">
+                        <input type="radio" name="category_id" value="<?= esc($category['id']) ?>" <?= (string) old('category_id', '') === (string) $category['id'] || (old('category_id') === null && $selectedCategory === $category['name']) ? 'checked' : '' ?> class="peer sr-only">
                         <span class="inline-block rounded-full px-3 py-2 text-sm font-medium bg-zinc-100 text-zinc-700 peer-checked:bg-lime-400 peer-checked:text-zinc-950">
                             <?= esc($category['name']) ?>
                         </span>
@@ -63,7 +63,7 @@
             <label class="text-sm font-medium text-zinc-700">Keluar dari rekening / dompet</label>
             <select name="from_account_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
                 <?php foreach ($accounts as $account): ?>
-                    <option value="<?= esc($account['id']) ?>" <?= $account['name'] === $activeContext['default_expense_account'] ? 'selected' : '' ?>><?= esc($account['name']) ?></option>
+                    <option value="<?= esc($account['id']) ?>" <?= (string) old('from_account_id', '') === (string) $account['id'] || (old('from_account_id') === null && $account['name'] === $activeContext['default_expense_account']) ? 'selected' : '' ?>><?= esc($account['name']) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -74,7 +74,7 @@
                 <label class="text-sm font-medium text-zinc-700">Unit / Program</label>
                 <select name="unit_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
                     <?php foreach ($units as $unit): ?>
-                        <option value="<?= esc($unit['id']) ?>" <?= $unit['slug'] === $activeContext['unit_slug'] ? 'selected' : '' ?>><?= esc($unit['name']) ?></option>
+                        <option value="<?= esc($unit['id']) ?>" <?= (string) old('unit_id', (string) $activeContext['unit_id']) === (string) $unit['id'] ? 'selected' : '' ?>><?= esc($unit['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -82,7 +82,7 @@
                 <label class="text-sm font-medium text-zinc-700">Kegiatan</label>
                 <select name="activity_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
                     <?php foreach ($activitySummaries as $activity): ?>
-                        <option value="<?= esc($activity['id']) ?>" <?= $activity['slug'] === $activeContext['activity_slug'] ? 'selected' : '' ?>>
+                        <option value="<?= esc($activity['id']) ?>" <?= (string) old('activity_id', (string) $activeContext['activity_id']) === (string) $activity['id'] ? 'selected' : '' ?>>
                             <?= esc($activity['name']) ?> · <?= esc($activity['unit_name']) ?>
                         </option>
                     <?php endforeach; ?>
@@ -92,25 +92,18 @@
 
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Tanggal</label>
-            <input type="date" name="transaction_date" value="<?= date('Y-m-d') ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
+            <input type="date" name="transaction_date" value="<?= esc(old('transaction_date', date('Y-m-d'))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
         </div>
 
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Keterangan</label>
-            <textarea name="notes" rows="3" placeholder="Contoh: Beli alat tulis" class="w-full rounded-2xl border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400"></textarea>
+            <textarea name="notes" rows="3" placeholder="Contoh: Beli alat tulis" class="w-full rounded-2xl border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400"><?= esc(old('notes', '')) ?></textarea>
         </div>
 
         <div class="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
             <p class="text-sm font-semibold text-zinc-950">Status bukti</p>
             <p class="mt-1 text-sm text-zinc-500">Belum ada bukti yang dibaca. Hasil scan nanti akan mengisi kategori dan nominal terlebih dahulu.</p>
         </div>
-
-        <?php if (session()->getFlashdata('success')): ?>
-            <div class="rounded-3xl border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-medium text-lime-950"><?= (string) session()->getFlashdata('success') ?></div>
-        <?php endif; ?>
-        <?php if (session()->getFlashdata('error')): ?>
-            <div class="rounded-3xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-950"><?= (string) session()->getFlashdata('error') ?></div>
-        <?php endif; ?>
 
         <div class="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
             <button type="submit" name="action" value="save" class="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-zinc-950 px-6 text-sm font-semibold text-white">

@@ -2,8 +2,6 @@
 
 <?= $this->section('content') ?>
 <div class="flex flex-col h-full space-y-8">
-    <?= $this->include('partials/auth_flash') ?>
-
     <header class="flex items-center justify-between">
         <a href="<?= site_url('auth/login') ?>" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm hover:bg-zinc-50" aria-label="Kembali">
             <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>

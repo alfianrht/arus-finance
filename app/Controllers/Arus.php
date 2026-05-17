@@ -22,6 +22,7 @@ class Arus extends BaseController
         $institution = $this->currentInstitution();
         $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
         $units = $this->loadUnitProgramRows();
+        $contextSelection = $this->resolveActiveContextSelection($units);
 
         $db = \Config\Database::connect();
         
@@ -74,28 +75,37 @@ class Arus extends BaseController
         foreach ($units as &$u) {
             $uInc = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'masuk')->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
             $uExp = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'keluar')->where('deleted_at', null)->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0);
-            $uActCount = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->countAllResults();
-            $uFirstAct = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getRowArray();
+            $uActCount = count($u['activities'] ?? []);
+            $uFirstAct = $u['activities'][0] ?? null;
             
             $u['income'] = $uInc;
             $u['expense'] = $uExp;
             $u['surplus'] = $uInc - $uExp;
-            $u['activities'] = array_fill(0, $uActCount, 1);
-            $u['quick_activity_name'] = $uFirstAct['name'] ?? '-';
+            $u['quick_activity_name'] = $uFirstAct['name'] ?? 'Belum ada kegiatan';
             $u['detail_url'] = '#';
-            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug']]);
-            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug']]);
+            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
+            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
         }
         unset($u);
 
         $activeContext = [
+            'unit_id' => $contextSelection['unit_id'],
+            'activity_id' => $contextSelection['activity_id'],
+            'unit_slug' => $contextSelection['unit_slug'],
+            'activity_slug' => $contextSelection['activity_slug'],
+            'unit_name' => $contextSelection['unit_name'],
+            'activity_name' => $contextSelection['activity_name'],
+            'display' => $contextSelection['unit_name'] . ' / ' . $contextSelection['activity_name'],
+            'query' => [
+                'unit' => $contextSelection['unit_slug'] ?: null,
+                'kegiatan' => $contextSelection['activity_slug'] ?: null,
+            ],
+            'switch_url' => site_url('konteks-aktif'),
+            'switch_redirect' => site_url('catat'),
+            'switch_params' => [],
+            'activity_url' => $contextSelection['activity_slug'] !== '' ? site_url('kegiatan/' . $contextSelection['activity_slug']) : site_url('beranda'),
             'masuk_url' => site_url('catat/masuk'),
             'keluar_url' => site_url('catat/keluar'),
-            'query' => [],
-            'unit_slug' => '',
-            'activity_slug' => '',
-            'activity_name' => 'Semua Kegiatan',
-            'unit_name' => 'Semua Unit',
         ];
 
         // Ensure settingsShortcuts are passed for the dashboard block

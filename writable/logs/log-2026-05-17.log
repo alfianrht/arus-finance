@@ -1919,3 +1919,323 @@ in APPPATH/Controllers/Arus.php on line 55.
  3 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
  4 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
  5 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 18:59:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2026-05-17 18:59:52 --> Error: __clone method called on non-object
+in APPPATH/Controllers/Arus.php on line 55.
+ 1 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->home()
+ 2 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 3 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 4 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 18:59:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2026-05-17 18:59:53 --> Error: __clone method called on non-object
+in APPPATH/Controllers/Arus.php on line 55.
+ 1 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->home()
+ 2 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 3 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 4 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 18:59:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2026-05-17 18:59:54 --> Error: Call to undefined method App\Controllers\Arus::buildSettingsShortcuts()
+in APPPATH/Controllers/Arus.php on line 760.
+ 1 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->pengaturan()
+ 2 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 3 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 4 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 19:02:47 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2026-05-17 19:02:47 --> mysqli_sql_exception: Unknown column 'institution_id' in 'WHERE' in /Users/cago/Documents/DEV/arus-finance/system/Database/MySQLi/Connection.php:306
+Stack trace:
+#0 /Users/cago/Documents/DEV/arus-finance/system/Database/MySQLi/Connection.php(306): mysqli->query('SELECT *\nFROM `...', 0)
+#1 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *\nFROM `...')
+#2 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *\nFROM `...')
+#3 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/cago/Documents/DEV/arus-finance/app/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(943): App\Controllers\Arus->catat()
+#6 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+#7 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /Users/cago/Documents/DEV/arus-finance/public/index.php(79): CodeIgniter\CodeIgniter->run()
+#9 /Users/cago/Documents/DEV/arus-finance/system/Commands/Server/rewrite.php(47): require_once('/Users/cago/Doc...')
+#10 {main}
+CRITICAL - 2026-05-17 19:02:47 --> CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'institution_id' in 'WHERE'
+in SYSTEMPATH/Database/BaseConnection.php on line 647.
+ 1 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 2 APPPATH/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+ 3 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->catat()
+ 4 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 5 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 19:02:47 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'institution_id' in 'WHERE'
+in SYSTEMPATH/Database/MySQLi/Connection.php on line 311.
+ 1 SYSTEMPATH/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 2 SYSTEMPATH/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 3 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 4 APPPATH/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+ 5 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->catat()
+ 6 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 7 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 8 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 9 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 19:02:47 --> [Caused by] mysqli_sql_exception: Unknown column 'institution_id' in 'WHERE'
+in SYSTEMPATH/Database/MySQLi/Connection.php on line 306.
+ 1 SYSTEMPATH/Database/MySQLi/Connection.php(306): mysqli->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL', 0)
+ 2 SYSTEMPATH/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 3 SYSTEMPATH/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 4 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 5 APPPATH/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+ 6 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->catat()
+ 7 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 8 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 19:05:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2026-05-17 19:05:06 --> mysqli_sql_exception: Unknown column 'institution_id' in 'WHERE' in /Users/cago/Documents/DEV/arus-finance/system/Database/MySQLi/Connection.php:306
+Stack trace:
+#0 /Users/cago/Documents/DEV/arus-finance/system/Database/MySQLi/Connection.php(306): mysqli->query('SELECT *\nFROM `...', 0)
+#1 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *\nFROM `...')
+#2 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *\nFROM `...')
+#3 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/cago/Documents/DEV/arus-finance/app/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(943): App\Controllers\Arus->catat()
+#6 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+#7 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /Users/cago/Documents/DEV/arus-finance/public/index.php(79): CodeIgniter\CodeIgniter->run()
+#9 /Users/cago/Documents/DEV/arus-finance/system/Commands/Server/rewrite.php(47): require_once('/Users/cago/Doc...')
+#10 {main}
+CRITICAL - 2026-05-17 19:05:06 --> CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'institution_id' in 'WHERE'
+in SYSTEMPATH/Database/BaseConnection.php on line 647.
+ 1 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 2 APPPATH/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+ 3 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->catat()
+ 4 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 5 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 19:05:06 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'institution_id' in 'WHERE'
+in SYSTEMPATH/Database/MySQLi/Connection.php on line 311.
+ 1 SYSTEMPATH/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 2 SYSTEMPATH/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 3 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 4 APPPATH/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+ 5 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->catat()
+ 6 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 7 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 8 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 9 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 19:05:06 --> [Caused by] mysqli_sql_exception: Unknown column 'institution_id' in 'WHERE'
+in SYSTEMPATH/Database/MySQLi/Connection.php on line 306.
+ 1 SYSTEMPATH/Database/MySQLi/Connection.php(306): mysqli->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL', 0)
+ 2 SYSTEMPATH/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 3 SYSTEMPATH/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *
+FROM `activities`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 4 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `activities`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 5 APPPATH/Controllers/Arus.php(140): CodeIgniter\Database\BaseBuilder->get()
+ 6 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->catat()
+ 7 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 8 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 19:08:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:08:10 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:10:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:11:31 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:11:31 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:11:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:11:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:11:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:11:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:12:03 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:12:05 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:12:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:12:17 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:15:58 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:18 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:19 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:19 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:24 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:24 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:17:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2026-05-17 19:17:25 --> Error: __clone method called on non-object
+in APPPATH/Controllers/Arus.php on line 56.
+ 1 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->home()
+ 2 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 3 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 4 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 19:17:27 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2026-05-17 19:17:27 --> mysqli_sql_exception: Unknown column 'deleted_at' in 'WHERE' in /Users/cago/Documents/DEV/arus-finance/system/Database/MySQLi/Connection.php:306
+Stack trace:
+#0 /Users/cago/Documents/DEV/arus-finance/system/Database/MySQLi/Connection.php(306): mysqli->query('SELECT *\nFROM `...', 0)
+#1 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *\nFROM `...')
+#2 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *\nFROM `...')
+#3 /Users/cago/Documents/DEV/arus-finance/system/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/cago/Documents/DEV/arus-finance/app/Controllers/Arus.php(586): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(943): App\Controllers\Arus->rekap()
+#6 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+#7 /Users/cago/Documents/DEV/arus-finance/system/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#8 /Users/cago/Documents/DEV/arus-finance/public/index.php(79): CodeIgniter\CodeIgniter->run()
+#9 /Users/cago/Documents/DEV/arus-finance/system/Commands/Server/rewrite.php(47): require_once('/Users/cago/Doc...')
+#10 {main}
+CRITICAL - 2026-05-17 19:17:27 --> CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'deleted_at' in 'WHERE'
+in SYSTEMPATH/Database/BaseConnection.php on line 647.
+ 1 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 2 APPPATH/Controllers/Arus.php(586): CodeIgniter\Database\BaseBuilder->get()
+ 3 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->rekap()
+ 4 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 5 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 19:17:27 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'deleted_at' in 'WHERE'
+in SYSTEMPATH/Database/MySQLi/Connection.php on line 311.
+ 1 SYSTEMPATH/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 2 SYSTEMPATH/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 3 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 4 APPPATH/Controllers/Arus.php(586): CodeIgniter\Database\BaseBuilder->get()
+ 5 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->rekap()
+ 6 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 7 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 8 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 9 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 19:17:27 --> [Caused by] mysqli_sql_exception: Unknown column 'deleted_at' in 'WHERE'
+in SYSTEMPATH/Database/MySQLi/Connection.php on line 306.
+ 1 SYSTEMPATH/Database/MySQLi/Connection.php(306): mysqli->query('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL', 0)
+ 2 SYSTEMPATH/Database/BaseConnection.php(693): CodeIgniter\Database\MySQLi\Connection->execute('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 3 SYSTEMPATH/Database/BaseConnection.php(607): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = 1
+AND `deleted_at` IS NULL')
+ 4 SYSTEMPATH/Database/BaseBuilder.php(1616): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `book_periods`
+WHERE `institution_id` = :institution_id:
+AND `deleted_at` IS NULL', [...], false)
+ 5 APPPATH/Controllers/Arus.php(586): CodeIgniter\Database\BaseBuilder->get()
+ 6 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->rekap()
+ 7 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 8 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 19:17:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2026-05-17 19:17:30 --> Error: Call to undefined method App\Controllers\Arus::buildSettingsShortcuts()
+in APPPATH/Controllers/Arus.php on line 769.
+ 1 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->pengaturan()
+ 2 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 3 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 4 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 19:18:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:18:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:18:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:18:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:20:46 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:20:47 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:20:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:20:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:20:59 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:20:59 --> CSRF token verified.
+INFO - 2026-05-17 19:20:59 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:21:01 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:21:07 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:21:19 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:22:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:22:53 --> CSRF token verified.
+INFO - 2026-05-17 19:22:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:22:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:26:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:26:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:27:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:27:37 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:27:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:27:47 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:28:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:28:20 --> CSRF token verified.
+INFO - 2026-05-17 19:28:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:28:22 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:28:27 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2026-05-17 19:28:27 --> Error: Call to undefined method App\Controllers\Arus::buildSettingsShortcuts()
+in APPPATH/Controllers/Arus.php on line 770.
+ 1 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->pengaturan()
+ 2 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 3 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 4 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 5 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+INFO - 2026-05-17 19:31:03 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:31:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:31:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:31:05 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:31:17 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:31:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:31:25 --> CSRF token verified.
+INFO - 2026-05-17 19:31:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:32:01 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:32:03 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:32:15 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2026-05-17 19:32:15 --> CSRF token verified.
+INFO - 2026-05-17 19:32:15 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.

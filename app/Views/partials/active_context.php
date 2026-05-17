@@ -46,13 +46,15 @@ foreach ($selectorUnits as $selectorUnit) {
     </div>
 
     <form
-        method="get"
+        method="post"
         action="<?= esc($activeContext['switch_url']) ?>"
         class="hidden rounded-3xl border border-zinc-950 bg-white p-4 shadow-sm"
         data-context-form
         data-context-switcher
         data-units='<?= esc(json_encode($selectorUnits, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>'
     >
+        <?= csrf_field() ?>
+        <input type="hidden" name="redirect_to" value="<?= esc($activeContext['switch_redirect'] ?? current_url()) ?>">
         <?php foreach ($activeContext['switch_params'] as $key => $value): ?>
             <input type="hidden" name="<?= esc($key) ?>" value="<?= esc((string) $value) ?>">
         <?php endforeach; ?>

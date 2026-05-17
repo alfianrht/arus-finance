@@ -111,6 +111,7 @@
 </head>
 <body class="bg-zinc-50 text-zinc-950">
     <div class="min-h-screen bg-zinc-50">
+        <?= $this->include('partials/flash_toast') ?>
         <main class="mx-auto max-w-4xl px-4 pb-28 pt-4 sm:px-5 md:px-6 md:pt-5">
             <?= $this->renderSection('content') ?>
         </main>
@@ -132,6 +133,22 @@
             }
         });
     }
+
+    document.querySelectorAll('[data-flash-toast]').forEach(function(toast) {
+        var hideToast = function() {
+            toast.classList.add('translate-y-[-0.5rem]', 'opacity-0');
+            setTimeout(function() {
+                toast.remove();
+            }, 250);
+        };
+
+        var closeButton = toast.querySelector('[data-flash-close]');
+        if (closeButton) {
+            closeButton.addEventListener('click', hideToast);
+        }
+
+        setTimeout(hideToast, 3500);
+    });
     </script>
 </body>
 </html>
