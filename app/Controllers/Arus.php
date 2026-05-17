@@ -79,6 +79,16 @@ class Arus extends BaseController
         return view('pages/catat/biaya', $data);
     }
 
+    public function catatHonorGaji(): string
+    {
+        $data              = $this->prototypeData();
+        $data['pageTitle'] = 'Honor & Gaji';
+        $data['activeNav'] = 'catat';
+        $data['backUrl']   = route_query('catat/keluar', $data['activeContext']['query']);
+
+        return view('pages/catat/honor_gaji', $data);
+    }
+
     public function catatPindahDana(): string
     {
         $data              = $this->prototypeData();
@@ -399,6 +409,66 @@ class Arus extends BaseController
         return view('pages/master/form', $data);
     }
 
+    public function masterPenerima(): string
+    {
+        $data              = $this->prototypeData();
+        $data['pageTitle'] = 'Penerima';
+        $data['activeNav'] = 'beranda';
+        $data['backUrl']   = site_url('pengaturan');
+
+        return view('pages/master/receivers', $data);
+    }
+
+    public function tambahPenerima(): string
+    {
+        $data                    = $this->prototypeData();
+        $data['pageTitle']       = 'Tambah Penerima';
+        $data['activeNav']       = 'beranda';
+        $data['backUrl']         = site_url('pengaturan/penerima');
+        $data['formMode']        = 'Tambah Data';
+        $data['formTitle']       = 'Form Penerima';
+        $data['formDescription'] = 'Penerima adalah daftar kontak atau vendor untuk mempercepat pencatatan transaksi.';
+        $data['saveLabel']       = 'Simpan Penerima';
+        $data['formFields']      = [
+            ['type' => 'text', 'label' => 'Nama Penerima / Kontak', 'value' => ''],
+            ['type' => 'select', 'label' => 'Jenis Kontak', 'value' => 'Vendor', 'options' => ['Tim Internal', 'Vendor', 'Klien', 'Lainnya']],
+            ['type' => 'text', 'label' => 'NIK (Opsional)', 'value' => ''],
+            ['type' => 'text', 'label' => 'NPWP (Opsional)', 'value' => ''],
+            ['type' => 'text', 'label' => 'Informasi Rekening (Opsional)', 'value' => ''],
+            ['type' => 'textarea', 'label' => 'Catatan', 'value' => ''],
+        ];
+
+        return view('pages/master/form', $data);
+    }
+
+    public function editPenerima(string $slug): string
+    {
+        $data     = $this->prototypeData();
+        $receiver = $this->findReceiver($data['receivers'], $slug);
+
+        if ($receiver === null) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $data['pageTitle']       = 'Edit ' . $receiver['name'];
+        $data['activeNav']       = 'beranda';
+        $data['backUrl']         = site_url('pengaturan/penerima');
+        $data['formMode']        = 'Edit Data';
+        $data['formTitle']       = 'Edit Penerima';
+        $data['formDescription'] = 'Penerima adalah daftar kontak atau vendor untuk mempercepat pencatatan transaksi.';
+        $data['saveLabel']       = 'Simpan Penerima';
+        $data['formFields']      = [
+            ['type' => 'text', 'label' => 'Nama Penerima / Kontak', 'value' => $receiver['name']],
+            ['type' => 'select', 'label' => 'Jenis Kontak', 'value' => $receiver['type'] ?? 'Vendor', 'options' => ['Tim Internal', 'Vendor', 'Klien', 'Lainnya']],
+            ['type' => 'text', 'label' => 'NIK (Opsional)', 'value' => $receiver['nik']],
+            ['type' => 'text', 'label' => 'NPWP (Opsional)', 'value' => $receiver['npwp']],
+            ['type' => 'text', 'label' => 'Informasi Rekening (Opsional)', 'value' => $receiver['bank_account']],
+            ['type' => 'textarea', 'label' => 'Catatan', 'value' => $receiver['note'] ?? ''],
+        ];
+
+        return view('pages/master/form', $data);
+    }
+
     public function masterPosLaporan(): string
     {
         $data              = $this->prototypeData();
@@ -638,6 +708,7 @@ class Arus extends BaseController
         $data['backUrl']             = route_query('rekap', $data['rekapQuery']);
         $data['account']             = $account;
         $data['accountTransactions'] = $accountTransactions;
+        $data['involvedReceivers']   = $this->buildRekapReceivers($data['receivers'], $accountTransactions);
         $data['accountActivities']   = $this->buildAccountActivityBreakdown($accountTransactions, $account['name']);
 
         return view('pages/account_detail', $data);
@@ -665,6 +736,7 @@ class Arus extends BaseController
                 static fn(array $transaction): bool => $transaction['unit_slug'] === $slug
             )
         );
+        $data['involvedReceivers'] = $this->buildRekapReceivers($data['receivers'], $data['unitTransactions']);
 
         return view('pages/unit_detail', $data);
     }
@@ -700,6 +772,7 @@ class Arus extends BaseController
         $data['activeNav']            = 'beranda';
         $data['activity']             = $activity;
         $data['activityTransactions'] = $activityTransactions;
+        $data['involvedReceivers']    = $this->buildRekapReceivers($data['receivers'], $activityTransactions);
         $data['categoryBreakdown']    = $categoryBreakdown;
         $data['transferItems']        = $transferItems;
 
@@ -754,6 +827,7 @@ class Arus extends BaseController
         $expenseCategories = $this->filterCategoriesByType($transactionCategories, 'Keluar');
         $bookPeriods = $raw['book_periods'];
         $openingBalances = $raw['opening_balances'];
+        $receivers = $raw['receivers'];
 
         $summary = $this->buildSummary($transactions, $raw['accounts']);
         $units = $this->buildUnitSummaries($units, $transactions, $activeContext);
@@ -806,6 +880,7 @@ class Arus extends BaseController
             $selectedUnitSlug,
             $selectedActivitySlug
         );
+        $rekapReceivers = $this->buildRekapReceivers($receivers, $rekapTransactions);
 
         $filterActivities = $this->buildFilterActivities($units, $selectedUnitSlug);
 
@@ -825,6 +900,7 @@ class Arus extends BaseController
             'neracaPositions'    => $this->filterReportPositionsByGroup($reportPositions, 'Neraca'),
             'bookPeriods'        => $bookPeriods,
             'openingBalances'    => $openingBalances,
+            'receivers'          => $receivers,
             'openingBalanceSources' => $this->buildOpeningBalanceSources($raw['accounts'], $reportPositions),
             'openingBalancePositions' => $this->buildOpeningBalancePositions($reportPositions),
             'selectedCategory'   => $selectedCategory,
@@ -840,6 +916,7 @@ class Arus extends BaseController
             'rekapAccounts'      => $rekapAccounts,
             'rekapUnits'         => $rekapUnits,
             'rekapActivities'    => $rekapActivities,
+            'rekapReceivers'     => $rekapReceivers,
             'rekapTransactions'  => $rekapTransactions,
             'rekapTransferItems' => array_values(
                 array_filter(
@@ -866,6 +943,7 @@ class Arus extends BaseController
                 'reportPositions'   => $reportPositions,
                 'bookPeriods'       => $bookPeriods,
                 'openingBalances'   => $openingBalances,
+                'receivers'         => $receivers,
             ]),
         ];
     }
@@ -1063,6 +1141,12 @@ class Arus extends BaseController
                 ['slug' => 'saldo-awal-hutang-2026', 'label' => 'Hutang Usaha', 'type' => 'Pos Laporan', 'report_position_slug' => 'hutang-usaha', 'report_position_name' => 'Hutang Usaha', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 0, 'note' => 'Disiapkan walau belum ada transaksi kewajiban.'],
                 ['slug' => 'saldo-awal-piutang-2026', 'label' => 'Piutang Usaha', 'type' => 'Pos Laporan', 'report_position_slug' => 'piutang-usaha', 'report_position_name' => 'Piutang Usaha', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 0, 'note' => 'Disiapkan walau belum ada transaksi tagihan berjalan.'],
             ],
+            'receivers' => [
+                ['slug' => 'penerima-1', 'name' => 'Budi Santoso', 'type' => 'Tim Internal', 'nik' => '3271234567890001', 'npwp' => '12.345.678.9-000.000', 'bank_account' => 'BCA 1234567890', 'note' => 'Staff Lapangan'],
+                ['slug' => 'penerima-2', 'name' => 'CV Maju Jaya', 'type' => 'Vendor', 'nik' => '', 'npwp' => '98.765.432.1-111.000', 'bank_account' => 'Mandiri 0987654321', 'note' => 'Konsultan IT'],
+                ['slug' => 'penerima-3', 'name' => 'Toko Laris', 'type' => 'Vendor', 'nik' => '', 'npwp' => '', 'bank_account' => 'BRI 111122223333', 'note' => 'Vendor ATK rutin'],
+                ['slug' => 'penerima-4', 'name' => 'PT Harapan Bangsa', 'type' => 'Klien', 'nik' => '', 'npwp' => '11.222.333.4-555.000', 'bank_account' => '', 'note' => 'Klien project website'],
+            ],
             'transactions' => [
                 [
                     'type'          => 'masuk',
@@ -1088,9 +1172,71 @@ class Arus extends BaseController
                     'activity_name' => 'Perizinan LKP Tax Session',
                     'from_account'  => 'BRI PT',
                     'to_account'    => 'Dana Operasional Cago',
+                    'admin_fee'     => 6500,
                     'note'          => 'Alokasi dana lapangan dan pengeluaran cepat',
                     'date'          => '16 Mei 2026',
                     'time'          => '14.10',
+                ],
+                [
+                    'type'          => 'honor',
+                    'period_slug'   => 'mei-2026',
+                    'amount'        => 3500000,
+                    'receiver_name' => 'Budi Santoso',
+                    'category'      => 'Beban Honor',
+                    'unit_slug'     => 'simpaud',
+                    'unit_name'     => 'SIMPAUD',
+                    'activity_slug' => 'operasional-simpaud',
+                    'activity_name' => 'Operasional SIMPAUD',
+                    'from_account'  => 'BRI PT',
+                    'admin_fee'     => 2500,
+                    'note'          => 'Gaji bulan Mei untuk Budi Santoso',
+                    'date'          => '15 Mei 2026',
+                    'time'          => '10.00',
+                ],
+                [
+                    'type'          => 'biaya',
+                    'period_slug'   => 'mei-2026',
+                    'amount'        => 5000000,
+                    'receiver_name' => 'CV Maju Jaya',
+                    'category'      => 'Operasional',
+                    'unit_slug'     => 'simpaud',
+                    'unit_name'     => 'SIMPAUD',
+                    'activity_slug' => 'operasional-simpaud',
+                    'activity_name' => 'Operasional SIMPAUD',
+                    'from_account'  => 'BRI PT',
+                    'note'          => 'Pembayaran termin pertama IT maintenance',
+                    'date'          => '14 Mei 2026',
+                    'time'          => '11.30',
+                ],
+                [
+                    'type'          => 'biaya',
+                    'period_slug'   => 'mei-2026',
+                    'amount'        => 450000,
+                    'receiver_name' => 'Toko Laris',
+                    'category'      => 'ATK',
+                    'unit_slug'     => 'simpaud',
+                    'unit_name'     => 'SIMPAUD',
+                    'activity_slug' => 'operasional-simpaud',
+                    'activity_name' => 'Operasional SIMPAUD',
+                    'from_account'  => 'Dana Operasional Cago',
+                    'note'          => 'Belanja alat tulis kantor bulanan',
+                    'date'          => '12 Mei 2026',
+                    'time'          => '09.15',
+                ],
+                [
+                    'type'          => 'biaya',
+                    'period_slug'   => 'mei-2026',
+                    'amount'        => 1250000,
+                    'receiver_name' => 'PT Harapan Bangsa',
+                    'category'      => 'Lainnya',
+                    'unit_slug'     => 'kebagusancode',
+                    'unit_name'     => 'KebagusanCode',
+                    'activity_slug' => 'project-website-client',
+                    'activity_name' => 'Project Website Client',
+                    'from_account'  => 'BCA PT',
+                    'note'          => 'Refund kelebihan transfer klien',
+                    'date'          => '11 Mei 2026',
+                    'time'          => '14.00',
                 ],
                 [
                     'type'          => 'biaya',
@@ -1180,9 +1326,32 @@ class Arus extends BaseController
                 $transaction['amount_class']  = 'text-rose-500';
                 $transaction['amount_prefix'] = '-';
                 $transaction['headline']      = $transaction['category'];
-                $transaction['subline']       = 'Keluar dari ' . $transaction['from_account'];
+                
+                $subline = 'Keluar dari ' . $transaction['from_account'];
+                if (!empty($transaction['admin_fee'])) {
+                    $subline .= ' · Admin: ' . rupiah($transaction['admin_fee']);
+                }
+                $transaction['subline']       = $subline;
+                
                 $transaction['meta']          = $transaction['unit_name'] . ' · ' . $transaction['date'] . ' · ' . $transaction['time'];
                 $transaction['icon']          = 'receipt_long';
+            }
+
+            if ($transaction['type'] === 'honor') {
+                $transaction['badge_label']   = 'Honor & Gaji';
+                $transaction['badge_class']   = 'bg-fuchsia-50 text-fuchsia-600';
+                $transaction['amount_class']  = 'text-rose-500';
+                $transaction['amount_prefix'] = '-';
+                $transaction['headline']      = 'Honor: ' . $transaction['receiver_name'];
+                
+                $subline = 'Keluar dari ' . $transaction['from_account'];
+                if (!empty($transaction['admin_fee'])) {
+                    $subline .= ' · Admin: ' . rupiah($transaction['admin_fee']);
+                }
+                $transaction['subline']       = $subline;
+                
+                $transaction['meta']          = $transaction['unit_name'] . ' · ' . $transaction['date'] . ' · ' . $transaction['time'];
+                $transaction['icon']          = 'payments';
             }
 
             if ($transaction['type'] === 'pindah') {
@@ -1190,8 +1359,14 @@ class Arus extends BaseController
                 $transaction['badge_class']   = 'bg-sky-50 text-sky-700';
                 $transaction['amount_class']  = 'text-zinc-700';
                 $transaction['amount_prefix'] = '';
-                $transaction['headline']      = $transaction['from_account'] . ' → ' . $transaction['to_account'];
-                $transaction['subline']       = 'Tidak dihitung sebagai biaya';
+                $transaction['headline']      = esc($transaction['from_account']) . ' <span class="material-symbols-rounded text-[1em] align-middle px-0.5" style="vertical-align: -0.125em;">arrow_right_alt</span> ' . esc($transaction['to_account']);
+                
+                $subline = 'Tidak dihitung sebagai biaya';
+                if (!empty($transaction['admin_fee'])) {
+                    $subline .= ' · Admin: ' . rupiah($transaction['admin_fee']);
+                }
+                $transaction['subline']       = $subline;
+                
                 $transaction['meta']          = $transaction['unit_name'] . ' · ' . $transaction['date'] . ' · ' . $transaction['time'];
                 $transaction['icon']          = 'swap_horiz';
             }
@@ -1747,6 +1922,36 @@ class Arus extends BaseController
         );
     }
 
+    private function buildRekapReceivers(array $receivers, array $transactions): array
+    {
+        $involvedNames = [];
+        foreach ($transactions as $trx) {
+            if (!empty($trx['receiver_name'])) {
+                $involvedNames[] = $trx['receiver_name'];
+            }
+        }
+        $involvedNames = array_unique($involvedNames);
+
+        $rekapReceivers = [];
+        foreach ($receivers as $receiver) {
+            if (in_array($receiver['name'], $involvedNames, true)) {
+                
+                // Calculate amount received
+                $totalReceived = 0;
+                foreach ($transactions as $trx) {
+                    if (!empty($trx['receiver_name']) && $trx['receiver_name'] === $receiver['name']) {
+                        $totalReceived += $trx['amount'];
+                    }
+                }
+                
+                $receiver['total_received'] = $totalReceived;
+                $rekapReceivers[] = $receiver;
+            }
+        }
+
+        return $rekapReceivers;
+    }
+
     private function filterReportPositionsByKinds(array $positions, array $kinds): array
     {
         return array_values(
@@ -1832,6 +2037,14 @@ class Arus extends BaseController
                 'meta' => count($data['transactionCategories']) . ' kategori',
                 'href' => site_url('pengaturan/kategori-biaya'),
                 'icon' => 'inventory_2',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Penerima / Kontak',
+                'description' => 'Master data kontak, tim, vendor, atau klien pihak yang bertransaksi.',
+                'meta' => count($data['receivers']) . ' penerima',
+                'href' => site_url('pengaturan/penerima'),
+                'icon' => 'person',
             ],
             [
                 'group' => 'Fondasi Laporan Tahunan',
@@ -1950,6 +2163,17 @@ class Arus extends BaseController
         foreach ($periods as $period) {
             if (($period['slug'] ?? null) === $slug) {
                 return $period;
+            }
+        }
+
+        return null;
+    }
+
+    private function findReceiver(array $receivers, string $slug): ?array
+    {
+        foreach ($receivers as $receiver) {
+            if (($receiver['slug'] ?? null) === $slug) {
+                return $receiver;
             }
         }
 

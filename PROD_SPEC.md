@@ -147,23 +147,23 @@ Prinsip:
 
 ### Uang Keluar
 
-Saat klik `Uang Keluar`, tampilkan pilihan:
-1. Biaya / Belanja
-2. Pindah Dana
+Saat klik `Uang Keluar`, tampilkan 3 pilar opsi pengeluaran:
+1. Biaya Operasional
+2. Honor & Gaji
+3. Pindah Dana
 
-#### Biaya / Belanja
+#### Biaya Operasional
 
-Dipakai ketika uang benar-benar habis untuk kebutuhan kegiatan.
+Dipakai ketika uang benar-benar habis untuk kebutuhan operasional rutin (transport, konsumsi, atk, dsb).
 
 Field form:
-- Unit / Program
-- Kegiatan
-- Nominal
+- Nominal utama
+- Biaya Admin Bank (Opsional, otomatis jadi transaksi beban terpisah)
 - Kategori Pengeluaran
 - Keluar dari rekening / dompet
-- Tanggal
-- Keterangan
-- Upload bukti
+- Unit / Program & Kegiatan
+- Tanggal & Keterangan
+- Upload bukti (Camera AI)
 
 Efek:
 - masuk sebagai biaya
@@ -174,6 +174,24 @@ Prinsip:
 - kategori pengeluaran berasal dari master kategori transaksi bertipe `Keluar`
 - kategori ini juga terkait ke `Pos Laporan`
 
+#### Honor & Gaji
+
+Form terspesialisasi untuk pembayaran SDM, tim internal, narasumber, atau insentif.
+
+Field form:
+- Penerima / Karyawan (Dari Master Kontak)
+- Total Dibayarkan (THP)
+- Biaya Admin Bank (Opsional, otomatis jadi transaksi beban terpisah)
+- Kategori (Otomatis terkunci ke Beban Honor & Gaji)
+- Keluar dari rekening / dompet
+- Unit / Program & Kegiatan
+- Tanggal & Keterangan (Periode)
+- Bukti Dokumen (Slip Gaji/Tanda Terima)
+
+Prinsip:
+- Mencegah kesalahan input kategori pengeluaran karena sudah dikunci otomatis.
+- Terintegrasi langsung dengan master Penerima / Kontak bertipe Tim Internal.
+
 #### Pindah Dana
 
 Dipakai ketika uang hanya berpindah tempat.
@@ -183,20 +201,25 @@ Contoh:
 - BRI PT → BCA PT
 
 Field form:
-- Unit / Program
-- Kegiatan
-- Nominal
+- Nominal Transfer
+- Biaya Admin Bank (Opsional, memisahkan biaya admin ke kategori Beban Operasional agar neraca balance)
+- Unit / Program & Kegiatan
 - Dari rekening / dompet
 - Ke rekening / dompet
-- Tanggal
-- Keterangan
-- Upload bukti
+- Tanggal & Keterangan
+- Upload bukti transfer
 
 Efek:
-- saldo asal berkurang
-- saldo tujuan bertambah
-- tidak masuk biaya
-- tidak mengurangi laba / surplus
+- saldo asal berkurang (Nominal Transfer + Biaya Admin)
+- saldo tujuan bertambah (Nominal Transfer)
+- Nominal Transfer tidak masuk biaya & laba/rugi
+- Biaya Admin masuk sebagai Beban Operasional
+- **Biaya Admin:** Untuk Pindah Dana beda bank/layanan, terdapat field "Biaya Admin (Beban Operasional)". Input ini hybrid (dropdown otomatis / manual ketik). Biaya admin pada pindah dana akan tampil secara global di subline transaksi daftar riwayat.
+
+Label visual yang digunakan:
+- `Pindah Dana`
+- `Tidak dihitung sebagai biaya`
+- `[Unit/Program] · [Tanggal] · [Waktu]`
 
 Catatan UI wajib:
 
@@ -258,22 +281,37 @@ Untuk `Uang Masuk`:
 - Keterangan
 - Bukti transaksi
 
-Untuk `Biaya / Belanja`:
+Untuk `Biaya Operasional`:
 - Unit / Program
 - Kegiatan
 - Nominal
+- Biaya Admin
 - Kategori Pengeluaran
 - Keluar dari rekening / dompet
 - Tanggal
 - Keterangan
 - Bukti transaksi
 
+Untuk `Honor & Gaji`:
+- Penerima / Karyawan
+- Total Dibayarkan (THP)
+- Biaya Admin
+- Kategori Pengeluaran (Terkunci Beban Honor)
+- Keluar dari rekening / dompet
+- Tanggal
+- Keterangan
+- Bukti Dokumen
+
 Untuk `Pindah Dana`:
-- Unit / Program
-- Kegiatan
-- Nominal
-- Dari rekening / dompet
-- Ke rekening / dompet
+- Rekening asal akan berkurang saldonya (sebesar nominal + biaya admin).
+- Rekening tujuan akan bertambah saldonya (sebesar nominal murni).
+- Transaksi pindah dananya sendiri **TIDAK** memotong surplus/laba-rugi, namun **Biaya Admin**-nya (jika ada) akan memotong surplus/laba-rugi sebagai Beban Operasional.
+
+### Pelacakan Penerima Terlibat (Penerima Terlibat)
+Sistem memiliki fitur context-aware yang merangkum *Kontak/Penerima* mana saja yang teraliri dana pada rentang waktu atau unit/kegiatan yang sedang aktif difilter.
+- Menggunakan arsitektur "Horizontal Scroll (Card Carousel)".
+- Ditampilkan di 4 level: Dashboard Rekap (`/rekap`), Detail Rekening (`/rekening/...`), Detail Unit (`/unit/...`), dan Detail Kegiatan (`/kegiatan/...`).
+- Fitur ini menghitung `total_received` per kontak berdasarkan transaksi `Biaya` atau `Honor & Gaji` yang terekam.
 - Tanggal
 - Keterangan
 - Bukti transaksi
@@ -356,6 +394,7 @@ Master data yang dipakai saat ini:
 - Unit / Program
 - Kegiatan
 - Rekening / Dompet
+- Penerima / Kontak
 - Kategori Transaksi
 - Pos Laporan
 - Tahun Buku
@@ -377,11 +416,16 @@ Sebagai gantinya:
   - penanda kategori cepat
 - `Rekening / Dompet` langsung punya:
   - pos laporan terkait
+- `Penerima / Kontak` langsung punya:
+  - nama
+  - jenis kontak (Tim Internal, Vendor, Klien, Lainnya)
+  - informasi pelengkap (NIK, NPWP, Rekening, Catatan)
 
 Dengan begitu:
 - struktur lebih sederhana
 - menu pengaturan tidak terlalu banyak
 - fondasi laporan tahunan tetap siap
+- pengelolaan karyawan dan vendor terpusat di satu pintu (Penerima)
 
 ## Kategori Transaksi Default
 
@@ -503,3 +547,15 @@ Prototype saat ini mengikuti prinsip:
 - route bisa diklik dan diuji
 - view-only untuk sebagian besar flow
 - belum ada backend CRUD / database / akuntansi dinamis
+- **Global Dropdown Fix:** Element `<select>` tidak menggunakan *native OS default arrow* (yang rentan bug rendering/layout berganda), melainkan dibungkus khusus dan menggunakan Material Symbols `expand_more` murni.
+- **Icon Formatting:** Render icon seperti `arrow_right_alt` dalam inline-text (headline Pindah Dana) dikonfigurasi ukurannya agar setara `text-[1em]` dan memiliki `align-middle` untuk perataan tipografi yang sempurna lintas-device.
+
+## Modul Autentikasi (Auth)
+
+Aplikasi memiliki alur login yang didesain dengan konsep mobile-first terisolasi (tanpa navigasi utama). Rute-rute yang tersedia:
+- `/auth/login` : Memasukkan No. WhatsApp.
+- `/auth/register` : Mendaftarkan akun baru (Nama & No. WhatsApp).
+- `/auth/forgot-password` : Form pemulihan akun/sandi.
+- `/auth/otp` : Layar verifikasi 4-digit angka (*placeholder* keamanan berbasis pesan WhatsApp).
+
+Desain *auth* memanfaatkan border zinc yang halus, focus ring berwarna lime khas, dan layout form padat vertikal (`space-y`).

@@ -24,19 +24,30 @@
     ]) ?>
 
     <form class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
-        <div class="flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
+        <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
             <div>
                 <p class="text-sm font-semibold text-zinc-950">Form manual tetap tersedia</p>
                 <p class="mt-1 text-xs text-zinc-500">Pakai ini untuk cek ulang asal dan tujuan dana jika hasil deteksi perlu disesuaikan.</p>
             </div>
-            <span class="rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700">Auto-fill siap</span>
+            <span class="absolute top-1 right-1 rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700">Auto-fill siap</span>
         </div>
 
         <div class="rounded-3xl bg-zinc-50 p-5 text-center">
-            <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Nominal</p>
+            <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Nominal Transfer</p>
             <input type="text" value="Rp 10.000.000" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
+            
+            <div class="mt-6 flex items-center justify-center gap-2 w-full overflow-hidden">
+                <p class="shrink-0 text-sm font-medium text-zinc-700">Biaya Admin:</p>
+                <select onchange="this.nextElementSibling.style.display = this.value === 'manual' ? 'block' : 'none'" class="h-10 min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-2 text-sm font-medium text-zinc-950 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400">
+                    <option value="0">Rp 0</option>
+                    <option value="2500">Rp 2.500</option>
+                    <option value="6500">Rp 6.500</option>
+                    <option value="manual">Lainnya</option>
+                </select>
+                <input type="text" placeholder="Isi nominal" style="display: none;" class="h-10 w-24 shrink-0 rounded-xl border border-zinc-200 bg-white px-3 text-center text-sm font-medium text-zinc-950 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400">
+            </div>
+            <p class="mt-3 text-[10px] text-zinc-500">Otomatis dicatat sebagai beban operasional / administrasi bank.</p>
         </div>
-
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="space-y-2">

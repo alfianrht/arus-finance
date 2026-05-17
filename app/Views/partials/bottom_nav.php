@@ -1,7 +1,7 @@
 <?php
 $items = [
     'beranda' => ['label' => 'Beranda', 'href' => route_query('beranda', $activeContext['query'] ?? []), 'icon' => 'home'],
-    'catat'   => ['label' => 'Transaksi', 'href' => route_query('catat', $activeContext['query'] ?? []), 'icon' => 'edit_square'],
+    'catat'   => ['label' => 'Pencatatan', 'href' => route_query('catat', $activeContext['query'] ?? []), 'icon' => 'edit_square'],
     'rekap'   => ['label' => 'Rekap', 'href' => site_url('rekap'), 'icon' => 'assessment'],
 ];
 ?>

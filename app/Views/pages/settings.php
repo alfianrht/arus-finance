@@ -9,9 +9,10 @@
     }
     ?>
     <?= view('partials/top_nav_back', [
-        'title' => 'Master Data Arus',
-        'subtitle' => 'Pengaturan',
+        'title' => 'Pengaturan',
+        'subtitle' => 'Master Data Arus',
         'backUrl' => $backUrl,
+        'showSettingsButton' => false,
     ]) ?>
 
     <section class="rounded-3xl border border-zinc-950 bg-white p-5">

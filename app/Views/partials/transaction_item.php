@@ -15,7 +15,7 @@ $detailUrl = site_url('transaksi/' . $transaction['id']) . '?from=' . rawurlenco
         <span class="material-symbols-rounded text-base" aria-hidden="true"><?= esc($transaction['icon']) ?></span>
     </div>
     <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-semibold text-zinc-950"><?= esc($transaction['headline']) ?></p>
+        <p class="truncate text-sm font-semibold text-zinc-950"><?= $transaction['headline'] ?></p>
         <p class="mt-1 text-xs text-zinc-500"><?= esc($transaction['subline']) ?></p>
         <p class="mt-1 text-xs text-zinc-400"><?= esc($transaction['meta']) ?></p>
     </div>

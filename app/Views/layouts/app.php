@@ -101,6 +101,12 @@
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             -webkit-font-smoothing: antialiased;
         }
+
+        /* Remove default select arrow globally but do not use background-image to avoid device inconsistencies */
+        select {
+            -webkit-appearance: none;
+            appearance: none;
+        }
     </style>
 </head>
 <body class="bg-zinc-50 text-zinc-950">

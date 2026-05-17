@@ -6,11 +6,16 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 $routes->get('/', 'Arus::home');
+$routes->get('auth/login', 'Auth::login');
+$routes->get('auth/register', 'Auth::register');
+$routes->get('auth/otp', 'Auth::otp');
+$routes->get('auth/forgot-password', 'Auth::forgotPassword');
 $routes->get('beranda', 'Arus::home');
 $routes->get('catat', 'Arus::catat');
 $routes->get('catat/masuk', 'Arus::catatMasuk');
 $routes->get('catat/keluar', 'Arus::catatKeluar');
 $routes->get('catat/keluar/biaya', 'Arus::catatBiaya');
+$routes->get('catat/keluar/honor-gaji', 'Arus::catatHonorGaji');
 $routes->get('catat/keluar/pindah-dana', 'Arus::catatPindahDana');
 $routes->get('rekap', 'Arus::rekap');
 $routes->get('pengaturan', 'Arus::pengaturan');
@@ -37,6 +42,9 @@ $routes->get('pengaturan/tahun-buku/(:segment)/edit', 'Arus::editTahunBuku/$1');
 $routes->get('pengaturan/saldo-awal', 'Arus::masterSaldoAwal');
 $routes->get('pengaturan/saldo-awal/tambah', 'Arus::tambahSaldoAwal');
 $routes->get('pengaturan/saldo-awal/(:segment)/edit', 'Arus::editSaldoAwal/$1');
+$routes->get('pengaturan/penerima', 'Arus::masterPenerima');
+$routes->get('pengaturan/penerima/tambah', 'Arus::tambahPenerima');
+$routes->get('pengaturan/penerima/(:segment)/edit', 'Arus::editPenerima/$1');
 $routes->get('transaksi/(:segment)', 'Arus::transaksi/$1');
 $routes->get('transaksi/(:segment)/edit', 'Arus::editTransaksi/$1');
 $routes->get('rekening/(:segment)', 'Arus::rekening/$1');

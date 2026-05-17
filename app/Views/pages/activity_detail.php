@@ -101,10 +101,45 @@
             <?php endif; ?>
             <?php foreach ($transferItems as $transfer): ?>
                 <div class="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                    <p class="text-sm font-semibold text-sky-900"><?= esc($transfer['headline']) ?> <?= esc(rupiah($transfer['amount'])) ?></p>
+                    <p class="text-sm font-semibold text-sky-900"><?= $transfer['headline'] ?> <?= esc(rupiah($transfer['amount'])) ?></p>
                     <p class="mt-1 text-sm text-sky-800">Catatan: Pindah Dana tidak dihitung sebagai biaya.</p>
                 </div>
             <?php endforeach; ?>
+        </div>
+    </section>
+
+    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-4">
+            <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
+        </div>
+        <div class="mt-4">
+            <?php if (empty($involvedReceivers)): ?>
+                <div class="px-4 pb-4">
+                    <div class="rounded-2xl bg-zinc-50 p-6 text-center">
+                        <p class="text-sm font-medium text-zinc-950">Belum ada data penerima.</p>
+                        <p class="mt-1 text-xs text-zinc-500">Penerima akan muncul dari transaksi Honor & Gaji.</p>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory" style="scrollbar-width: none;">
+                    <style>
+                        .overflow-x-auto::-webkit-scrollbar { display: none; }
+                    </style>
+                    
+                    <?php foreach ($involvedReceivers as $receiver): ?>
+                        <div class="flex w-36 shrink-0 snap-start flex-col items-center justify-center rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                            <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                                <span class="material-symbols-rounded text-2xl" aria-hidden="true">account_circle</span>
+                            </div>
+                            <p class="w-full truncate text-sm font-semibold text-zinc-950"><?= esc($receiver['name']) ?></p>
+                            <p class="mt-0.5 text-[10px] font-medium tracking-wider text-zinc-500 uppercase"><?= esc($receiver['type']) ?></p>
+                            <div class="mt-3 w-full rounded-lg bg-white py-1.5 shadow-sm border border-zinc-100">
+                                <p class="text-xs font-bold text-rose-500"><?= esc(rupiah($receiver['total_received'])) ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 
