@@ -8,11 +8,16 @@
         'backUrl' => $backUrl,
     ]) ?>
 
-    <section class="rounded-2xl bg-lime-50 p-4">
-        <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Filter Rekap yang Sedang Aktif</p>
-        <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc($rekapFilterSummary['period_label']) ?></p>
-        <p class="mt-1 text-sm text-zinc-700"><?= esc($rekapFilterSummary['unit_label']) ?> · <?= esc($rekapFilterSummary['activity_label']) ?></p>
-        <p class="mt-2 text-sm text-zinc-600">Saldo utama tetap angka dummy rekening. Rincian mutasi di bawah mengikuti filter rekap saat ini.</p>
+    <section class="rounded-3xl border border-lime-100 bg-lime-50 p-5">
+        <div class="flex items-start gap-3">
+            <span class="material-symbols-rounded text-lime-600" aria-hidden="true">tune</span>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-lime-900/60">Filter Rekap yang Sedang Aktif</p>
+                <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc($rekapFilterSummary['period_label']) ?></p>
+                <p class="mt-1 text-sm text-zinc-700"><?= esc($rekapFilterSummary['unit_label']) ?> · <?= esc($rekapFilterSummary['activity_label']) ?></p>
+                <p class="mt-3 text-xs text-lime-800">Saldo utama di bawah menunjukkan posisi rekening secara utuh. Arus & mutasi di bawah mengikuti filter rekap saat ini.</p>
+            </div>
+        </div>
     </section>
 
     <section class="relative block">
@@ -53,30 +58,36 @@
         </div>
     </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-            <h2 class="text-base font-semibold text-zinc-950">Arus pada Rekening / Dompet</h2>
-            <p class="text-xs text-zinc-500">Sesuai filter</p>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="rounded-3xl border border-emerald-100 bg-emerald-50 p-4">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-200/50 text-emerald-700">
+                <span class="material-symbols-rounded text-sm">south_west</span>
+            </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-emerald-900/60">Uang Masuk</p>
+            <p class="mt-1 font-black text-emerald-950"><?= esc(rupiah($account['income'])) ?></p>
         </div>
-        <div class="mt-4 grid grid-cols-2 gap-3">
-            <div class="rounded-2xl bg-zinc-50 p-3">
-                <p class="text-xs text-zinc-500">Uang Masuk</p>
-                <p class="mt-2 text-sm font-semibold text-emerald-600"><?= esc(rupiah($account['income'])) ?></p>
+        <div class="rounded-3xl border border-rose-100 bg-rose-50 p-4">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-rose-200/50 text-rose-700">
+                <span class="material-symbols-rounded text-sm">north_east</span>
             </div>
-            <div class="rounded-2xl bg-zinc-50 p-3">
-                <p class="text-xs text-zinc-500">Biaya / Belanja</p>
-                <p class="mt-2 text-sm font-semibold text-rose-500"><?= esc(rupiah($account['expense'])) ?></p>
-            </div>
-            <div class="rounded-2xl bg-zinc-50 p-3">
-                <p class="text-xs text-zinc-500">Pindah Masuk</p>
-                <p class="mt-2 text-sm font-semibold text-sky-700"><?= esc(rupiah($account['transfer_in'])) ?></p>
-            </div>
-            <div class="rounded-2xl bg-zinc-50 p-3">
-                <p class="text-xs text-zinc-500">Pindah Keluar</p>
-                <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc(rupiah($account['transfer_out'])) ?></p>
-            </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-rose-900/60">Biaya / Belanja</p>
+            <p class="mt-1 font-black text-rose-950"><?= esc(rupiah($account['expense'])) ?></p>
         </div>
-    </section>
+        <div class="rounded-3xl border border-sky-100 bg-sky-50 p-4">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-200/50 text-sky-700">
+                <span class="material-symbols-rounded text-sm">login</span>
+            </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-sky-900/60">Pindah Masuk</p>
+            <p class="mt-1 font-black text-sky-950"><?= esc(rupiah($account['transfer_in'])) ?></p>
+        </div>
+        <div class="rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/50 text-zinc-700">
+                <span class="material-symbols-rounded text-sm">logout</span>
+            </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-zinc-600">Pindah Keluar</p>
+            <p class="mt-1 font-black text-zinc-950"><?= esc(rupiah($account['transfer_out'])) ?></p>
+        </div>
+    </div>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">

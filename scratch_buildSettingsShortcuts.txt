@@ -1,0 +1,77 @@
+    private function buildSettingsShortcuts(array $data): array
+    {
+        return [
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Profil Lembaga',
+                'description' => 'Identitas utama aplikasi dan lembaga yang memakai Arus.',
+                'meta' => $data['institutionName'],
+                'href' => site_url('pengaturan/profil-lembaga'),
+                'icon' => 'badge',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Unit / Program',
+                'description' => 'Struktur usaha atau layanan yang menaungi kegiatan.',
+                'meta' => count($data['units']) . ' unit',
+                'href' => site_url('pengaturan/unit-program'),
+                'icon' => 'domain',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Kegiatan',
+                'description' => 'Turunan dari unit yang dipakai sebagai konteks aktif pencatatan.',
+                'meta' => count($data['activitySummaries']) . ' kegiatan',
+                'href' => site_url('pengaturan/kegiatan'),
+                'icon' => 'workspaces',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Rekening / Dompet',
+                'description' => 'Sumber dan tujuan uang bergerak saat transaksi dicatat.',
+                'meta' => count($data['accounts']) . ' rekening / dompet',
+                'href' => site_url('pengaturan/rekening-dompet'),
+                'icon' => 'account_balance_wallet',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Kategori Transaksi',
+                'description' => 'Satu master kategori untuk uang masuk dan uang keluar, langsung terhubung ke pos laporan.',
+                'meta' => count($data['transactionCategories']) . ' kategori',
+                'href' => site_url('pengaturan/kategori-biaya'),
+                'icon' => 'inventory_2',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Penerima / Kontak',
+                'description' => 'Master data kontak, tim, vendor, atau klien pihak yang bertransaksi.',
+                'meta' => count($data['receivers']) . ' penerima',
+                'href' => site_url('pengaturan/penerima'),
+                'icon' => 'person',
+            ],
+            [
+                'group' => 'Fondasi Laporan Tahunan',
+                'title' => 'Pos Laporan',
+                'description' => 'Struktur pendapatan, beban, aset, hutang, dan modal untuk laporan tahunan.',
+                'meta' => count($data['reportPositions']) . ' pos',
+                'href' => site_url('pengaturan/pos-laporan'),
+                'icon' => 'account_tree',
+            ],
+            [
+                'group' => 'Fondasi Laporan Tahunan',
+                'title' => 'Tahun Buku',
+                'description' => 'Periode resmi yang nanti dipakai untuk saldo awal dan laporan tahunan.',
+                'meta' => count($data['bookPeriods']) . ' periode',
+                'href' => site_url('pengaturan/tahun-buku'),
+                'icon' => 'calendar_month',
+            ],
+            [
+                'group' => 'Fondasi Laporan Tahunan',
+                'title' => 'Saldo Awal',
+                'description' => 'Titik awal neraca agar laporan tahunan bisa dieksekusi tanpa bongkar data ulang.',
+                'meta' => count($data['openingBalances']) . ' saldo',
+                'href' => site_url('pengaturan/saldo-awal'),
+                'icon' => 'stacked_line_chart',
+            ],
+        ];
+    }

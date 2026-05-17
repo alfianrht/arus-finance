@@ -1,0 +1,200 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\ActivityModel;
+use App\Models\BookPeriodModel;
+use App\Models\UnitModel;
+use App\Services\TransactionService;
+
+class HomeController extends BaseController
+{
+    private TransactionService $transactionService;
+
+    public function __construct()
+    {
+        $this->transactionService = new TransactionService();
+    }
+
+    public function index(): string
+    {
+        $institution = $this->currentInstitution();
+        $institutionId = (int) ($institution['id'] ?? 1);
+        
+        $period = (new BookPeriodModel())
+            ->where('institution_id', $institutionId)
+            ->where('is_active', 1)
+            ->first();
+        $bookPeriodId = is_array($period) ? (int) $period['id'] : 0;
+
+        $units = $this->loadUnitsWithActivities($institutionId);
+        $contextSelection = $this->resolveActiveContextSelection($units);
+
+        $db = \Config\Database::connect();
+
+        // 1. Calculate Summary
+        // Opening Balances
+        $obSum = (float) ($db->table('opening_balances')
+            ->where('institution_id', $institutionId)
+            ->where('book_period_id', $bookPeriodId)
+            ->where('deleted_at', null)
+            ->selectSum('amount')
+            ->get()->getRow()->amount ?? 0);
+
+        // Incomes
+        $incSum = (float) ($db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('book_period_id', $bookPeriodId)
+            ->where('type', 'masuk')
+            ->where('deleted_at', null)
+            ->selectSum('amount')
+            ->get()->getRow()->amount ?? 0);
+
+        // Expenses (keluar, honor) + pindah fees
+        $expSumMain = (float) ($db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('book_period_id', $bookPeriodId)
+            ->whereIn('type', ['keluar', 'honor'])
+            ->where('deleted_at', null)
+            ->select('SUM(amount + admin_fee) as total')
+            ->get()->getRow()->total ?? 0);
+
+        $pindahFeeSum = (float) ($db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('book_period_id', $bookPeriodId)
+            ->where('type', 'pindah')
+            ->where('deleted_at', null)
+            ->selectSum('admin_fee')
+            ->get()->getRow()->admin_fee ?? 0);
+
+        $expSum = $expSumMain + $pindahFeeSum;
+
+        $surplus = $incSum - $expSum;
+        $balance = $obSum + $surplus;
+
+        // 2. Format Recent Transactions using the robust TransactionController formatter pattern.
+        $homeTransactions = $this->transactionService->loadRecentTransactions($institutionId);
+
+        // 3. Units mapping for cards
+        foreach ($units as &$u) {
+            $uInc = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'masuk')->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
+            
+            $uExpMain = (float) ($db->table('transactions')->where('unit_id', $u['id'])->whereIn('type', ['keluar', 'honor'])->where('deleted_at', null)->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0);
+            $uExpFee = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'pindah')->where('deleted_at', null)->selectSum('admin_fee')->get()->getRow()->admin_fee ?? 0);
+            $uExp = $uExpMain + $uExpFee;
+            
+            $u['income'] = $uInc;
+            $u['expense'] = $uExp;
+            $u['surplus'] = $uInc - $uExp;
+            
+            $uFirstAct = $u['activities'][0] ?? null;
+            $u['quick_activity_name'] = $uFirstAct['name'] ?? 'Belum ada kegiatan';
+            $u['detail_url'] = '#';
+            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
+            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
+        }
+        unset($u);
+
+        // 4. Active Context
+        $activeContext = [
+            'unit_id' => $contextSelection['unit_id'],
+            'activity_id' => $contextSelection['activity_id'],
+            'unit_slug' => $contextSelection['unit_slug'],
+            'activity_slug' => $contextSelection['activity_slug'],
+            'unit_name' => $contextSelection['unit_name'],
+            'activity_name' => $contextSelection['activity_name'],
+            'display' => $contextSelection['unit_name'] . ' / ' . $contextSelection['activity_name'],
+            'query' => [
+                'unit' => $contextSelection['unit_slug'] ?: null,
+                'kegiatan' => $contextSelection['activity_slug'] ?: null,
+            ],
+            'switch_url' => site_url('konteks-aktif'),
+            'switch_redirect' => site_url('beranda'),
+            'switch_params' => [],
+            'activity_url' => $contextSelection['activity_slug'] !== '' ? site_url('kegiatan/' . $contextSelection['activity_slug']) : site_url('beranda'),
+            'masuk_url' => site_url('catat/masuk'),
+            'keluar_url' => site_url('catat/keluar'),
+        ];
+
+        // 5. Build settings shortcuts for the dashboard
+        $settingsShortcuts = $this->buildSettingsShortcuts([
+            'institutionName'       => $institution['name'],
+            'units'                 => $units,
+        ]);
+
+        $data = [
+            'appName'          => $institution['app_name'] ?? 'Arusdana',
+            'institutionName'  => $institution['name'],
+            'pageTitle'        => 'Beranda',
+            'activeNav'        => 'beranda',
+            'activeContext'    => $activeContext,
+            'summary'          => [
+                'balance' => $balance,
+                'income'  => $incSum,
+                'expense' => $expSum,
+                'surplus' => $surplus,
+            ],
+            'homeTransactions'  => $homeTransactions,
+            'units'             => $units,
+            'settingsShortcuts' => $settingsShortcuts,
+        ];
+
+        return view('pages/home', $data);
+    }
+
+    private function loadUnitsWithActivities(int $institutionId): array
+    {
+        $units = (new UnitModel())
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->where('is_active', 1)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        $activityModel = new ActivityModel();
+
+        foreach ($units as &$unit) {
+            $unit['activities'] = $activityModel
+                ->where('unit_id', (int) $unit['id'])
+                ->where('deleted_at', null)
+                ->where('is_active', 1)
+                ->orderBy('sort_order', 'ASC')
+                ->orderBy('name', 'ASC')
+                ->findAll();
+        }
+        unset($unit);
+
+        return $units;
+    }
+
+    private function currentInstitution(): array
+    {
+        $id = (int) (service('session')->get('auth_institution_id') ?? 1);
+        $row = (new \App\Models\InstitutionModel())->find($id);
+
+        return is_array($row) ? $row : ['id' => 1, 'name' => 'Arusdana', 'app_name' => 'Arusdana'];
+    }
+
+    private function buildSettingsShortcuts(array $data): array
+    {
+        return [
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Profil Lembaga',
+                'description' => 'Identitas utama aplikasi dan lembaga yang memakai Arus.',
+                'meta' => $data['institutionName'] ?? 'Lembaga',
+                'href' => site_url('pengaturan/profil-lembaga'),
+                'icon' => 'badge',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Unit / Program',
+                'description' => 'Struktur usaha atau layanan yang menaungi kegiatan.',
+                'meta' => count($data['units'] ?? []) . ' unit',
+                'href' => site_url('pengaturan/unit-program'),
+                'icon' => 'domain',
+            ],
+        ];
+    }
+}

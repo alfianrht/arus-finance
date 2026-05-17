@@ -35,7 +35,7 @@
         
         <div class="rounded-3xl bg-zinc-50 p-5 text-center">
             <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Total Dibayarkan (THP)</p>
-            <input type="text" name="amount" value="<?= esc(old('amount', '0')) ?>" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none" required>
+            <input type="text" inputmode="numeric" name="amount" value="<?= esc(old('amount', '0')) ?>" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none" required>
             
             <div class="mt-6 flex items-center justify-center gap-2 w-full overflow-hidden">
                 <p class="shrink-0 text-sm font-medium text-zinc-700">Biaya Admin:</p>
@@ -45,7 +45,7 @@
                     <option value="6500">Rp 6.500</option>
                     <option value="manual">Lainnya</option>
                 </select>
-                <input type="text" name="admin_fee_manual" placeholder="Isi nominal" style="display: none;" class="h-10 w-24 shrink-0 rounded-xl border border-zinc-200 bg-white px-3 text-center text-sm font-medium text-zinc-950 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400">
+                <input type="text" inputmode="numeric" name="admin_fee_manual" placeholder="Isi nominal" style="display: none;" class="h-10 w-24 shrink-0 rounded-xl border border-zinc-200 bg-white px-3 text-center text-sm font-medium text-zinc-950 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400">
             </div>
             <p class="mt-3 text-[10px] text-zinc-500">Otomatis dicatat terpisah sebagai beban administrasi bank.</p>
         </div>

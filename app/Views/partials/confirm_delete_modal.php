@@ -10,8 +10,8 @@
  *    >Hapus</button>
  */
 ?>
-<div id="deleteModal" class="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/40 backdrop-blur-sm transition-opacity duration-200 opacity-0 pointer-events-none sm:items-center" style="display:none">
-    <div class="w-full max-w-md transform rounded-t-3xl bg-white p-6 shadow-xl transition-transform duration-200 translate-y-4 sm:rounded-3xl sm:translate-y-0">
+<div id="deleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/40 backdrop-blur-sm transition-opacity duration-200 opacity-0 pointer-events-none" style="display:none">
+    <div class="w-full max-w-md transform rounded-3xl bg-white p-6 shadow-xl transition-transform duration-200 translate-y-4 sm:translate-y-0">
         <div class="flex items-center gap-3">
             <span class="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100">
                 <span class="material-symbols-rounded text-rose-600 text-xl">delete</span>

@@ -8,74 +8,109 @@
         'showBackButton' => false,
     ]) ?>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-rounded text-base text-zinc-500" aria-hidden="true">tune</span>
-                <h2 class="text-base font-semibold text-zinc-950">Filter Rekap</h2>
+    <section class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
+        <div class="flex items-center justify-between cursor-pointer group" onclick="document.getElementById('filterRekapForm').classList.toggle('hidden'); document.getElementById('filterRekapIcon').innerText = document.getElementById('filterRekapForm').classList.contains('hidden') ? 'expand_more' : 'expand_less'">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <span class="material-symbols-rounded text-sm sm:text-base text-zinc-500" aria-hidden="true">tune</span>
+                <h2 class="text-sm sm:text-base font-semibold text-zinc-950">Filter Rekap</h2>
             </div>
-            <a href="<?= site_url('rekap') ?>" class="text-xs font-medium text-zinc-500">Reset</a>
+            <div class="flex items-center gap-3">
+                <a href="<?= site_url('rekap') ?>" class="text-[10px] sm:text-xs font-medium text-zinc-500 hover:text-zinc-950" onclick="event.stopPropagation()">Reset</a>
+                <span id="filterRekapIcon" class="material-symbols-rounded text-sm sm:text-base text-zinc-400 group-hover:text-zinc-600 transition-colors">expand_more</span>
+            </div>
         </div>
 
-        <form method="get" action="<?= site_url('rekap') ?>" class="mt-4 space-y-3">
-            <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700">Periode</label>
-                <select name="periode" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
-                    <?php foreach ($periods as $period): ?>
-                        <option value="<?= esc($period['slug']) ?>" <?= $selectedPeriodSlug === $period['slug'] ? 'selected' : '' ?>><?= esc($period['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+        <form id="filterRekapForm" method="get" action="<?= site_url('rekap') ?>" class="mt-3 sm:mt-4 hidden">
+            <div class="grid gap-2.5 sm:gap-3 sm:grid-cols-3">
+                <div class="space-y-1 sm:space-y-1.5">
+                    <label class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Periode</label>
+                    <div class="relative">
+                        <select name="periode" class="h-10 sm:h-11 w-full appearance-none rounded-lg sm:rounded-xl border border-zinc-200 bg-zinc-50 pl-3 sm:pl-4 pr-8 sm:pr-10 text-xs sm:text-sm font-medium text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-1 focus:ring-zinc-950">
+                            <?php foreach ($periods as $period): ?>
+                                <option value="<?= esc($period['slug']) ?>" <?= $selectedPeriodSlug === $period['slug'] ? 'selected' : '' ?>><?= esc($period['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="pointer-events-none absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 material-symbols-rounded text-[18px] text-zinc-400">expand_more</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1 sm:space-y-1.5">
+                    <label class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Unit / Program</label>
+                    <div class="relative">
+                        <select id="unitFilter" name="unit" class="h-10 sm:h-11 w-full appearance-none rounded-lg sm:rounded-xl border border-zinc-200 bg-zinc-50 pl-3 sm:pl-4 pr-8 sm:pr-10 text-xs sm:text-sm font-medium text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-1 focus:ring-zinc-950">
+                            <option value="semua" <?= $selectedUnitSlug === 'semua' ? 'selected' : '' ?>>Semua Unit / Program</option>
+                            <?php foreach ($units as $unit): ?>
+                                <option value="<?= esc($unit['slug']) ?>" <?= $selectedUnitSlug === $unit['slug'] ? 'selected' : '' ?>><?= esc($unit['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="pointer-events-none absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 material-symbols-rounded text-[18px] text-zinc-400">expand_more</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1 sm:space-y-1.5">
+                    <label class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Kegiatan</label>
+                    <div class="relative">
+                        <select id="kegiatanFilter" name="kegiatan" class="h-10 sm:h-11 w-full appearance-none rounded-lg sm:rounded-xl border border-zinc-200 bg-zinc-50 pl-3 sm:pl-4 pr-8 sm:pr-10 text-xs sm:text-sm font-medium text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-1 focus:ring-zinc-950">
+                            <option value="semua" <?= $selectedActivitySlug === 'semua' ? 'selected' : '' ?>>Semua Kegiatan</option>
+                            <?php foreach ($dropdownActivities as $activity): ?>
+                                <option value="<?= esc($activity['slug']) ?>" data-unit="<?= esc($activity['unit_slug']) ?>" <?= $selectedActivitySlug === $activity['slug'] ? 'selected' : '' ?>>
+                                    <?= esc($activity['name']) ?> · <?= esc($activity['unit_name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="pointer-events-none absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 material-symbols-rounded text-[18px] text-zinc-400">expand_more</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700">Unit / Program</label>
-                <select name="unit" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
-                    <option value="semua" <?= $selectedUnitSlug === 'semua' ? 'selected' : '' ?>>Semua Unit / Program</option>
-                    <?php foreach ($units as $unit): ?>
-                        <option value="<?= esc($unit['slug']) ?>" <?= $selectedUnitSlug === $unit['slug'] ? 'selected' : '' ?>><?= esc($unit['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-sm font-medium text-zinc-700">Kegiatan</label>
-                <select name="kegiatan" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
-                    <option value="semua" <?= $selectedActivitySlug === 'semua' ? 'selected' : '' ?>>Semua Kegiatan</option>
-                    <?php foreach ($filterActivities as $activity): ?>
-                        <option value="<?= esc($activity['slug']) ?>" <?= $selectedActivitySlug === $activity['slug'] ? 'selected' : '' ?>>
-                            <?= esc($activity['name']) ?> · <?= esc($activity['unit_name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <button type="submit" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white">
-                <span class="material-symbols-rounded text-base" aria-hidden="true">assessment</span>
+            <button type="submit" class="mt-3 sm:mt-4 inline-flex h-10 sm:h-11 w-full items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl bg-zinc-950 px-4 sm:px-5 text-xs sm:text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-auto">
+                <span class="material-symbols-rounded text-[18px] sm:text-base" aria-hidden="true">tune</span>
                 <span>Terapkan Filter</span>
             </button>
         </form>
     </section>
 
-    <section class="rounded-3xl bg-white p-5 shadow-sm">
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div>
-                <p class="text-xs text-zinc-500">Uang Masuk</p>
-                <p class="mt-2 text-sm font-semibold text-emerald-600"><?= esc(rupiah($rekapSummary['income'])) ?></p>
+    <div class="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
+        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                    <span class="material-symbols-rounded text-[11px] sm:text-sm">south_west</span>
+                </div>
+                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Masuk</p>
             </div>
-            <div>
-                <p class="text-xs text-zinc-500">Biaya</p>
-                <p class="mt-2 text-sm font-semibold text-rose-500"><?= esc(rupiah($rekapSummary['expense'])) ?></p>
-            </div>
-            <div>
-                <p class="text-xs text-zinc-500">Laba / Surplus</p>
-                <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc(rupiah($rekapSummary['surplus'])) ?></p>
-            </div>
-            <div>
-                <p class="text-xs text-zinc-500">Saldo Total</p>
-                <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc(rupiah($rekapSummary['balance'])) ?></p>
-            </div>
+            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['income'])) ?></p>
         </div>
-    </section>
+        
+        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700">
+                    <span class="material-symbols-rounded text-[11px] sm:text-sm">north_east</span>
+                </div>
+                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Biaya</p>
+            </div>
+            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['expense'])) ?></p>
+        </div>
+        
+        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
+                    <span class="material-symbols-rounded text-[11px] sm:text-sm">waterfall_chart</span>
+                </div>
+                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Surplus</p>
+            </div>
+            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['surplus'])) ?></p>
+        </div>
+        
+        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700">
+                    <span class="material-symbols-rounded text-[11px] sm:text-sm">account_balance_wallet</span>
+                </div>
+                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Saldo Total</p>
+            </div>
+            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['balance'])) ?></p>
+        </div>
+    </div>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
@@ -189,4 +224,35 @@
         </div>
     </section>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const unitFilter = document.getElementById('unitFilter');
+        const kegiatanFilter = document.getElementById('kegiatanFilter');
+        const allOptions = Array.from(kegiatanFilter.options);
+
+        function filterKegiatan() {
+            const selectedUnit = unitFilter.value;
+            let firstVisibleIndex = 0;
+
+            kegiatanFilter.innerHTML = '';
+            
+            allOptions.forEach(option => {
+                const optionUnit = option.getAttribute('data-unit');
+                if (selectedUnit === 'semua' || !optionUnit || optionUnit === selectedUnit) {
+                    kegiatanFilter.appendChild(option);
+                }
+            });
+
+            // If the currently selected option is no longer visible, reset to "semua"
+            if (!Array.from(kegiatanFilter.options).some(opt => opt.selected)) {
+                kegiatanFilter.value = 'semua';
+            }
+        }
+
+        unitFilter.addEventListener('change', filterKegiatan);
+        filterKegiatan(); // Run on load to ensure initial state matches if opened with GET params
+    });
+</script>
+
 <?= $this->endSection() ?>

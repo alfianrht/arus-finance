@@ -38,16 +38,18 @@
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Riwayat Terakhir</h2>
-            <a href="<?= esc($activeContext['activity_url']) ?>" class="text-xs font-medium text-zinc-500">Lihat kegiatan</a>
+            <a href="<?= site_url('rekap') ?>" class="text-xs font-medium text-zinc-500">Lihat rekap</a>
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($recentTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk konteks ini.</div>
+                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi di tahun buku ini.</div>
             <?php endif; ?>
             <?php foreach ($recentTransactions as $transaction): ?>
-                <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
+                <?= view('partials/transaction_item', ['transaction' => $transaction, 'allow_delete' => true]) ?>
             <?php endforeach; ?>
         </div>
     </section>
 </div>
+
+<?= view('partials/confirm_delete_modal') ?>
 <?= $this->endSection() ?>

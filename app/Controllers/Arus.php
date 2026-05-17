@@ -569,174 +569,82 @@ class Arus extends BaseController
         return redirect()->to('beranda')->with('success', 'Pindah Dana berhasil dicatat.');
     }
 
-    public function rekap(): string
+private function buildSettingsShortcuts(array $data): array
     {
-        $institutionId = $this->currentInstitutionId();
-        $institution = $this->currentInstitution();
-        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
-        $db = \Config\Database::connect();
-        $request = service('request');
-
-        // Filters
-        $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
-        $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
-        $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
-
-        // 1. Load Filter Options
-        $periods = [['slug' => 'semua', 'label' => 'Semua Periode']];
-        $dbPeriods = $db->table('book_periods')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
-        foreach ($dbPeriods as $p) {
-            $periods[] = ['slug' => 'period-' . $p['id'], 'label' => 'TB ' . $p['start_year'] . '/' . $p['end_year'] . ($p['is_active'] ? ' (Aktif)' : '')];
-        }
-
-        $units = $this->loadUnitProgramRows();
-        
-        $filterActivities = [];
-        if ($selectedUnitSlug !== 'semua') {
-            $unitId = (int) str_replace('unit-', '', $selectedUnitSlug);
-            $filterActivities = $db->table('activities')->where('unit_id', $unitId)->where('deleted_at', null)->get()->getResultArray();
-        } else {
-            $filterActivities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
-        }
-        foreach ($filterActivities as &$fa) {
-            $faUnit = $db->table('units')->where('id', $fa['unit_id'])->get()->getRowArray();
-            $fa['slug'] = 'act-' . $fa['id'];
-            $fa['unit_name'] = $faUnit['name'] ?? '';
-        }
-        unset($fa);
-
-        // Map selected slugs to IDs
-        $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
-        $filterUnitId = $selectedUnitSlug !== 'semua' ? (int) str_replace('unit-', '', $selectedUnitSlug) : null;
-        $filterActivityId = $selectedActivitySlug !== 'semua' ? (int) str_replace('act-', '', $selectedActivitySlug) : null;
-
-        // Base Query builder for transactions
-        $tBuilder = $db->table('transactions')->where('institution_id', $institutionId)->where('deleted_at', null);
-        if ($filterPeriodId) $tBuilder->where('book_period_id', $filterPeriodId);
-        if ($filterUnitId) $tBuilder->where('unit_id', $filterUnitId);
-        if ($filterActivityId) $tBuilder->where('activity_id', $filterActivityId);
-
-        // 2. Summary
-        $obBuilder = $db->table('opening_balances')->where('institution_id', $institutionId)->where('deleted_at', null);
-        if ($filterPeriodId) $obBuilder->where('book_period_id', $filterPeriodId);
-        $obSum = (float) ($obBuilder->selectSum('amount')->get()->getRow()->amount ?? 0);
-
-        $incSum = (float) (clone $tBuilder)->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
-        $expSum = (float) (clone $tBuilder)->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
-        $surplus = $incSum - $expSum;
-
-        $rekapSummary = [
-            'balance' => $obSum + $surplus,
-            'income' => $incSum,
-            'expense' => $expSum,
-            'surplus' => $surplus,
-        ];
-
-        // 3. Transactions List
-        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
-        $rekapTransactions = [];
-        $rekapTransferItems = [];
-        foreach ($recentRows as $row) {
-            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
-            $item = [
-                'id' => $row['id'],
-                'headline' => $cat['name'] ?? 'Transaksi',
-                'subline' => $row['notes'],
-                'meta' => date('d M Y', strtotime($row['transaction_date'])),
-                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
-                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
-                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
-                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
-                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
-                'amount' => $row['amount'] + $row['admin_fee'],
-            ];
-            if ($row['type'] === 'pindah') {
-                $rekapTransferItems[] = $item;
-            } else {
-                $rekapTransactions[] = $item;
-            }
-        }
-
-        // 4. Accounts
-        $accounts = $db->table('accounts')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
-        $rekapAccounts = [];
-        foreach ($accounts as $acc) {
-            $accOb = (float) ($db->table('opening_balances')->where('account_id', $acc['id'])->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
-            $accInc = (float) (clone $tBuilder)->where('to_account_id', $acc['id'])->selectSum('amount')->get()->getRow()->amount ?? 0;
-            $accExp = (float) (clone $tBuilder)->where('from_account_id', $acc['id'])->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
-            $rekapAccounts[] = [
-                'name' => $acc['name'],
-                'balance' => $accOb + $accInc - $accExp,
-                'income' => $accInc,
-                'expense' => $accExp,
+        return [
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Profil Lembaga',
+                'description' => 'Identitas utama aplikasi dan lembaga yang memakai Arus.',
+                'meta' => $data['institutionName'],
+                'href' => site_url('pengaturan/profil-lembaga'),
+                'icon' => 'badge',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Unit / Program',
+                'description' => 'Struktur usaha atau layanan yang menaungi kegiatan.',
+                'meta' => count($data['units']) . ' unit',
+                'href' => site_url('pengaturan/unit-program'),
+                'icon' => 'domain',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Kegiatan',
+                'description' => 'Turunan dari unit yang dipakai sebagai konteks aktif pencatatan.',
+                'meta' => count($data['activitySummaries']) . ' kegiatan',
+                'href' => site_url('pengaturan/kegiatan'),
+                'icon' => 'workspaces',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Rekening / Dompet',
+                'description' => 'Sumber dan tujuan uang bergerak saat transaksi dicatat.',
+                'meta' => count($data['accounts']) . ' rekening / dompet',
+                'href' => site_url('pengaturan/rekening-dompet'),
                 'icon' => 'account_balance_wallet',
-                'color' => 'emerald',
-                'detail_url' => route_query('rekening/acc-' . $acc['id']),
-            ];
-        }
-
-        // 5. Units
-        $rekapUnits = [];
-        if ($filterUnitId) {
-            $unitRows = $db->table('units')->where('id', $filterUnitId)->where('deleted_at', null)->get()->getResultArray();
-        } else {
-            $unitRows = $units;
-        }
-        
-        foreach ($unitRows as $u) {
-            $uInc = (float) (clone $tBuilder)->where('unit_id', $u['id'])->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
-            $uExp = (float) (clone $tBuilder)->where('unit_id', $u['id'])->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
-            if ($uInc == 0 && $uExp == 0) continue; // Only units with transactions in this filter
-            
-            $uActCount = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->countAllResults();
-            $uFirstAct = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getRowArray();
-            
-            $u['slug'] = 'unit-' . $u['id'];
-            $u['income'] = $uInc;
-            $u['expense'] = $uExp;
-            $u['surplus'] = $uInc - $uExp;
-            $u['activities'] = array_fill(0, $uActCount, 1);
-            $u['quick_activity_name'] = $uFirstAct['name'] ?? '-';
-            $u['detail_url'] = '#';
-            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug']]);
-            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug']]);
-            $rekapUnits[] = $u;
-        }
-
-        // 6. Activities
-        $rekapActivities = [];
-        $actRows = $filterActivities;
-        foreach ($actRows as $a) {
-            $aInc = (float) (clone $tBuilder)->where('activity_id', $a['id'])->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
-            $aExp = (float) (clone $tBuilder)->where('activity_id', $a['id'])->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
-            if ($aInc == 0 && $aExp == 0) continue;
-            
-            $a['income'] = $aInc;
-            $a['expense'] = $aExp;
-            $a['surplus'] = $aInc - $aExp;
-            $a['detail_url'] = route_query('kegiatan/act-' . $a['id']);
-            $rekapActivities[] = $a;
-        }
-
-        $data = [
-            'pageTitle' => 'Rekap',
-            'activeNav' => 'rekap',
-            'periods' => $periods,
-            'selectedPeriodSlug' => $selectedPeriodSlug,
-            'units' => array_map(function($u) { $u['slug'] = 'unit-'.$u['id']; return $u; }, $units),
-            'selectedUnitSlug' => $selectedUnitSlug,
-            'filterActivities' => $filterActivities,
-            'selectedActivitySlug' => $selectedActivitySlug,
-            'rekapSummary' => $rekapSummary,
-            'rekapTransactions' => $rekapTransactions,
-            'rekapTransferItems' => $rekapTransferItems,
-            'rekapAccounts' => $rekapAccounts,
-            'rekapUnits' => $rekapUnits,
-            'rekapActivities' => $rekapActivities,
-            'rekapReceivers' => [],
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Kategori Transaksi',
+                'description' => 'Satu master kategori untuk uang masuk dan uang keluar, langsung terhubung ke pos laporan.',
+                'meta' => count($data['transactionCategories']) . ' kategori',
+                'href' => site_url('pengaturan/kategori-biaya'),
+                'icon' => 'inventory_2',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Penerima / Kontak',
+                'description' => 'Master data kontak, tim, vendor, atau klien pihak yang bertransaksi.',
+                'meta' => count($data['receivers']) . ' penerima',
+                'href' => site_url('pengaturan/penerima'),
+                'icon' => 'person',
+            ],
+            [
+                'group' => 'Fondasi Laporan Tahunan',
+                'title' => 'Pos Laporan',
+                'description' => 'Struktur pendapatan, beban, aset, hutang, dan modal untuk laporan tahunan.',
+                'meta' => count($data['reportPositions']) . ' pos',
+                'href' => site_url('pengaturan/pos-laporan'),
+                'icon' => 'account_tree',
+            ],
+            [
+                'group' => 'Fondasi Laporan Tahunan',
+                'title' => 'Tahun Buku',
+                'description' => 'Periode resmi yang nanti dipakai untuk saldo awal dan laporan tahunan.',
+                'meta' => count($data['bookPeriods']) . ' periode',
+                'href' => site_url('pengaturan/tahun-buku'),
+                'icon' => 'calendar_month',
+            ],
+            [
+                'group' => 'Fondasi Laporan Tahunan',
+                'title' => 'Saldo Awal',
+                'description' => 'Titik awal neraca agar laporan tahunan bisa dieksekusi tanpa bongkar data ulang.',
+                'meta' => count($data['openingBalances']) . ' saldo',
+                'href' => site_url('pengaturan/saldo-awal'),
+                'icon' => 'stacked_line_chart',
+            ],
         ];
-
-        return view('pages/rekap', $data);
     }
 
     public function pengaturan(): string
@@ -1297,297 +1205,7 @@ class Arus extends BaseController
         return view('pages/transaction_detail', $data);
     }
 
-    public function rekening(string $slug): string
-    {
-        $institutionId = $this->currentInstitutionId();
-        $institution = $this->currentInstitution();
-        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
-        $db = \Config\Database::connect();
-        $request = service('request');
-
-        $accountId = (int) str_replace('acc-', '', $slug);
-        $acc = $db->table('accounts')->where('id', $accountId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
-        
-        if (! $acc) {
-            throw PageNotFoundException::forPageNotFound();
-        }
-
-        // Apply same filters as rekap to account details
-        $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
-        $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
-        $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
-
-        $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
-        $filterUnitId = $selectedUnitSlug !== 'semua' ? (int) str_replace('unit-', '', $selectedUnitSlug) : null;
-        $filterActivityId = $selectedActivitySlug !== 'semua' ? (int) str_replace('act-', '', $selectedActivitySlug) : null;
-
-        $tBuilder = $db->table('transactions')
-            ->where('institution_id', $institutionId)
-            ->where('deleted_at', null)
-            ->groupStart()
-                ->where('to_account_id', $accountId)
-                ->orWhere('from_account_id', $accountId)
-            ->groupEnd();
-            
-        if ($filterPeriodId) $tBuilder->where('book_period_id', $filterPeriodId);
-        if ($filterUnitId) $tBuilder->where('unit_id', $filterUnitId);
-        if ($filterActivityId) $tBuilder->where('activity_id', $filterActivityId);
-
-        // Account balances
-        $accOb = (float) ($db->table('opening_balances')->where('account_id', $accountId)->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
-        $accInc = (float) (clone $tBuilder)->where('type', 'masuk')->where('to_account_id', $accountId)->selectSum('amount')->get()->getRow()->amount ?? 0;
-        $accExp = (float) (clone $tBuilder)->where('type', 'keluar')->where('from_account_id', $accountId)->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
-
-        $account = [
-            'name' => $acc['name'],
-            'balance' => $accOb + $accInc - $accExp,
-            'income' => $accInc,
-            'expense' => $accExp,
-            'transfer_in' => 0,
-            'transfer_out' => 0,
-            'icon' => 'account_balance_wallet',
-            'color' => 'emerald',
-            'surplus' => $accInc - $accExp,
-            'slug' => 'acc-' . $accountId,
-            'kind' => 'Rekening / Dompet',
-            'mark' => 'IDR',
-            'note' => 'Rekening aktif',
-            'movement_count' => count($recentRows),
-        ];
-
-        $accountTransactions = [];
-        $accountActivities = []; // Track amount per activity
-        
-        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
-        
-        foreach ($recentRows as $row) {
-            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
-            $isIncome = ($row['to_account_id'] == $accountId);
-            $amount = $row['amount'] + ($isIncome ? 0 : $row['admin_fee']);
-            
-            $accountTransactions[] = [
-                'id' => $row['id'],
-                'headline' => $cat['name'] ?? 'Transaksi',
-                'subline' => $row['notes'],
-                'meta' => date('d M Y', strtotime($row['transaction_date'])),
-                'badge_class' => $isIncome ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
-                'badge_label' => $isIncome ? 'Masuk' : 'Keluar',
-                'icon' => $isIncome ? 'south_west' : 'north_east',
-                'amount_class' => $isIncome ? 'text-emerald-600' : 'text-rose-600',
-                'amount_prefix' => $isIncome ? '+' : '-',
-                'amount' => $amount,
-            ];
-
-            $actId = $row['activity_id'];
-            if ($actId) {
-                if (!isset($accountActivities[$actId])) {
-                    $a = $db->table('activities')->where('id', $actId)->get()->getRowArray();
-                    $u = $db->table('units')->where('id', $a['unit_id'])->get()->getRowArray();
-                    $accountActivities[$actId] = [
-                        'name' => $a['name'],
-                        'unit_name' => $u['name'],
-                        'amount' => 0,
-                        'income' => 0,
-                        'expense' => 0,
-                        'transfer_in' => 0,
-                        'transfer_out' => 0,
-                        'detail_url' => route_query('kegiatan/act-' . $actId),
-                    ];
-                }
-                $accountActivities[$actId]['amount'] += ($isIncome ? $amount : -$amount);
-                if ($isIncome) {
-                    $accountActivities[$actId]['income'] += $amount;
-                } else {
-                    $accountActivities[$actId]['expense'] += $amount;
-                }
-            }
-        }
-
-        // Sort activities by absolute amount desc
-        usort($accountActivities, fn($a, $b) => abs($b['amount']) <=> abs($a['amount']));
-
-        $rekapQuery = [
-            'periode'  => $selectedPeriodSlug,
-            'unit'     => $selectedUnitSlug,
-            'kegiatan' => $selectedActivitySlug,
-        ];
-
-        $rekapFilterSummary = [
-            'period_label' => $selectedPeriodSlug === 'semua' ? 'Semua Periode' : 'Periode Terpilih',
-            'unit_label' => $selectedUnitSlug === 'semua' ? 'Semua Unit' : 'Unit Terpilih',
-            'activity_label' => $selectedActivitySlug === 'semua' ? 'Semua Kegiatan' : 'Kegiatan Terpilih',
-        ];
-
-        $data = [
-            'pageTitle'           => $account['name'],
-            'activeNav'           => 'rekap',
-            'backUrl'             => route_query('rekap', $rekapQuery),
-            'account'             => $account,
-            'accountTransactions' => $accountTransactions,
-            'involvedReceivers'   => [],
-            'accountActivities'   => $accountActivities,
-            'rekapFilterSummary'  => $rekapFilterSummary,
-        ];
-
-        return view('pages/account_detail', $data);
-    }
-
-    public function unit(string $slug): string
-    {
-        $institutionId = $this->currentInstitutionId();
-        $institution = $this->currentInstitution();
-        $db = \Config\Database::connect();
-
-        $unitId = (int) str_replace('unit-', '', $slug);
-        $u = $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
-        
-        if (! $u) {
-            throw PageNotFoundException::forPageNotFound();
-        }
-
-        $tBuilder = $db->table('transactions')
-            ->where('institution_id', $institutionId)
-            ->where('unit_id', $unitId)
-            ->where('deleted_at', null);
-
-        $uInc = (float) (clone $tBuilder)->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
-        $uExp = (float) (clone $tBuilder)->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
-        $uActCount = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->countAllResults();
-        $uFirstAct = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getRowArray();
-
-        $unit = [
-            'slug' => 'unit-' . $u['id'],
-            'name' => $u['name'],
-            'short_name' => substr($u['name'], 0, 4),
-            'income' => $uInc,
-            'expense' => $uExp,
-            'surplus' => $uInc - $uExp,
-            'activities' => array_fill(0, $uActCount, 1),
-            'quick_activity_name' => $uFirstAct['name'] ?? '-',
-            'detail_url' => '#',
-            'masuk_url' => route_query('catat/masuk', ['unit' => 'unit-' . $u['id']]),
-            'keluar_url' => route_query('catat/keluar', ['unit' => 'unit-' . $u['id']]),
-        ];
-
-        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
-        $unitTransactions = [];
-        
-        foreach ($recentRows as $row) {
-            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
-            $unitTransactions[] = [
-                'id' => $row['id'],
-                'headline' => $cat['name'] ?? 'Transaksi',
-                'subline' => $row['notes'],
-                'meta' => date('d M Y', strtotime($row['transaction_date'])),
-                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
-                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
-                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
-                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
-                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
-                'amount' => $row['amount'] + $row['admin_fee'],
-            ];
-        }
-
-        $data['pageTitle']        = $unit['name'];
-        $data['activeNav']        = 'beranda';
-        $data['unit']             = $unit;
-        $data['unitTransactions'] = $unitTransactions;
-        $data['involvedReceivers'] = [];
-
-        return view('pages/unit_detail', $data);
-    }
-
-    public function kegiatan(string $slug): string
-    {
-        $institutionId = $this->currentInstitutionId();
-        $institution = $this->currentInstitution();
-        $db = \Config\Database::connect();
-        
-        $activityId = (int) str_replace('act-', '', $slug);
-        $act = $db->table('activities')->where('id', $activityId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
-        
-        if (! $act) {
-            throw PageNotFoundException::forPageNotFound();
-        }
-
-        $unit = $db->table('units')->where('id', $act['unit_id'])->get()->getRowArray();
-
-        $tBuilder = $db->table('transactions')
-            ->where('institution_id', $institutionId)
-            ->where('activity_id', $activityId)
-            ->where('deleted_at', null);
-
-        $actInc = (float) (clone $tBuilder)->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
-        $actExp = (float) (clone $tBuilder)->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
-
-        $activity = [
-            'name' => $act['name'],
-            'unit_name' => $unit['name'] ?? '',
-            'income' => $actInc,
-            'expense' => $actExp,
-            'surplus' => $actInc - $actExp,
-        ];
-
-        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
-        
-        $activityTransactions = [];
-        $transferItems = [];
-        $categoryBreakdownMap = [];
-        
-        foreach ($recentRows as $row) {
-            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
-            $item = [
-                'id' => $row['id'],
-                'headline' => $cat['name'] ?? 'Transaksi',
-                'subline' => $row['notes'],
-                'meta' => date('d M Y', strtotime($row['transaction_date'])),
-                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
-                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
-                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
-                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
-                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
-                'amount' => $row['amount'] + $row['admin_fee'],
-            ];
-
-            if ($row['type'] === 'pindah') {
-                $transferItems[] = $item;
-            } else {
-                $activityTransactions[] = $item;
-            }
-
-            if ($row['type'] === 'keluar') {
-                $catName = $cat['name'] ?? 'Lainnya';
-                if (!isset($categoryBreakdownMap[$catName])) {
-                    $categoryBreakdownMap[$catName] = 0;
-                }
-                $categoryBreakdownMap[$catName] += ($row['amount'] + $row['admin_fee']);
-            }
-        }
-
-        $categoryBreakdown = [];
-        foreach ($categoryBreakdownMap as $name => $amount) {
-            $categoryBreakdown[] = [
-                'category_name' => $name,
-                'total_amount' => $amount,
-                'percentage' => $actExp > 0 ? ($amount / $actExp) * 100 : 0,
-            ];
-        }
-        usort($categoryBreakdown, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
-
-        $data = [
-            'pageTitle'            => $activity['name'],
-            'activeNav'            => 'beranda',
-            'activity'             => $activity,
-            'activityTransactions' => $activityTransactions,
-            'involvedReceivers'    => [],
-            'categoryBreakdown'    => $categoryBreakdown,
-            'transferItems'        => $transferItems,
-        ];
-
-        return view('pages/activity_detail', $data);
-    }
-
-    private function prototypeData(array $options = []): array
+private function prototypeData(array $options = []): array
     {
         return [];
     }

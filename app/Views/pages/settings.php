@@ -13,6 +13,7 @@
         'subtitle' => 'Master Data Arus',
         'backUrl' => $backUrl,
         'showSettingsButton' => false,
+        'showLogoutButton' => true,
     ]) ?>
 
     <section class="rounded-3xl border border-zinc-950 bg-white p-5">

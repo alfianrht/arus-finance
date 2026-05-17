@@ -6,14 +6,16 @@
     <?= view('partials/top_nav_back', [
         'title' => $unit['name'],
         'subtitle' => 'Unit / Program',
-        'backUrl' => route_query('beranda', $activeContext['query']),
+        'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
+    <?php if (isset($activeContext)): ?>
     <section class="rounded-2xl bg-lime-50 p-4">
         <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks cepat untuk pencatatan</p>
         <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc($activeContext['display']) ?></p>
         <p class="mt-1 text-sm text-zinc-600">Tombol aksi di halaman ini akan langsung memakai kegiatan tersebut.</p>
     </section>
+    <?php endif; ?>
 
     <section class="relative overflow-hidden rounded-3xl bg-lime-400 p-5 text-zinc-950 shadow-sm">
         <div class="absolute inset-0 bg-white/10" aria-hidden="true"></div>
@@ -28,7 +30,9 @@
         <div class="relative mt-6">
             <p class="text-xs font-medium uppercase tracking-wide text-zinc-900/60">Laba Sementara</p>
             <p class="mt-2 text-4xl font-black tracking-tight text-zinc-950"><?= esc(rupiah($unit['surplus'])) ?></p>
-            <p class="mt-3 text-sm text-zinc-900/75">Kegiatan utama: <?= esc($activeContext['activity_name']) ?></p>
+            <?php if (isset($activeContext)): ?>
+                <p class="mt-3 text-sm text-zinc-900/75">Kegiatan utama: <?= esc($activeContext['activity_name']) ?></p>
+            <?php endif; ?>
         </div>
 
         <p class="pointer-events-none absolute -bottom-3 left-4 text-7xl font-black uppercase tracking-tight text-white/30" aria-hidden="true"><?= esc($surfaceText) ?></p>
@@ -48,6 +52,7 @@
             </div>
         </div>
 
+        <?php if (isset($activeContext)): ?>
         <div class="relative mt-4 flex items-center justify-between gap-3">
             <p class="text-sm font-semibold tracking-wide text-zinc-950">•••• <?= esc(surface_tail($unit['slug'])) ?></p>
             <span class="inline-flex items-center gap-1 rounded-full bg-zinc-950 px-3 py-2 text-xs font-semibold text-white">
@@ -66,6 +71,7 @@
                 <span>Uang Keluar</span>
             </a>
         </div>
+        <?php endif; ?>
     </section>
 
     <section class="space-y-3">

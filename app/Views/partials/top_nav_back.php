@@ -4,6 +4,7 @@ $subtitle = $subtitle ?? '';
 $backUrl = $backUrl ?? '#';
 $showBackButton = $showBackButton ?? true;
 $showSettingsButton = $showSettingsButton ?? true;
+$showLogoutButton = $showLogoutButton ?? false;
 ?>
 <header class="flex items-start justify-between gap-4 h-16">
     <div class="flex min-w-0 items-center gap-3">
@@ -28,6 +29,12 @@ $showSettingsButton = $showSettingsButton ?? true;
         <?php if ($showSettingsButton): ?>
             <a href="<?= site_url('pengaturan') ?>" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm" aria-label="Buka pengaturan">
                 <span class="material-symbols-rounded text-base" style="font-size: 1.2rem;" aria-hidden="true">settings</span>
+            </a>
+        <?php endif; ?>
+        <?php if ($showLogoutButton): ?>
+            <a href="<?= site_url('auth/logout') ?>" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-rose-600 shadow-sm hover:bg-rose-50" aria-label="Keluar">
+                <span class="material-symbols-rounded text-base" style="font-size: 1.2rem;" aria-hidden="true">logout</span>
+                <span class="text-sm font-medium">Keluar</span>
             </a>
         <?php endif; ?>
     </div>

@@ -33,7 +33,15 @@
 
         <div class="rounded-3xl bg-zinc-50 p-5 text-center">
             <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Nominal</p>
-            <input type="text" name="amount" value="<?= esc($transactionForm['nominal_value']) ?>" <?= $isEditMode ? '' : 'readonly' ?> class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
+            <input type="text" inputmode="numeric" name="amount" value="<?= esc($transactionForm['nominal_value']) ?>" <?= $isEditMode ? '' : 'readonly' ?> class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
+            
+            <?php if (in_array($transaction['type_key'], ['keluar', 'honor', 'pindah'], true)): ?>
+                <div class="mt-6 flex items-center justify-center gap-2 w-full overflow-hidden">
+                    <p class="shrink-0 text-sm font-medium text-zinc-700">Biaya Admin:</p>
+                    <input type="text" inputmode="numeric" name="<?= $transaction['type_key'] === 'pindah' || $transaction['type_key'] === 'honor' ? 'admin_fee_manual' : 'admin_fee_custom' ?>" value="<?= esc($transactionForm['admin_fee_value']) ?>" <?= $isEditMode ? '' : 'readonly' ?> class="h-10 w-28 shrink-0 rounded-xl border border-zinc-200 bg-white px-3 text-center text-sm font-medium text-zinc-950 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400">
+                    <input type="hidden" name="<?= $transaction['type_key'] === 'pindah' || $transaction['type_key'] === 'honor' ? 'admin_fee' : 'admin_fee_preset' ?>" value="manual">
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="space-y-2">
@@ -126,13 +134,7 @@
             </div>
         <?php endif; ?>
 
-        <?php if ($isEditMode && in_array($transaction['type_key'], ['keluar', 'honor', 'pindah'], true)): ?>
-            <div class="rounded-3xl bg-zinc-50 p-5 text-center">
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Biaya Admin</p>
-                <input type="text" name="<?= $transaction['type_key'] === 'pindah' || $transaction['type_key'] === 'honor' ? 'admin_fee_manual' : 'admin_fee_custom' ?>" value="<?= esc($transactionForm['admin_fee_value']) ?>" class="mt-3 w-full border-0 bg-transparent text-center text-2xl font-semibold tracking-tight text-zinc-950 outline-none">
-                <input type="hidden" name="<?= $transaction['type_key'] === 'pindah' || $transaction['type_key'] === 'honor' ? 'admin_fee' : 'admin_fee_preset' ?>" value="manual">
-            </div>
-        <?php endif; ?>
+
 
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Tanggal</label>

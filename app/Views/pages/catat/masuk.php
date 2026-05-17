@@ -50,7 +50,7 @@
 
         <div class="rounded-3xl bg-zinc-50 p-5 text-center">
             <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Nominal</p>
-            <input type="text" name="amount" value="<?= esc(old('amount', '')) ?>" placeholder="Rp 0" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
+            <input type="text" inputmode="numeric" name="amount" value="<?= esc(old('amount', '')) ?>" placeholder="Rp 0" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
         </div>
 
         <div class="space-y-2">

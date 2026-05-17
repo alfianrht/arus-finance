@@ -34,10 +34,26 @@ class TransactionController extends BaseController
             'units' => $units,
             'activeContext' => $activeContext,
             'quickCategories' => $this->buildQuickCategories($activeContext),
-            'recentTransactions' => $this->loadRecentTransactions($activeContext['unit_id'], $activeContext['activity_id']),
+            'recentTransactions' => $this->transactionService->loadRecentTransactions(
+                $this->currentInstitutionId(),
+                0, // No unit filter for global history
+                0, // No activity filter for global history
+                10, // Show 10 items
+                $this->activeBookPeriodId()
+            ),
         ];
 
         return view('pages/catat/index', $data);
+    }
+
+    public function hapus(int $id): RedirectResponse
+    {
+        try {
+            $this->transactionService->delete($id, $this->currentInstitutionId());
+            return redirect()->back()->with('success', 'Transaksi berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     public function masuk(): string
@@ -93,7 +109,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Uang masuk berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Uang masuk berhasil dicatat.');
+        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Uang masuk berhasil dicatat.');
     }
 
     public function keluar(): string
@@ -160,7 +176,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Biaya berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat/keluar', $this->contextQueryFromPost()))->with('success', 'Biaya berhasil dicatat.');
+        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Biaya berhasil dicatat.');
     }
 
     public function honor(): string
@@ -218,7 +234,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Honor & gaji berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat/keluar', $this->contextQueryFromPost()))->with('success', 'Honor & gaji berhasil dicatat.');
+        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Honor & gaji berhasil dicatat.');
     }
 
     public function pindahDana(): string
@@ -275,7 +291,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Pindah dana berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat/keluar', $this->contextQueryFromPost()))->with('success', 'Pindah dana berhasil dicatat.');
+        return redirect()->to(route_query('beranda', $this->contextQueryFromPost()))->with('success', 'Pindah dana berhasil dicatat.');
     }
 
     public function detail(string $id): string
@@ -364,7 +380,7 @@ class TransactionController extends BaseController
 
         (new TransactionModel())->update((int) $existing['id'], $payload);
 
-        return redirect()->to(site_url('transaksi/' . $existing['id']) . '?from=' . rawurlencode($this->resolveBackUrl(site_url('catat'))))
+        return redirect()->to($this->resolveBackUrl(site_url('beranda')))
             ->with('success', 'Transaksi berhasil diperbarui.');
     }
 
@@ -520,102 +536,6 @@ class TransactionController extends BaseController
         );
     }
 
-    private function loadRecentTransactions(int $unitId = 0, int $activityId = 0, int $limit = 4): array
-    {
-        $builder = (new TransactionModel())
-            ->where('institution_id', $this->currentInstitutionId())
-            ->where('deleted_at', null)
-            ->orderBy('transaction_date', 'DESC')
-            ->orderBy('transaction_time', 'DESC')
-            ->orderBy('id', 'DESC');
-
-        if ($unitId > 0) {
-            $builder->where('unit_id', $unitId);
-        }
-        if ($activityId > 0) {
-            $builder->where('activity_id', $activityId);
-        }
-
-        return $this->formatTransactions($builder->findAll($limit));
-    }
-
-    private function formatTransactions(array $rows): array
-    {
-        if ($rows === []) {
-            return [];
-        }
-
-        $units = $this->indexById((new UnitModel())->findAll());
-        $activities = $this->indexById((new ActivityModel())->findAll());
-        $categories = $this->indexById((new TransactionCategoryModel())->findAll());
-        $accounts = $this->indexById((new AccountModel())->findAll());
-        $receivers = $this->indexById((new ReceiverModel())->findAll());
-
-        $items = [];
-        foreach ($rows as $row) {
-            $type = (string) $row['type'];
-            $unit = $units[(int) $row['unit_id']] ?? null;
-            $activity = $activities[(int) $row['activity_id']] ?? null;
-            $category = $categories[(int) ($row['category_id'] ?? 0)] ?? null;
-            $fromAccount = $accounts[(int) ($row['from_account_id'] ?? 0)] ?? null;
-            $toAccount = $accounts[(int) ($row['to_account_id'] ?? 0)] ?? null;
-            $receiver = $receivers[(int) ($row['receiver_id'] ?? 0)] ?? null;
-
-            $badge = match ($type) {
-                'masuk' => ['label' => 'Masuk', 'class' => 'bg-emerald-50 text-emerald-700', 'icon' => 'south'],
-                'pindah' => ['label' => 'Pindah Dana', 'class' => 'bg-sky-50 text-sky-700', 'icon' => 'sync_alt'],
-                'honor' => ['label' => 'Honor', 'class' => 'bg-orange-50 text-orange-700', 'icon' => 'payments'],
-                default => ['label' => 'Biaya', 'class' => 'bg-rose-50 text-rose-600', 'icon' => 'north_east'],
-            };
-
-            $headline = match ($type) {
-                'masuk' => ($category['name'] ?? 'Uang Masuk') . ' ke ' . ($toAccount['name'] ?? '-'),
-                'pindah' => ($fromAccount['name'] ?? '-') . ' ke ' . ($toAccount['name'] ?? '-'),
-                'honor' => 'Honor untuk ' . ($receiver['name'] ?? 'Penerima'),
-                default => ($category['name'] ?? 'Biaya') . ' dari ' . ($fromAccount['name'] ?? '-'),
-            };
-
-            $subline = ($unit['name'] ?? 'Tanpa Unit') . ' / ' . ($activity['name'] ?? 'Tanpa Kegiatan');
-            $metaParts = [date('d M Y', strtotime((string) $row['transaction_date']))];
-            if (! empty($row['notes'])) {
-                $metaParts[] = $row['notes'];
-            }
-
-            $items[] = [
-                'id' => (string) $row['id'],
-                'type' => $type,
-                'type_key' => $type,
-                'badge_label' => $badge['label'],
-                'badge_class' => $badge['class'],
-                'icon' => $badge['icon'],
-                'headline' => $headline,
-                'subline' => $subline,
-                'meta' => implode(' · ', array_filter($metaParts)),
-                'amount' => (float) $row['amount'],
-                'amount_prefix' => in_array($type, ['keluar', 'honor'], true) ? '-' : '+',
-                'amount_class' => in_array($type, ['keluar', 'honor'], true) ? 'text-rose-600' : 'text-emerald-600',
-                'unit_id' => (int) ($unit['id'] ?? 0),
-                'unit_name' => $unit['name'] ?? '',
-                'activity_id' => (int) ($activity['id'] ?? 0),
-                'activity_name' => $activity['name'] ?? '',
-                'category_id' => (int) ($category['id'] ?? 0),
-                'category' => $category['name'] ?? '',
-                'from_account_id' => (int) ($fromAccount['id'] ?? 0),
-                'from_account' => $fromAccount['name'] ?? '',
-                'to_account_id' => (int) ($toAccount['id'] ?? 0),
-                'to_account' => $toAccount['name'] ?? '',
-                'receiver_id' => (int) ($receiver['id'] ?? 0),
-                'receiver_name' => $receiver['name'] ?? '',
-                'transaction_date' => (string) $row['transaction_date'],
-                'transaction_time' => (string) ($row['transaction_time'] ?? ''),
-                'notes' => (string) ($row['notes'] ?? ''),
-                'admin_fee' => (float) ($row['admin_fee'] ?? 0),
-                'proof_image' => $row['proof_image'] ?? null,
-            ];
-        }
-
-        return $items;
-    }
 
     private function findTransactionOrFail(int $id): array
     {
@@ -629,7 +549,7 @@ class TransactionController extends BaseController
             throw PageNotFoundException::forPageNotFound();
         }
 
-        return $this->formatTransactions([$row])[0];
+        return $this->transactionService->formatTransactions([$row])[0];
     }
 
     private function buildTransactionForm(array $transaction, bool $preferOld = false): array

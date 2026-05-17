@@ -6,7 +6,7 @@
     <?= view('partials/top_nav_back', [
         'title' => $activity['name'],
         'subtitle' => $activity['unit_name'],
-        'backUrl' => route_query('unit/' . $activity['unit_slug'], ['kegiatan' => $activity['slug']]),
+        'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
     <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
@@ -22,8 +22,12 @@
 
         <div class="relative mt-6">
             <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Saldo Terkait</p>
-            <p class="mt-2 text-4xl font-black tracking-tight text-white"><?= esc(rupiah($activity['related_balance'])) ?></p>
+            <p class="mt-2 text-4xl font-black tracking-tight text-white"><?= esc(rupiah($activity['related_balance'] ?? 0)) ?></p>
+            <?php if (!empty($activity['related_accounts'])): ?>
             <p class="mt-3 text-sm text-zinc-300"><?= esc(implode(', ', $activity['related_accounts'])) ?></p>
+            <?php else: ?>
+            <p class="mt-3 text-sm text-zinc-400">Semua Rekening</p>
+            <?php endif; ?>
         </div>
 
         <p class="pointer-events-none absolute -bottom-3 left-4 text-7xl font-black uppercase tracking-tight text-white/10" aria-hidden="true"><?= esc($surfaceText) ?></p>
@@ -47,8 +51,9 @@
             </div>
         </div>
 
+        <?php if (isset($activeContext)): ?>
         <div class="relative mt-4 flex items-center justify-between gap-3">
-            <p class="text-sm font-semibold tracking-wide text-zinc-300">•••• <?= esc(surface_tail($activity['slug'])) ?></p>
+            <p class="text-sm font-semibold tracking-wide text-zinc-300">•••• <?= esc(surface_tail($activity['slug'] ?? $activity['name'])) ?></p>
             <span class="inline-flex items-center gap-1 rounded-full bg-lime-400 px-3 py-2 text-xs font-semibold text-zinc-950">
                 <span class="material-symbols-rounded text-sm" aria-hidden="true">radio_button_checked</span>
                 <span>Konteks Aktif</span>
@@ -65,6 +70,7 @@
                 <span>Uang Keluar</span>
             </a>
         </div>
+        <?php endif; ?>
     </section>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
@@ -75,13 +81,13 @@
         <div class="mt-3 space-y-3">
             <?php $hasCategoryCost = false; ?>
             <?php foreach ($categoryBreakdown as $item): ?>
-                <?php if ($item['amount'] <= 0) {
+                <?php if ($item['total_amount'] <= 0) {
                     continue;
                 } ?>
                 <?php $hasCategoryCost = true; ?>
                 <div class="flex items-center justify-between rounded-2xl bg-zinc-50 px-4 py-3">
-                    <span class="text-sm font-medium text-zinc-800"><?= esc($item['name']) ?></span>
-                    <span class="text-sm font-semibold text-zinc-950"><?= esc(rupiah($item['amount'])) ?></span>
+                    <span class="text-sm font-medium text-zinc-800"><?= esc($item['category_name']) ?></span>
+                    <span class="text-sm font-semibold text-zinc-950"><?= esc(rupiah($item['total_amount'])) ?></span>
                 </div>
             <?php endforeach; ?>
             <?php if (! $hasCategoryCost): ?>
