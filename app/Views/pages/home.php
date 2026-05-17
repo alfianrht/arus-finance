@@ -15,7 +15,7 @@
                 </a>
             </div>
         </div>
-        <div>
+        <div class="px-2">
             <p class="text-sm text-zinc-500">Selamat Datang,</p>
             <p class="text-xl font-semibold tracking-tight text-zinc-950"><?= esc($institutionName) ?></p>
         </div>
@@ -56,6 +56,18 @@
         </a>
     </div>
 
+    <section class="space-y-3">
+        <div class="flex items-center justify-between">
+            <h2 class="text-base font-semibold text-zinc-950">Unit / Program</h2>
+            <p class="text-xs text-zinc-500">Ringkasan bulan ini</p>
+        </div>
+        <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+            <?php foreach ($units as $unit): ?>
+                <?= view('partials/unit_card', ['unit' => $unit]) ?>
+            <?php endforeach; ?>
+        </div>
+    </section>
+
     <section class="rounded-3xl border border-zinc-950 bg-white p-4">
         <div class="flex items-start justify-between gap-3">
             <div>
@@ -68,24 +80,12 @@
             </a>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
-            <?php foreach (array_slice($settingsShortcuts, 0, 3) as $shortcut): ?>
+            <?php foreach (array_slice($settingsShortcuts, 0, 6) as $shortcut): ?>
                 <a href="<?= esc($shortcut['href']) ?>" class="rounded-2xl bg-zinc-50 p-3">
                     <span class="material-symbols-rounded text-base text-zinc-500" aria-hidden="true"><?= esc($shortcut['icon']) ?></span>
                     <p class="mt-3 text-sm font-semibold text-zinc-950"><?= esc($shortcut['title']) ?></p>
                     <p class="mt-1 text-xs text-zinc-500"><?= esc($shortcut['meta']) ?></p>
                 </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-
-    <section class="space-y-3">
-        <div class="flex items-center justify-between">
-            <h2 class="text-base font-semibold text-zinc-950">Unit / Program</h2>
-            <p class="text-xs text-zinc-500">Ringkasan bulan ini</p>
-        </div>
-        <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
-            <?php foreach ($units as $unit): ?>
-                <?= view('partials/unit_card', ['unit' => $unit]) ?>
             <?php endforeach; ?>
         </div>
     </section>

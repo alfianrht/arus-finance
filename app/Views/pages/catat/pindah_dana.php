@@ -13,18 +13,17 @@
         <p class="mt-1 text-sm text-sky-800">Gunakan layar ini untuk perpindahan BRI PT, BCA PT, Dana Operasional Cago, atau Kas Tunai.</p>
     </section>
 
-    <?= view('partials/capture_assist', [
-        'captureKey' => 'pindah_dana',
-        'title' => 'Tangkap bukti mutasi antar rekening dulu',
-        'description' => 'Nanti AI akan membaca bukti mutasi lalu membantu mengisi nominal, rekening asal, rekening tujuan, tanggal, dan keterangan.',
-        'previewTitle' => 'Belum ada bukti mutasi dipilih',
-        'previewDescription' => 'Cocok untuk screenshot mutasi mobile banking, bukti transfer internal, atau nota perpindahan dana.',
-        'autoFields' => ['Nominal', 'Dari Rekening', 'Ke Rekening', 'Tanggal', 'Keterangan'],
-        'noteLabel' => 'Cepat di HP',
-    ]) ?>
-
-    <form method="post" action="<?= site_url('catat/keluar/pindah-dana') ?>" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
+    <form method="post" action="<?= site_url('catat/keluar/pindah-dana') ?>" enctype="multipart/form-data" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
         <?= csrf_field() ?>
+        <?= view('partials/capture_assist', [
+            'captureKey' => 'pindah_dana',
+            'title' => 'Tangkap bukti mutasi antar rekening dulu',
+            'description' => 'Nanti AI akan membaca bukti mutasi lalu membantu mengisi nominal, rekening asal, rekening tujuan, tanggal, dan keterangan.',
+            'previewTitle' => 'Belum ada bukti mutasi dipilih',
+            'previewDescription' => 'Cocok untuk screenshot mutasi mobile banking, bukti transfer internal, atau nota perpindahan dana.',
+            'autoFields' => ['Nominal', 'Dari Rekening', 'Ke Rekening', 'Tanggal', 'Keterangan'],
+            'noteLabel' => 'Cepat di HP',
+        ]) ?>
 
         <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
             <div>
@@ -103,11 +102,6 @@
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Keterangan</label>
             <textarea name="notes" rows="3" class="w-full rounded-2xl border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400" required><?= esc(old('notes', '')) ?></textarea>
-        </div>
-
-        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
-            <p class="text-sm font-semibold text-zinc-950">Status bukti</p>
-            <p class="mt-1 text-sm text-zinc-500">Belum ada bukti mutasi yang dibaca. Perpindahan dana tetap tidak akan dihitung sebagai biaya walau diisi dari AI.</p>
         </div>
 
         <div class="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">

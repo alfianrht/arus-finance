@@ -10,6 +10,7 @@ use App\Models\TransactionCategoryModel;
 use App\Models\TransactionModel;
 use App\Models\UnitModel;
 use App\Models\UserModel;
+use App\Services\FileUploadService;
 use App\Services\TransactionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -17,30 +18,48 @@ use CodeIgniter\HTTP\RedirectResponse;
 class TransactionController extends BaseController
 {
     private TransactionService $transactionService;
+    private FileUploadService $fileUploadService;
 
     public function __construct()
     {
         $this->transactionService = new TransactionService();
+        $this->fileUploadService = new FileUploadService();
     }
 
     public function index(): string
     {
         $units = $this->loadUnitsWithActivities();
         $activeContext = $this->buildActiveContext($units);
+        $selectedFilter = strtolower(trim((string) ($this->request->getGet('jenis') ?? 'semua')));
+        $selectedFilter = in_array($selectedFilter, ['semua', 'masuk', 'keluar', 'honor', 'pindah'], true)
+            ? $selectedFilter
+            : 'semua';
+        $page = max(1, (int) ($this->request->getGet('page') ?? 1));
+        $history = $this->transactionService->loadTransactionHistoryPage(
+            $this->currentInstitutionId(),
+            0,
+            0,
+            $this->activeBookPeriodId(),
+            $selectedFilter,
+            $page,
+            10
+        );
 
         $data = [
             'pageTitle' => 'Catat',
             'activeNav' => 'catat',
             'units' => $units,
             'activeContext' => $activeContext,
-            'quickCategories' => $this->buildQuickCategories($activeContext),
-            'recentTransactions' => $this->transactionService->loadRecentTransactions(
-                $this->currentInstitutionId(),
-                0, // No unit filter for global history
-                0, // No activity filter for global history
-                10, // Show 10 items
-                $this->activeBookPeriodId()
-            ),
+            'transactionFilters' => [
+                ['key' => 'semua', 'label' => 'Semua'],
+                ['key' => 'masuk', 'label' => 'Masuk'],
+                ['key' => 'keluar', 'label' => 'Biaya'],
+                ['key' => 'honor', 'label' => 'Honor'],
+                ['key' => 'pindah', 'label' => 'Pindah Dana'],
+            ],
+            'selectedTransactionFilter' => $history['filter'],
+            'recentTransactions' => $history['items'],
+            'transactionPagination' => $history,
         ];
 
         return view('pages/catat/index', $data);
@@ -99,7 +118,7 @@ class TransactionController extends BaseController
             'transaction_date' => (string) $this->request->getPost('transaction_date'),
             'transaction_time' => date('H:i:s'),
             'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => null,
+            'proof_image' => $this->storeProofUpload('masuk'),
             'created_by' => $this->currentUserId(),
         ];
 
@@ -166,7 +185,7 @@ class TransactionController extends BaseController
             'transaction_date' => (string) $this->request->getPost('transaction_date'),
             'transaction_time' => date('H:i:s'),
             'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => null,
+            'proof_image' => $this->storeProofUpload('keluar'),
             'created_by' => $this->currentUserId(),
         ];
 
@@ -224,7 +243,7 @@ class TransactionController extends BaseController
             'transaction_date' => (string) $this->request->getPost('transaction_date'),
             'transaction_time' => date('H:i:s'),
             'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => null,
+            'proof_image' => $this->storeProofUpload('honor'),
             'created_by' => $this->currentUserId(),
         ];
 
@@ -281,7 +300,7 @@ class TransactionController extends BaseController
             'transaction_date' => (string) $this->request->getPost('transaction_date'),
             'transaction_time' => date('H:i:s'),
             'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => null,
+            'proof_image' => $this->storeProofUpload('pindah'),
             'created_by' => $this->currentUserId(),
         ];
 
@@ -356,6 +375,7 @@ class TransactionController extends BaseController
             'activity_id' => (int) $this->request->getPost('activity_id'),
             'transaction_date' => (string) $this->request->getPost('transaction_date'),
             'notes' => trim((string) $this->request->getPost('notes')),
+            'proof_image' => $this->storeProofUpload($type, (string) ($existing['proof_image'] ?? '')),
         ];
 
         if ($type === 'masuk') {
@@ -614,6 +634,37 @@ class TransactionController extends BaseController
     private function resolveAdminFee(string $preset, string $custom): float
     {
         return $preset === 'manual' ? $this->normalizeMoney($custom) : $this->normalizeMoney($preset);
+    }
+
+    private function storeProofUpload(string $type, string $existingPath = ''): ?string
+    {
+        $file = null;
+        foreach (['proof_camera', 'proof_upload', 'proof_file'] as $field) {
+            $candidate = $this->request->getFile($field);
+            if ($candidate !== null && $candidate->isValid() && ! $candidate->hasMoved()) {
+                $file = $candidate;
+                break;
+            }
+        }
+
+        if ($file === null) {
+            return $existingPath !== '' ? $existingPath : null;
+        }
+
+        $bucket = match ($type) {
+            'masuk' => 'pemasukan',
+            'pindah' => 'pindah-dana',
+            'honor' => 'honor-gaji',
+            default => 'biaya',
+        };
+
+        $storedPath = $this->fileUploadService->storeProof($file, $bucket, 'bukti');
+
+        if ($existingPath !== '' && $existingPath !== $storedPath) {
+            $this->fileUploadService->deleteProof($existingPath);
+        }
+
+        return $storedPath;
     }
 
     private function normalizeMoney(string $raw): float

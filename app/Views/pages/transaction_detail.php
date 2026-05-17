@@ -15,7 +15,7 @@
         </section>
     <?php endif; ?>
 
-    <form action="<?= esc($formAction) ?>" method="post" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
+    <form action="<?= esc($formAction) ?>" method="post" enctype="multipart/form-data" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
         <?= csrf_field() ?>
         <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
             <div>
@@ -148,29 +148,44 @@
 
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Bukti Transaksi</label>
-            <div class="rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
+            <div class="relative rounded-3xl border border-zinc-200 bg-zinc-50 p-4">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-sm font-semibold text-zinc-950">Preview Bukti</p>
-                        <p class="mt-1 text-xs text-zinc-500">Placeholder sementara untuk slip transfer, struk, invoice, atau screenshot mutasi.</p>
+                        <p class="mt-1 text-xs text-zinc-500">Slip transfer, struk, invoice, atau screenshot mutasi akan ditampilkan di sini.</p>
                     </div>
-                    <span class="rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700">Belum ada file</span>
+                    <span class="absolute right-2 top-2 rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700"><?= !empty($transaction['proof_image']) ? 'File tersedia' : 'Belum ada file' ?></span>
                 </div>
-
-                <div class="mt-4 flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white px-4 py-6 text-center">
-                    <div>
-                        <span class="material-symbols-rounded text-3xl text-zinc-400" aria-hidden="true">image</span>
-                        <p class="mt-3 text-sm font-medium text-zinc-700">Preview bukti transaksi akan tampil di sini</p>
-                        <p class="mt-1 text-xs text-zinc-500">Saat ini masih placeholder untuk validasi tampilan detail dan edit.</p>
+                <?php $proofPath = trim((string) ($transaction['proof_image'] ?? '')); ?>
+                <?php $proofUrl = $proofPath !== '' ? base_url($proofPath) : ''; ?>
+                <?php $proofExt = $proofPath !== '' ? strtolower((string) pathinfo($proofPath, PATHINFO_EXTENSION)) : ''; ?>
+                <?php $isImageProof = in_array($proofExt, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true); ?>
+                <?php if ($proofPath !== '' && $isImageProof): ?>
+                    <div class="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+                        <img src="<?= esc($proofUrl) ?>" alt="Bukti transaksi" class="h-64 w-full object-cover">
                     </div>
-                </div>
+                <?php elseif ($proofPath !== ''): ?>
+                    <div class="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-white px-4 py-6 text-center">
+                        <span class="material-symbols-rounded text-3xl text-zinc-400" aria-hidden="true">description</span>
+                        <p class="mt-3 text-sm font-medium text-zinc-700">File bukti tersimpan</p>
+                        <a href="<?= esc($proofUrl) ?>" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex h-10 items-center justify-center rounded-full border border-zinc-950 px-4 text-sm font-semibold text-zinc-950">Buka File</a>
+                    </div>
+                <?php else: ?>
+                    <div class="mt-4 flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white px-4 py-6 text-center">
+                        <div>
+                            <span class="material-symbols-rounded text-3xl text-zinc-400" aria-hidden="true">image</span>
+                            <p class="mt-3 text-sm font-medium text-zinc-700">Belum ada bukti transaksi</p>
+                            <p class="mt-1 text-xs text-zinc-500">Upload akan tersedia saat mode edit aktif.</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                 <?php if ($isEditMode): ?>
                     <div class="mt-4">
                         <label class="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-zinc-950 bg-white px-5 text-sm font-semibold text-zinc-950">
                             <span class="material-symbols-rounded text-base" aria-hidden="true">upload</span>
                             <span>Upload Bukti</span>
-                            <input type="file" class="hidden">
+                            <input type="file" name="proof_file" accept="image/*,.pdf" class="hidden">
                         </label>
                     </div>
                 <?php endif; ?>

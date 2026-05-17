@@ -2,19 +2,19 @@
 
 namespace App\Services;
 
-use CodeIgniter\Files\File;
+use CodeIgniter\HTTP\Files\UploadedFile;
 use RuntimeException;
 
 class FileUploadService
 {
-    public function proofDirectory(): string
+    public function proofDirectory(string $bucket): string
     {
-        return WRITEPATH . 'uploads/proofs/' . date('Y/m') . '/';
+        return FCPATH . 'uploads/transaksi/' . trim($bucket, '/') . '/' . date('Y/m') . '/';
     }
 
-    public function ensureProofDirectory(): string
+    public function ensureProofDirectory(string $bucket): string
     {
-        $directory = $this->proofDirectory();
+        $directory = $this->proofDirectory($bucket);
 
         if (! is_dir($directory) && ! mkdir($directory, 0775, true) && ! is_dir($directory)) {
             throw new RuntimeException('Folder bukti transaksi gagal dibuat.');
@@ -23,14 +23,27 @@ class FileUploadService
         return $directory;
     }
 
-    public function storeProof(File $file, string $prefix = 'proof'): string
+    public function storeProof(UploadedFile $file, string $bucket, string $prefix = 'proof'): string
     {
-        $directory = $this->ensureProofDirectory();
+        $directory = $this->ensureProofDirectory($bucket);
         $extension = $file->getExtension() ?: 'bin';
-        $filename = sprintf('%s_%s.%s', $prefix, date('Ymd_His'), $extension);
+        $filename = sprintf('%s_%s.%s', $prefix, bin2hex(random_bytes(6)), $extension);
 
         $file->move($directory, $filename);
 
-        return 'uploads/proofs/' . date('Y/m') . '/' . $filename;
+        return 'uploads/transaksi/' . trim($bucket, '/') . '/' . date('Y/m') . '/' . $filename;
+    }
+
+    public function deleteProof(?string $relativePath): void
+    {
+        $path = trim((string) $relativePath);
+        if ($path === '') {
+            return;
+        }
+
+        $fullPath = FCPATH . ltrim($path, '/');
+        if (is_file($fullPath)) {
+            @unlink($fullPath);
+        }
     }
 }

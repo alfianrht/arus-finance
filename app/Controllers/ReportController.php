@@ -212,8 +212,6 @@ class ReportController extends BaseController
             $u['activities'] = $uActRows;
             $u['quick_activity_name'] = $uFirstAct['name'] ?? '-';
             $u['detail_url'] = route_query('unit/' . $u['slug'], ['periode' => $selectedPeriodSlug, 'kegiatan' => $selectedActivitySlug]);
-            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
-            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $uFirstAct['slug'] ?? null]);
             $rekapUnits[] = $u;
         }
 
@@ -233,6 +231,15 @@ class ReportController extends BaseController
             $a['expense'] = $aExp;
             $a['surplus'] = $aInc - $aExp;
             $a['detail_url'] = route_query('kegiatan/' . $a['slug'], ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug]);
+            $activityUnitSlug = null;
+            foreach ($units as $candidateUnit) {
+                if ((int) $candidateUnit['id'] === (int) ($a['unit_id'] ?? 0)) {
+                    $activityUnitSlug = $candidateUnit['slug'] ?? null;
+                    break;
+                }
+            }
+            $a['masuk_url'] = route_query('catat/masuk', ['unit' => $activityUnitSlug, 'kegiatan' => $a['slug']]);
+            $a['keluar_url'] = route_query('catat/keluar', ['unit' => $activityUnitSlug, 'kegiatan' => $a['slug']]);
             $rekapActivities[] = $a;
         }
 
@@ -362,7 +369,9 @@ class ReportController extends BaseController
             'slug' => $acc['slug'] ?? ('acc-' . $accountId),
             'kind' => $acc['kind'] ?? 'Tunai',
             'mark' => $acc['mark'] ?? '',
-            'note' => 'Rekening aktif',
+            'account_number' => $acc['account_number'] ?? '',
+            'logo_asset' => $acc['logo_asset'] ?? '',
+            'note' => trim((string) ($acc['note'] ?? '')) !== '' ? (string) $acc['note'] : 'Rekening aktif',
             'movement_count' => count($recentRows),
         ];
 
@@ -478,6 +487,8 @@ class ReportController extends BaseController
                 'expense' => $actExp,
                 'surplus' => $actInc - $actExp,
                 'detail_url' => route_query('kegiatan/' . ($act['slug'] ?? ('act-' . $act['id'])), ['periode' => $selectedPeriodSlug, 'unit' => $u['slug']]),
+                'masuk_url' => route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $act['slug'] ?? null]),
+                'keluar_url' => route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $act['slug'] ?? null]),
             ];
         }
 
@@ -491,8 +502,6 @@ class ReportController extends BaseController
             'activities' => $formattedActivities,
             'quick_activity_name' => $uActivities[0]['name'] ?? '-',
             'detail_url' => site_url('unit/' . $u['slug']),
-            'masuk_url' => route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $uActivities[0]['slug'] ?? null]),
-            'keluar_url' => route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $uActivities[0]['slug'] ?? null]),
         ];
 
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();

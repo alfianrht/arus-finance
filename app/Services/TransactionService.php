@@ -140,6 +140,66 @@ class TransactionService
         return $this->formatTransactions($builder->findAll($limit));
     }
 
+    public function loadTransactionHistoryPage(
+        int $institutionId,
+        int $unitId = 0,
+        int $activityId = 0,
+        int $bookPeriodId = 0,
+        string $typeFilter = 'semua',
+        int $page = 1,
+        int $perPage = 10
+    ): array {
+        $page = max(1, $page);
+        $perPage = max(1, $perPage);
+
+        $builder = (new TransactionModel())
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null);
+
+        if ($bookPeriodId > 0) {
+            $builder->where('book_period_id', $bookPeriodId);
+        }
+
+        if ($unitId > 0) {
+            $builder->where('unit_id', $unitId);
+        }
+
+        if ($activityId > 0) {
+            $builder->where('activity_id', $activityId);
+        }
+
+        $typeFilter = strtolower(trim($typeFilter));
+        if (in_array($typeFilter, ['masuk', 'keluar', 'honor', 'pindah'], true)) {
+            $builder->where('type', $typeFilter);
+        } else {
+            $typeFilter = 'semua';
+        }
+
+        $total = $builder->countAllResults(false);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $perPage;
+
+        $rows = $builder
+            ->orderBy('transaction_date', 'DESC')
+            ->orderBy('transaction_time', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->findAll($perPage, $offset);
+
+        return [
+            'items' => $this->formatTransactions($rows),
+            'filter' => $typeFilter,
+            'total' => $total,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalPages' => $totalPages,
+            'hasPrev' => $page > 1,
+            'hasNext' => $page < $totalPages,
+            'prevPage' => max(1, $page - 1),
+            'nextPage' => min($totalPages, $page + 1),
+        ];
+    }
+
     public function formatTransactions(array $rows): array
     {
         if ($rows === []) {

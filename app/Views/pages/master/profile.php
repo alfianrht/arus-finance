@@ -16,9 +16,20 @@
     </div>
 
     <section class="rounded-3xl border border-zinc-950 bg-white p-5">
-        <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Identitas Utama</p>
-        <p class="mt-3 text-lg font-semibold text-zinc-950"><?= esc($institutionName) ?></p>
-        <p class="mt-1 text-sm text-zinc-500">Dipakai sebagai identitas global aplikasi, header, dan dokumen ringkas yang keluar dari Arus.</p>
+        <div class="flex items-start gap-4">
+            <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
+                <?php if (! empty($institutionLogo)): ?>
+                    <img src="<?= esc(base_url($institutionLogo)) ?>" alt="<?= esc($institutionName) ?>" class="h-full w-full object-contain">
+                <?php else: ?>
+                    <span class="material-symbols-rounded text-3xl text-zinc-400" aria-hidden="true">domain</span>
+                <?php endif; ?>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Identitas Utama</p>
+                <p class="mt-3 text-lg font-semibold text-zinc-950"><?= esc($institutionName) ?></p>
+                <p class="mt-1 text-sm text-zinc-500">Dipakai sebagai identitas global aplikasi, header, dan dokumen ringkas yang keluar dari Arus.</p>
+            </div>
+        </div>
         <div class="mt-4 grid grid-cols-2 gap-3">
             <?php foreach ($profileSections as $item): ?>
                 <div class="rounded-2xl bg-zinc-50 p-3">

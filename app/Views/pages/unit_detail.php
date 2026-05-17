@@ -56,20 +56,9 @@
         <div class="relative mt-4 flex items-center justify-between gap-3">
             <p class="text-sm font-semibold tracking-wide text-zinc-950">•••• <?= esc(surface_tail($unit['slug'])) ?></p>
             <span class="inline-flex items-center gap-1 rounded-full bg-zinc-950 px-3 py-2 text-xs font-semibold text-white">
-                <span class="material-symbols-rounded text-sm" aria-hidden="true">radio_button_checked</span>
-                <span>Konteks Aktif</span>
+                <span class="material-symbols-rounded text-sm" aria-hidden="true">stacks</span>
+                <span>Pilih dari kegiatan</span>
             </span>
-        </div>
-
-        <div class="relative mt-4 grid grid-cols-2 gap-3">
-            <a href="<?= esc($activeContext['masuk_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-zinc-950">
-                <span class="material-symbols-rounded text-base" aria-hidden="true">add</span>
-                <span>Uang Masuk</span>
-            </a>
-            <a href="<?= esc($activeContext['keluar_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white">
-                <span class="material-symbols-rounded text-base" aria-hidden="true">remove</span>
-                <span>Uang Keluar</span>
-            </a>
         </div>
         <?php endif; ?>
     </section>

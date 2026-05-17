@@ -145,7 +145,7 @@
             <h2 class="text-base font-semibold text-zinc-950">Ringkasan per Kegiatan</h2>
             <p class="text-xs text-zinc-500">Masuk, biaya, dan surplus</p>
         </div>
-        <div class="mt-3 space-y-3">
+        <div class="mt-3 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
             <?php if ($rekapActivities === []): ?>
                 <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada kegiatan dengan transaksi pada filter ini.</div>
             <?php endif; ?>

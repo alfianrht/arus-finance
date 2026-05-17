@@ -8,17 +8,16 @@
         'backUrl' => $backUrl,
     ]) ?>
 
-    <?= view('partials/capture_assist', [
-        'captureKey' => 'biaya_belanja',
-        'title' => 'Foto struk atau nota dulu',
-        'description' => 'Nanti AI akan membaca bukti pengeluaran lalu membantu mengisi nominal, kategori, rekening, tanggal, dan keterangan.',
-        'previewTitle' => 'Belum ada struk atau nota',
-        'previewDescription' => 'Gunakan kamera untuk foto struk fisik, atau upload PDF / gambar jika bukti sudah tersimpan.',
-        'autoFields' => ['Nominal', 'Kategori', 'Rekening', 'Tanggal', 'Keterangan'],
-    ]) ?>
-
-    <form action="<?= esc(site_url('catat/keluar/biaya')) ?>" method="post" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
+    <form action="<?= esc(site_url('catat/keluar/biaya')) ?>" method="post" enctype="multipart/form-data" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
         <?= csrf_field() ?>
+        <?= view('partials/capture_assist', [
+            'captureKey' => 'biaya_belanja',
+            'title' => 'Foto struk atau nota dulu',
+            'description' => 'Nanti AI akan membaca bukti pengeluaran lalu membantu mengisi nominal, kategori, rekening, tanggal, dan keterangan.',
+            'previewTitle' => 'Belum ada struk atau nota',
+            'previewDescription' => 'Gunakan kamera untuk foto struk fisik, atau upload PDF / gambar jika bukti sudah tersimpan.',
+            'autoFields' => ['Nominal', 'Kategori', 'Rekening', 'Tanggal', 'Keterangan'],
+        ]) ?>
         <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
             <div>
                 <p class="text-sm font-semibold text-zinc-950">Form manual tetap tersedia</p>
@@ -98,11 +97,6 @@
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Keterangan</label>
             <textarea name="notes" rows="3" placeholder="Contoh: Beli alat tulis" class="w-full rounded-2xl border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400"><?= esc(old('notes', '')) ?></textarea>
-        </div>
-
-        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
-            <p class="text-sm font-semibold text-zinc-950">Status bukti</p>
-            <p class="mt-1 text-sm text-zinc-500">Belum ada bukti yang dibaca. Hasil scan nanti akan mengisi kategori dan nominal terlebih dahulu.</p>
         </div>
 
         <div class="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">

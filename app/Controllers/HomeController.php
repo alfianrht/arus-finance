@@ -3,7 +3,11 @@
 namespace App\Controllers;
 
 use App\Models\ActivityModel;
+use App\Models\AccountModel;
 use App\Models\BookPeriodModel;
+use App\Models\ReceiverModel;
+use App\Models\ReportPositionModel;
+use App\Models\TransactionCategoryModel;
 use App\Models\UnitModel;
 use App\Services\TransactionService;
 
@@ -117,6 +121,12 @@ class HomeController extends BaseController
         $settingsShortcuts = $this->buildSettingsShortcuts([
             'institutionName'       => $institution['name'],
             'units'                 => $units,
+            'activityCount'         => array_sum(array_map(static fn(array $unit): int => count($unit['activities'] ?? []), $units)),
+            'accountCount'          => (new AccountModel())->where('institution_id', $institutionId)->where('deleted_at', null)->countAllResults(),
+            'transactionCategoryCount' => (new TransactionCategoryModel())->where('institution_id', $institutionId)->where('deleted_at', null)->countAllResults(),
+            'receiverCount'         => (new ReceiverModel())->where('institution_id', $institutionId)->where('deleted_at', null)->countAllResults(),
+            'reportPositionCount'   => (new ReportPositionModel())->where('institution_id', $institutionId)->countAllResults(),
+            'bookPeriodCount'       => (new BookPeriodModel())->where('institution_id', $institutionId)->countAllResults(),
         ]);
 
         $data = [
@@ -192,6 +202,54 @@ class HomeController extends BaseController
                 'meta' => count($data['units'] ?? []) . ' unit',
                 'href' => site_url('pengaturan/unit-program'),
                 'icon' => 'domain',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Kegiatan',
+                'description' => 'Turunan unit yang dipakai sebagai konteks aktif pencatatan.',
+                'meta' => ($data['activityCount'] ?? 0) . ' kegiatan',
+                'href' => site_url('pengaturan/kegiatan'),
+                'icon' => 'workspaces',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Rekening / Dompet',
+                'description' => 'Sumber dan tujuan uang bergerak saat transaksi dicatat.',
+                'meta' => ($data['accountCount'] ?? 0) . ' rekening',
+                'href' => site_url('pengaturan/rekening-dompet'),
+                'icon' => 'account_balance_wallet',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Kategori Transaksi',
+                'description' => 'Kategori untuk pemasukan, biaya, honor, dan pengeluaran lain.',
+                'meta' => ($data['transactionCategoryCount'] ?? 0) . ' kategori',
+                'href' => site_url('pengaturan/kategori-biaya'),
+                'icon' => 'inventory_2',
+            ],
+            [
+                'group' => 'Operasional Harian',
+                'title' => 'Penerima',
+                'description' => 'Kontak internal, vendor, atau pihak yang menerima pembayaran.',
+                'meta' => ($data['receiverCount'] ?? 0) . ' penerima',
+                'href' => site_url('pengaturan/penerima'),
+                'icon' => 'person',
+            ],
+            [
+                'group' => 'Fondasi Laporan',
+                'title' => 'Pos Laporan',
+                'description' => 'Fondasi struktur laporan tahunan dan pemetaan transaksi.',
+                'meta' => ($data['reportPositionCount'] ?? 0) . ' pos',
+                'href' => site_url('pengaturan/pos-laporan'),
+                'icon' => 'account_tree',
+            ],
+            [
+                'group' => 'Fondasi Laporan',
+                'title' => 'Tahun Buku',
+                'description' => 'Periode aktif yang dipakai transaksi dan laporan.',
+                'meta' => ($data['bookPeriodCount'] ?? 0) . ' periode',
+                'href' => site_url('pengaturan/tahun-buku'),
+                'icon' => 'calendar_month',
             ],
         ];
     }

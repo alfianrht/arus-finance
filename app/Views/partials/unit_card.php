@@ -46,14 +46,4 @@ $surfaceText = surface_label($unit['short_name'] ?? $unit['name']);
         </div>
     </a>
 
-    <div class="grid grid-cols-2 gap-3">
-        <a href="<?= esc($unit['masuk_url']) ?>" class="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-zinc-950 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">add</span>
-            <span>Uang Masuk</span>
-        </a>
-        <a href="<?= esc($unit['keluar_url']) ?>" class="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">remove</span>
-            <span>Uang Keluar</span>
-        </a>
-    </div>
 </article>

@@ -3,7 +3,11 @@
 namespace App\Controllers;
 
 use App\Controllers\Concerns\LegacySettingsMasterDataTrait;
+use App\Controllers\Concerns\LegacySettingsDashboardTrait;
+use App\Controllers\Concerns\LegacySettingsFinanceMasterTrait;
 use App\Controllers\Concerns\LegacySettingsPrototypeFlowTrait;
+use App\Controllers\Concerns\LegacySettingsReportMasterTrait;
+use App\Controllers\Concerns\LegacySettingsUnitActivityTrait;
 use App\Models\AccountModel;
 use App\Models\ActivityModel;
 use App\Models\BookPeriodModel;
@@ -20,11 +24,6 @@ class LegacySettingsController extends BaseController
 {
     use LegacySettingsMasterDataTrait;
     use LegacySettingsPrototypeFlowTrait;
-
-    private function currentInstitutionId(): int
-    {
-        return (int) ($this->session->get('auth_institution_id') ?? 1);
-    }
 
     private function currentInstitution(): array
     {
