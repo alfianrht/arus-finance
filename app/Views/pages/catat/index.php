@@ -2,10 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
-    <header class="space-y-1">
-        <p class="text-2xl font-semibold tracking-tight text-zinc-950">Catat</p>
-        <p class="text-sm text-zinc-500">Pilih aksi cepat untuk konteks yang sedang aktif.</p>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => 'Catat',
+        'subtitle' => 'Pilih aksi cepat untuk konteks yang sedang aktif.',
+        'showBackButton' => false,
+    ]) ?>
 
     <?= $this->include('partials/active_context') ?>
 

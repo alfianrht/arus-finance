@@ -2,15 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="mx-auto max-w-xl space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950">Pindah Dana</p>
-            <p class="text-sm text-zinc-500">Perpindahan saldo internal yang tidak masuk biaya.</p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => 'Pindah Dana',
+        'subtitle' => 'Perpindahan saldo internal yang tidak masuk biaya.',
+        'backUrl' => $backUrl,
+    ]) ?>
 
     <section class="rounded-2xl border border-sky-100 bg-sky-50 p-4">
         <p class="text-sm font-semibold text-sky-900">Pindah Dana tidak dihitung sebagai biaya.</p>

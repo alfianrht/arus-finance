@@ -2,15 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-sm text-zinc-500">Rekening / Dompet</p>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950"><?= esc($account['name']) ?></p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => $account['name'],
+        'subtitle' => 'Rekening / Dompet',
+        'backUrl' => $backUrl,
+    ]) ?>
 
     <section class="rounded-2xl bg-lime-50 p-4">
         <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Filter Rekap yang Sedang Aktif</p>

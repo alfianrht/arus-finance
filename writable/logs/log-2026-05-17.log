@@ -200,3 +200,63 @@ in SYSTEMPATH/Exceptions/FrameworkException.php on line 39.
  6 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
  7 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
  8 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 13:57:47 --> ParseError: syntax error, unexpected identifier "name", expecting "]"
+in APPPATH/Views/pages/account_detail.php on line 6.
+ 1 SYSTEMPATH/View/View.php(231): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 2 SYSTEMPATH/Common.php(1178): CodeIgniter\View\View->render('pages/account_detail', [], true)
+ 3 APPPATH/Controllers/Arus.php(643): view('pages/account_detail', [...])
+ 4 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->rekening('dana-operasional-cago')
+ 5 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 6 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 13:57:57 --> ParseError: syntax error, unexpected identifier "badge_label", expecting "]"
+in APPPATH/Views/pages/transaction_detail.php on line 6.
+ 1 SYSTEMPATH/View/View.php(231): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 2 SYSTEMPATH/Common.php(1178): CodeIgniter\View\View->render('pages/transaction_detail', [], true)
+ 3 APPPATH/Controllers/Arus.php(598): view('pages/transaction_detail', [...])
+ 4 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->transaksi('trx-003')
+ 5 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 6 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 13:59:41 --> ParseError: syntax error, unexpected identifier "badge_label", expecting "]"
+in APPPATH/Views/pages/transaction_detail.php on line 6.
+ 1 SYSTEMPATH/View/View.php(231): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 2 SYSTEMPATH/Common.php(1178): CodeIgniter\View\View->render('pages/transaction_detail', [], true)
+ 3 APPPATH/Controllers/Arus.php(598): view('pages/transaction_detail', [...])
+ 4 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->transaksi('trx-003')
+ 5 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 6 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 13:59:41 --> ParseError: syntax error, unexpected identifier "badge_label", expecting "]"
+in APPPATH/Views/pages/transaction_detail.php on line 6.
+ 1 SYSTEMPATH/View/View.php(231): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 2 SYSTEMPATH/Common.php(1178): CodeIgniter\View\View->render('pages/transaction_detail', [], true)
+ 3 APPPATH/Controllers/Arus.php(598): view('pages/transaction_detail', [...])
+ 4 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->transaksi('trx-003')
+ 5 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 6 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 14:00:04 --> ParseError: syntax error, unexpected identifier "badge_label", expecting "]"
+in APPPATH/Views/pages/transaction_detail.php on line 6.
+ 1 SYSTEMPATH/View/View.php(231): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 2 SYSTEMPATH/Common.php(1178): CodeIgniter\View\View->render('pages/transaction_detail', [], true)
+ 3 APPPATH/Controllers/Arus.php(598): view('pages/transaction_detail', [...])
+ 4 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->transaksi('trx-001')
+ 5 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 6 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')
+CRITICAL - 2026-05-17 14:00:37 --> ParseError: syntax error, unexpected identifier "badge_label", expecting "]"
+in APPPATH/Views/pages/transaction_detail.php on line 6.
+ 1 SYSTEMPATH/View/View.php(231): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 2 SYSTEMPATH/Common.php(1178): CodeIgniter\View\View->render('pages/transaction_detail', [], true)
+ 3 APPPATH/Controllers/Arus.php(598): view('pages/transaction_detail', [...])
+ 4 SYSTEMPATH/CodeIgniter.php(943): App\Controllers\Arus->transaksi('trx-001')
+ 5 SYSTEMPATH/CodeIgniter.php(503): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Arus))
+ 6 SYSTEMPATH/CodeIgniter.php(361): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 FCPATH/index.php(79): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Commands/Server/rewrite.php(47): require_once('/Users/cago/Documents/DEV/arus-finance/public/index.php')

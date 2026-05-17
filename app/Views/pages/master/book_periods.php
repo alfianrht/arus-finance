@@ -2,15 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-sm text-zinc-500">Fondasi Laporan Tahunan</p>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950">Tahun Buku</p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => 'Tahun Buku',
+        'subtitle' => 'Fondasi Laporan Tahunan',
+        'backUrl' => $backUrl,
+    ]) ?>
 
     <div class="flex justify-end">
         <a href="<?= site_url('pengaturan/tahun-buku/tambah') ?>" class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white">

@@ -2,15 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="mx-auto max-w-xl space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-sm text-zinc-500"><?= $isEditMode ? 'Edit Transaksi' : 'Detail Transaksi' ?></p>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950"><?= esc($transaction['badge_label']) ?></p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => $transaction['badge_label'],
+        'subtitle' => $isEditMode ? 'Edit Transaksi' : 'Detail Transaksi',
+        'backUrl' => $backUrl,
+    ]) ?>
 
     <?php if ($transaction['type'] === 'pindah'): ?>
         <section class="rounded-2xl border border-sky-100 bg-sky-50 p-4">
@@ -20,15 +16,15 @@
     <?php endif; ?>
 
     <form class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
-        <div class="flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
+        <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
             <div>
                 <p class="text-sm font-semibold text-zinc-950"><?= $isEditMode ? 'Mode edit aktif' : 'Mode lihat aktif' ?></p>
-                <p class="mt-1 text-xs text-zinc-500">
+                <p class="mt-1 pr-30 text-xs text-zinc-500">
                     <?= $isEditMode ? 'Field di bawah disiapkan seperti form catat, tanpa bukti transaksi karena ini bukan transaksi baru.' : 'Tampilan ini memakai form yang sama agar detail transaksi mudah ditinjau sebelum diedit.' ?>
                 </p>
             </div>
             <?php if ($isEditMode): ?>
-                <span class="rounded-full bg-lime-400 px-3 py-2 text-xs font-medium text-zinc-950">Sedang diedit</span>
+                <span class="absolute top-2 right-2 rounded-full bg-lime-400 px-3 py-2 text-xs font-medium text-zinc-950">Sedang diedit</span>
             <?php else: ?>
                 <a href="<?= esc($editUrl) ?>" class="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white">Edit</a>
             <?php endif; ?>

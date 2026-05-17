@@ -2,15 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="mx-auto max-w-xl space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950">Uang Keluar</p>
-            <p class="text-sm text-zinc-500">Pilih dulu jenis pengeluaran agar form tetap pendek.</p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => 'Uang Keluar',
+        'subtitle' => 'Pilih dulu jenis pengeluaran agar form tetap pendek.',
+        'backUrl' => $backUrl,
+    ]) ?>
 
     <?= $this->include('partials/active_context') ?>
 

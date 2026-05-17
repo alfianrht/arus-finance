@@ -8,15 +8,11 @@
         $groupedShortcuts[$shortcut['group']][] = $shortcut;
     }
     ?>
-    <header class="flex items-center gap-3">
-        <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-sm text-zinc-500">Pengaturan</p>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950">Master Data Arus</p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => 'Master Data Arus',
+        'subtitle' => 'Pengaturan',
+        'backUrl' => $backUrl,
+    ]) ?>
 
     <section class="rounded-3xl border border-zinc-950 bg-white p-5">
         <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Tujuan Halaman</p>

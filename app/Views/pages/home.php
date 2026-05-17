@@ -2,14 +2,23 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
-    <header class="flex items-start justify-between gap-4">
-        <div>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950"><?= esc($appName) ?></p>
-            <p class="mt-1 text-sm text-zinc-500"><?= esc($institutionName) ?></p>
+    <header class="flex flex-col gap-4">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <img src="<?= base_url('images/logo-primary-1.webp') ?>" alt="<?= esc($appName) ?>" class="h-6 w-auto">
+                <span class="text-2xl font-bold tracking-tight text-zinc-950"><?= esc($appName) ?></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="shrink-0 whitespace-nowrap rounded-full border border-lime-200 bg-lime-100 px-2 py-1 text-[10px] font-medium text-lime-950 shadow-sm">Tahun Buku 2026</span>
+                <a href="<?= site_url('pengaturan') ?>" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm" aria-label="Buka pengaturan">
+                    <span class="material-symbols-rounded text-base" style="font-size: 1.2rem;" aria-hidden="true">settings</span>
+                </a>
+            </div>
         </div>
-        <a href="<?= site_url('pengaturan') ?>" class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm" aria-label="Buka pengaturan">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">settings</span>
-        </a>
+        <div>
+            <p class="text-sm text-zinc-500">Selamat Datang,</p>
+            <p class="text-xl font-semibold tracking-tight text-zinc-950"><?= esc($institutionName) ?></p>
+        </div>
     </header>
     
     <?= $this->include('partials/active_context') ?>

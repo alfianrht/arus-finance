@@ -3,15 +3,11 @@
 <?= $this->section('content') ?>
 <?php $surfaceText = surface_label($unit['short_name'] ?? $unit['name']); ?>
 <div class="space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= route_query('beranda', $activeContext['query']) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-sm text-zinc-500">Unit / Program</p>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950"><?= esc($unit['name']) ?></p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => $unit['name'],
+        'subtitle' => 'Unit / Program',
+        'backUrl' => route_query('beranda', $activeContext['query']),
+    ]) ?>
 
     <section class="rounded-2xl bg-lime-50 p-4">
         <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks cepat untuk pencatatan</p>

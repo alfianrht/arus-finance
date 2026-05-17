@@ -2,15 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-sm text-zinc-500"><?= esc($formMode ?? 'Form Dummy') ?></p>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950"><?= esc($formTitle ?? $pageTitle) ?></p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => $formTitle ?? $pageTitle,
+        'subtitle' => $formMode ?? 'Form Dummy',
+        'backUrl' => $backUrl,
+    ]) ?>
 
     <section class="rounded-3xl border border-zinc-950 bg-white p-5">
         <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Prototype Input</p>

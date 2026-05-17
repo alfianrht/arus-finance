@@ -2,10 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
-    <header class="space-y-1">
-        <p class="text-2xl font-semibold tracking-tight text-zinc-950">Rekap</p>
-        <p class="text-sm text-zinc-500">Satu halaman ringkas dengan filter dummy untuk validasi alur laporan.</p>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => 'Rekap',
+        'subtitle' => 'Satu halaman ringkas validasi alur laporan.',
+        'showBackButton' => false,
+    ]) ?>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">

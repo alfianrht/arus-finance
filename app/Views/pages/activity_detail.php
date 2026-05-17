@@ -3,15 +3,11 @@
 <?= $this->section('content') ?>
 <?php $surfaceText = surface_label($activity['short_name'] ?? $activity['name']); ?>
 <div class="space-y-3">
-    <header class="flex items-center gap-3">
-        <a href="<?= esc(route_query('unit/' . $activity['unit_slug'], ['kegiatan' => $activity['slug']])) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_back</span>
-        </a>
-        <div>
-            <p class="text-sm text-zinc-500"><?= esc($activity['unit_name']) ?></p>
-            <p class="text-2xl font-semibold tracking-tight text-zinc-950"><?= esc($activity['name']) ?></p>
-        </div>
-    </header>
+    <?= view('partials/top_nav_back', [
+        'title' => $activity['name'],
+        'subtitle' => $activity['unit_name'],
+        'backUrl' => route_query('unit/' . $activity['unit_slug'], ['kegiatan' => $activity['slug']]),
+    ]) ?>
 
     <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
         <div class="absolute inset-0 bg-white/5" aria-hidden="true"></div>

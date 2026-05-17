@@ -810,7 +810,7 @@ class Arus extends BaseController
         $filterActivities = $this->buildFilterActivities($units, $selectedUnitSlug);
 
         return [
-            'appName'            => 'Arus',
+            'appName'            => 'Arusdana',
             'institutionName'    => 'PT Maju Pendidikan Bangsa',
             'activeContext'      => $activeContext,
             'summary'            => $summary,
