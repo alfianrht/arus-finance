@@ -14,27 +14,70 @@
     </section>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <form class="space-y-4" action="#" method="get">
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="mb-4 rounded-3xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-950">
+                <?= (string) session()->getFlashdata('error') ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('success')): ?>
+            <div class="mb-4 rounded-3xl border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-medium text-lime-950">
+                <?= (string) session()->getFlashdata('success') ?>
+            </div>
+        <?php endif; ?>
+
+        <?php
+        $hasFileField = false;
+        foreach ($formFields as $f) { if (($f['type'] ?? 'text') === 'file') { $hasFileField = true; break; } }
+        ?>
+        <form class="space-y-4" action="<?= esc($formAction ?? '#') ?>" method="<?= esc($formMethod ?? 'get') ?>"<?= $hasFileField ? ' enctype="multipart/form-data"' : '' ?>>
+            <?php if (($formMethod ?? 'get') === 'post'): ?>
+                <?= csrf_field() ?>
+            <?php endif; ?>
             <?php foreach ($formFields as $field): ?>
                 <div class="space-y-2">
                     <label class="text-sm font-medium text-zinc-700"><?= esc($field['label']) ?></label>
 
                     <?php if (($field['type'] ?? 'text') === 'select'): ?>
-                        <select class="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 focus:border-zinc-950 focus:outline-none">
+                        <select name="<?= esc($field['name'] ?? '') ?>" class="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 focus:border-zinc-950 focus:outline-none">
                             <?php foreach (($field['options'] ?? []) as $option): ?>
-                                <option value="<?= esc($option) ?>" <?= ($field['value'] ?? null) === $option ? 'selected' : '' ?>><?= esc($option) ?></option>
+                                <?php
+                                $optionValue = is_array($option) ? (string) ($option['value'] ?? '') : (string) $option;
+                                $optionLabel = is_array($option) ? (string) ($option['label'] ?? $optionValue) : (string) $option;
+                                $selectedValue = (string) ($field['value'] ?? '');
+                                ?>
+                                <option value="<?= esc($optionValue) ?>" <?= $selectedValue === $optionValue ? 'selected' : '' ?>><?= esc($optionLabel) ?></option>
                             <?php endforeach; ?>
                         </select>
                     <?php elseif (($field['type'] ?? 'text') === 'textarea'): ?>
-                        <textarea rows="4" class="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 focus:border-zinc-950 focus:outline-none"><?= esc($field['value'] ?? '') ?></textarea>
+                        <textarea name="<?= esc($field['name'] ?? '') ?>" rows="4" class="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 focus:border-zinc-950 focus:outline-none"><?= esc($field['value'] ?? '') ?></textarea>
                     <?php elseif (($field['type'] ?? 'text') === 'file'): ?>
-                        <label class="flex min-h-28 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-center">
-                            <span class="text-sm text-zinc-500"><?= esc($field['value'] ?? 'Pilih file') ?></span>
-                            <input type="file" class="hidden">
+                        <?php $previewSrc = !empty($field['value']) ? base_url($field['value']) : ''; ?>
+                        <label class="group flex min-h-28 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-center transition hover:border-zinc-400 hover:bg-zinc-100">
+                            <img
+                                id="preview_<?= esc($field['name'] ?? 'file') ?>"
+                                src="<?= esc($previewSrc) ?>"
+                                alt="Preview"
+                                class="h-16 w-16 rounded-xl object-contain <?= $previewSrc ? '' : 'hidden' ?>"
+                            >
+                            <span class="text-sm text-zinc-500">
+                                <?= $previewSrc ? 'Klik untuk ganti gambar' : 'Klik untuk pilih gambar logo' ?>
+                            </span>
+                            <input
+                                type="file"
+                                name="<?= esc($field['name'] ?? '') ?>"
+                                accept="image/*"
+                                class="hidden"
+                                onchange="previewImage(this, 'preview_<?= esc($field['name'] ?? 'file') ?>')"
+                            >
                         </label>
+                        <?php if ($previewSrc): ?>
+                            <p class="px-1 text-xs text-zinc-400"><?= esc($field['value']) ?></p>
+                        <?php endif; ?>
                     <?php else: ?>
                         <input
                             type="<?= esc($field['type'] ?? 'text') ?>"
+                            name="<?= esc($field['name'] ?? '') ?>"
                             value="<?= esc($field['value'] ?? '') ?>"
                             class="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 focus:border-zinc-950 focus:outline-none"
                         >
@@ -46,11 +89,28 @@
                 <a href="<?= esc($backUrl) ?>" class="inline-flex h-12 items-center justify-center rounded-full border border-zinc-950 px-5 text-sm font-semibold text-zinc-950">
                     Batal
                 </a>
-                <button type="button" class="inline-flex h-12 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white">
+                <button type="submit" class="inline-flex h-12 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white">
                     <?= esc($saveLabel ?? 'Simpan Dummy') ?>
                 </button>
             </div>
         </form>
     </section>
 </div>
+
+<?php if ($hasFileField): ?>
+<script>
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            input.closest('label').querySelector('span').textContent = input.files[0].name;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+<?php endif; ?>
 <?= $this->endSection() ?>

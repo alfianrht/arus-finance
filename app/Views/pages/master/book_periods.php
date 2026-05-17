@@ -22,21 +22,42 @@
     </section>
 
     <section class="space-y-3">
-        <?php foreach ($bookPeriods as $period): ?>
-            <a href="<?= site_url('pengaturan/tahun-buku/' . $period['slug'] . '/edit') ?>" class="block rounded-3xl bg-white p-4 shadow-sm">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="min-w-0">
-                        <p class="text-xs text-zinc-500">Periode Buku</p>
-                        <p class="mt-2 text-base font-semibold text-zinc-950"><?= esc($period['name']) ?></p>
-                        <p class="mt-1 text-sm text-zinc-500"><?= esc($period['start']) ?> - <?= esc($period['end']) ?></p>
-                        <p class="mt-2 text-sm text-zinc-500"><?= esc($period['note']) ?></p>
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="rounded-3xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-950"><?= (string) session()->getFlashdata('error') ?></div>
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('success')): ?>
+            <div class="rounded-3xl border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-medium text-lime-950"><?= (string) session()->getFlashdata('success') ?></div>
+        <?php endif; ?>
+
+        <?php if (empty($bookPeriods)): ?>
+            <?= view('partials/empty_state', [
+                'icon' => 'calendar_month', 'title' => 'Belum Ada Tahun Buku',
+                'message' => 'Tahun buku mengikat saldo awal dan laporan keuangan per periode. Tambahkan periode pertama.',
+                'actionUrl' => site_url('pengaturan/tahun-buku/tambah'), 'actionLabel' => 'Tambah Periode',
+            ]) ?>
+        <?php else: ?>
+            <?php foreach ($bookPeriods as $period): ?>
+                <div class="rounded-3xl bg-white p-4 shadow-sm">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <p class="text-xs text-zinc-500">Periode Buku</p>
+                            <p class="mt-2 text-base font-semibold text-zinc-950"><?= esc($period['name']) ?></p>
+                            <p class="mt-1 text-sm text-zinc-500"><?= esc($period['start']) ?> - <?= esc($period['end']) ?></p>
+                            <p class="mt-2 text-sm text-zinc-500"><?= esc($period['note']) ?></p>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <p class="rounded-full <?= $period['status'] === 'Aktif' ? 'bg-lime-100 text-lime-950' : 'bg-zinc-100 text-zinc-700' ?> px-3 py-2 text-xs font-medium"><?= esc($period['status']) ?></p>
+                        </div>
                     </div>
-                    <div class="shrink-0 text-right">
-                        <p class="rounded-full <?= $period['status'] === 'Aktif' ? 'bg-lime-100 text-lime-950' : 'bg-zinc-100 text-zinc-700' ?> px-3 py-2 text-xs font-medium"><?= esc($period['status']) ?></p>
+                    <div class="mt-3 flex items-center justify-end gap-3 border-t border-zinc-100 pt-3">
+                        <button type="button" onclick="openDeleteModal('<?= site_url('pengaturan/tahun-buku/' . $period['slug'] . '/hapus') ?>', '<?= esc($period['name'], 'js') ?>', '<?= csrf_hash() ?>')" class="text-sm font-medium text-rose-600">Hapus</button>
+                        <a href="<?= site_url('pengaturan/tahun-buku/' . $period['slug'] . '/edit') ?>" class="text-sm font-medium text-zinc-700">Edit</a>
                     </div>
                 </div>
-            </a>
-        <?php endforeach; ?>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </section>
 </div>
+
+<?= view('partials/confirm_delete_modal') ?>
 <?= $this->endSection() ?>

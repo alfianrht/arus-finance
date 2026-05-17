@@ -117,5 +117,21 @@
     </div>
 
     <?= $this->include('partials/bottom_nav') ?>
+
+    <script>
+    function copyToClipboard(text, btn) {
+        navigator.clipboard.writeText(text).then(function() {
+            var icon = btn.querySelector('.material-symbols-rounded');
+            if (icon) {
+                icon.textContent = 'check';
+                btn.classList.add('text-lime-600');
+                setTimeout(function() {
+                    icon.textContent = 'content_copy';
+                    btn.classList.remove('text-lime-600');
+                }, 1500);
+            }
+        });
+    }
+    </script>
 </body>
 </html>

@@ -32,28 +32,49 @@
         </div>
     </section>
 
-    <?php foreach ($positionsByGroup as $group => $positions): ?>
-        <section class="space-y-3">
-            <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold text-zinc-950"><?= esc($group) ?></h2>
-                <p class="text-xs text-zinc-500"><?= esc(count($positions)) ?> pos</p>
-            </div>
-            <?php foreach ($positions as $position): ?>
-                <a href="<?= site_url('pengaturan/pos-laporan/' . $position['slug'] . '/edit') ?>" class="block rounded-3xl bg-white p-4 shadow-sm">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="min-w-0">
-                            <p class="text-xs font-medium uppercase tracking-wide text-zinc-500"><?= esc($position['code']) ?></p>
-                            <p class="mt-2 text-base font-semibold text-zinc-950"><?= esc($position['name']) ?></p>
-                            <p class="mt-1 text-sm text-zinc-500"><?= esc($position['note']) ?></p>
+    <?php if (session()->getFlashdata('error')): ?>
+        <div class="rounded-3xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-950"><?= (string) session()->getFlashdata('error') ?></div>
+    <?php endif; ?>
+    <?php if (session()->getFlashdata('success')): ?>
+        <div class="rounded-3xl border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-medium text-lime-950"><?= (string) session()->getFlashdata('success') ?></div>
+    <?php endif; ?>
+
+    <?php if (empty($reportPositions)): ?>
+        <?= view('partials/empty_state', [
+            'icon' => 'assignment', 'title' => 'Belum Ada Pos Laporan',
+            'message' => 'Pos laporan menghubungkan kategori dan rekening ke struktur laba rugi dan neraca. Tambahkan pos pertama.',
+            'actionUrl' => site_url('pengaturan/pos-laporan/tambah'), 'actionLabel' => 'Tambah Pos',
+        ]) ?>
+    <?php else: ?>
+        <?php foreach ($positionsByGroup as $group => $positions): ?>
+            <section class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-zinc-950"><?= esc($group) ?></h2>
+                    <p class="text-xs text-zinc-500"><?= esc(count($positions)) ?> pos</p>
+                </div>
+                <?php foreach ($positions as $position): ?>
+                    <div class="rounded-3xl bg-white p-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500"><?= esc($position['code']) ?></p>
+                                <p class="mt-2 text-base font-semibold text-zinc-950"><?= esc($position['name']) ?></p>
+                                <p class="mt-1 text-sm text-zinc-500"><?= esc($position['note']) ?></p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700"><?= esc($position['kind']) ?></p>
+                                <p class="mt-2 text-xs text-zinc-500">Saldo normal <?= esc($position['normal_balance']) ?></p>
+                            </div>
                         </div>
-                        <div class="shrink-0 text-right">
-                            <p class="rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700"><?= esc($position['kind']) ?></p>
-                            <p class="mt-2 text-xs text-zinc-500">Saldo normal <?= esc($position['normal_balance']) ?></p>
+                        <div class="mt-3 flex items-center justify-end gap-3 border-t border-zinc-100 pt-3">
+                            <button type="button" onclick="openDeleteModal('<?= site_url('pengaturan/pos-laporan/' . $position['slug'] . '/hapus') ?>', '<?= esc($position['name'], 'js') ?>', '<?= csrf_hash() ?>')" class="text-sm font-medium text-rose-600">Hapus</button>
+                            <a href="<?= site_url('pengaturan/pos-laporan/' . $position['slug'] . '/edit') ?>" class="text-sm font-medium text-zinc-700">Edit</a>
                         </div>
                     </div>
-                </a>
-            <?php endforeach; ?>
-        </section>
-    <?php endforeach; ?>
+                <?php endforeach; ?>
+            </section>
+        <?php endforeach; ?>
+    <?php endif; ?>
 </div>
+
+<?= view('partials/confirm_delete_modal') ?>
 <?= $this->endSection() ?>

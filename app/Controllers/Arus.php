@@ -2,137 +2,793 @@
 
 namespace App\Controllers;
 
+use App\Models\AccountModel;
+use App\Models\ActivityModel;
+use App\Models\BookPeriodModel;
+use App\Models\InstitutionModel;
+use App\Models\OpeningBalanceModel;
+use App\Models\ReceiverModel;
+use App\Models\ReportPositionModel;
+use App\Models\TransactionCategoryModel;
+use App\Models\UnitModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\RedirectResponse;
 
 class Arus extends BaseController
 {
     public function home(): string
     {
-        $data                      = $this->prototypeData();
-        $data['pageTitle']         = 'Beranda';
-        $data['activeNav']         = 'beranda';
-        $data['homeTransactions']  = array_slice($data['transactions'], 0, 4);
+        $institutionId = $this->currentInstitutionId();
+        $institution = $this->currentInstitution();
+        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
+        $units = $this->loadUnitProgramRows();
+
+        $db = \Config\Database::connect();
+        
+        $obSum = (float) ($db->table('opening_balances')
+            ->where('institution_id', $institutionId)
+            ->where('book_period_id', $bookPeriodId)
+            ->where('deleted_at', null)
+            ->selectSum('amount')
+            ->get()->getRow()->amount ?? 0);
+            
+        $incSum = (float) ($db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('book_period_id', $bookPeriodId)
+            ->where('type', 'masuk')
+            ->where('deleted_at', null)
+            ->selectSum('amount')
+            ->get()->getRow()->amount ?? 0);
+            
+        $expSum = (float) ($db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('book_period_id', $bookPeriodId)
+            ->where('type', 'keluar')
+            ->where('deleted_at', null)
+            ->select('SUM(amount + admin_fee) as total')
+            ->get()->getRow()->total ?? 0);
+
+        $surplus = $incSum - $expSum;
+        $balance = $obSum + $surplus;
+
+        // Recent transactions
+        $recentRows = clone $db->table('transactions')->where('institution_id', $institutionId)->where('deleted_at', null)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->limit(4)->get()->getResultArray();
+        $homeTransactions = [];
+        foreach ($recentRows as $row) {
+            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
+            $homeTransactions[] = [
+                'id' => $row['id'],
+                'headline' => $cat['name'] ?? 'Transaksi',
+                'subline' => $row['notes'],
+                'meta' => date('d M Y', strtotime($row['transaction_date'])),
+                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
+                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
+                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
+                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
+                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
+                'amount' => $row['amount'] + $row['admin_fee'],
+            ];
+        }
+
+        // Units mapping for cards
+        foreach ($units as &$u) {
+            $uInc = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'masuk')->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
+            $uExp = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'keluar')->where('deleted_at', null)->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0);
+            $uActCount = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->countAllResults();
+            $uFirstAct = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getRowArray();
+            
+            $u['income'] = $uInc;
+            $u['expense'] = $uExp;
+            $u['surplus'] = $uInc - $uExp;
+            $u['activities'] = array_fill(0, $uActCount, 1);
+            $u['quick_activity_name'] = $uFirstAct['name'] ?? '-';
+            $u['detail_url'] = '#';
+            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug']]);
+            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug']]);
+        }
+        unset($u);
+
+        $activeContext = [
+            'masuk_url' => site_url('catat/masuk'),
+            'keluar_url' => site_url('catat/keluar'),
+            'query' => [],
+            'unit_slug' => '',
+            'activity_slug' => '',
+            'activity_name' => 'Semua Kegiatan',
+            'unit_name' => 'Semua Unit',
+        ];
+
+        // Ensure settingsShortcuts are passed for the dashboard block
+        $settingsShortcuts = $this->buildSettingsShortcuts([
+            'institutionName'       => $institution['name'],
+            'units'                 => $units,
+            'activitySummaries'     => [],
+            'accounts'              => [],
+            'transactionCategories' => [],
+            'reportPositions'       => [],
+            'bookPeriods'           => [],
+            'openingBalances'       => [],
+            'receivers'             => [],
+        ]);
+
+        $data = [
+            'appName'          => $institution['app_name'] ?? 'Arusdana',
+            'institutionName'  => $institution['name'],
+            'pageTitle'        => 'Beranda',
+            'activeNav'        => 'beranda',
+            'activeContext'    => $activeContext,
+            'summary'          => [
+                'balance' => $balance,
+                'income'  => $incSum,
+                'expense' => $expSum,
+                'surplus' => $surplus,
+            ],
+            'homeTransactions'  => $homeTransactions,
+            'units'             => $units,
+            'settingsShortcuts' => $settingsShortcuts,
+        ];
 
         return view('pages/home', $data);
     }
 
     public function catat(): string
     {
-        $data                      = $this->prototypeData();
-        $data['pageTitle']         = 'Catat';
-        $data['activeNav']         = 'catat';
-        $data['recentTransactions'] = array_slice($data['contextTransactions'], 0, 4);
-        $data['quickCategories']   = array_values(
-            array_map(
-                static function (array $category): array {
-                    return [
-                        'label' => $category['chip_label'] ?? $category['name'],
-                        'value' => $category['name'],
-                    ];
-                },
-                array_filter(
-                    $data['expenseCategories'],
-                    static fn(array $category): bool => (bool) $category['is_quick']
-                )
-            )
-        );
-
-        foreach ($data['quickCategories'] as &$chip) {
-            $chip['href'] = route_query(
-                'catat/keluar/biaya',
-                array_merge($data['activeContext']['query'], ['kategori' => $chip['value']])
-            );
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        
+        $units = $this->loadUnitProgramRows();
+        $activities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        
+        $recentRows = $db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->orderBy('transaction_date', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->limit(4)
+            ->get()->getResultArray();
+        
+        $recentTransactions = [];
+        foreach ($recentRows as $row) {
+            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
+            $recentTransactions[] = [
+                'id' => $row['id'],
+                'headline' => $cat['name'] ?? 'Transaksi',
+                'subline' => $row['notes'],
+                'meta' => date('d M Y', strtotime($row['transaction_date'])),
+                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
+                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
+                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
+                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
+                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
+                'amount' => $row['amount'] + $row['admin_fee'],
+            ];
         }
-        unset($chip);
+
+        $quickCategories = $db->table('transaction_categories')
+            ->where('institution_id', $institutionId)
+            ->where('type', 'keluar')
+            ->where('deleted_at', null)
+            ->limit(5)
+            ->get()->getResultArray();
+        
+        $quickFormatted = [];
+        foreach ($quickCategories as $c) {
+            $quickFormatted[] = [
+                'label' => $c['name'],
+                'value' => $c['name'],
+                'href' => route_query('catat/keluar/biaya', ['kategori' => $c['name']])
+            ];
+        }
+
+        $data = [
+            'pageTitle' => 'Catat',
+            'activeNav' => 'catat',
+            'units' => $units,
+            'activitySummaries' => $activities,
+            'recentTransactions' => $recentTransactions,
+            'quickCategories' => $quickFormatted,
+            'activeContext' => [
+                'unit_slug' => '',
+                'activity_slug' => '',
+                'masuk_url' => site_url('catat/masuk'),
+                'keluar_url' => site_url('catat/keluar'),
+                'activity_url' => site_url('beranda'),
+                'query' => [],
+            ]
+        ];
 
         return view('pages/catat/index', $data);
     }
 
     public function catatMasuk(): string
     {
-        $data              = $this->prototypeData();
-        $data['pageTitle'] = 'Uang Masuk';
-        $data['activeNav'] = 'catat';
-        $data['backUrl']   = route_query('catat', $data['activeContext']['query']);
-        $data['selectedIncomeCategory'] = $data['incomeCategories'][0]['name'] ?? '';
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        
+        $units = $this->loadUnitProgramRows();
+        $activities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        $accounts = $db->table('accounts')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        $categories = $db->table('transaction_categories')->where('institution_id', $institutionId)->where('type', 'masuk')->where('deleted_at', null)->get()->getResultArray();
+        
+        $data = [
+            'pageTitle' => 'Uang Masuk',
+            'activeNav' => 'catat',
+            'backUrl' => site_url('catat'),
+            'units' => $units,
+            'activitySummaries' => $activities,
+            'accounts' => $accounts,
+            'incomeCategories' => $categories,
+            'selectedIncomeCategory' => $categories[0]['name'] ?? '',
+            'activeContext' => [
+                'unit_slug' => $this->request->getGet('unit') ?? '',
+                'activity_slug' => $this->request->getGet('kegiatan') ?? '',
+                'default_income_account' => '',
+            ]
+        ];
 
         return view('pages/catat/masuk', $data);
     }
 
+    public function simpanMasuk()
+    {
+        $institutionId = $this->currentInstitutionId();
+        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
+
+        $rules = [
+            'unit_id'          => 'required|is_natural_no_zero',
+            'activity_id'      => 'required|is_natural_no_zero',
+            'amount'           => 'required',
+            'category_id'      => 'required|is_natural_no_zero',
+            'to_account_id'    => 'required|is_natural_no_zero',
+            'transaction_date' => 'required|valid_date[Y-m-d]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Semua kolom wajib diisi dengan benar.');
+        }
+
+        $amountStr = preg_replace('/[^0-9]/', '', (string) $this->request->getPost('amount'));
+        $amount = (int) $amountStr;
+
+        $data = [
+            'institution_id'   => $institutionId,
+            'book_period_id'   => $bookPeriodId,
+            'type'             => 'masuk',
+            'amount'           => $amount,
+            'admin_fee'        => 0,
+            'unit_id'          => $this->request->getPost('unit_id'),
+            'activity_id'      => $this->request->getPost('activity_id'),
+            'category_id'      => $this->request->getPost('category_id'),
+            'from_account_id'  => null,
+            'to_account_id'    => $this->request->getPost('to_account_id'),
+            'receiver_id'      => null,
+            'transaction_date' => $this->request->getPost('transaction_date'),
+            'transaction_time' => date('H:i:s'),
+            'notes'            => $this->request->getPost('notes'),
+            'created_by'       => $this->currentUser()['id'],
+        ];
+
+        (new \App\Models\TransactionModel())->insert($data);
+
+        $action = $this->request->getPost('action');
+        if ($action === 'save_add') {
+            return redirect()->back()->with('success', 'Uang masuk berhasil dicatat. Silakan tambah lagi.');
+        }
+
+        return redirect()->to('catat')->with('success', 'Uang masuk berhasil dicatat.');
+    }
+
     public function catatKeluar(): string
     {
-        $data              = $this->prototypeData();
-        $data['pageTitle'] = 'Uang Keluar';
-        $data['activeNav'] = 'catat';
-        $data['backUrl']   = route_query('catat', $data['activeContext']['query']);
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        
+        $units = $this->loadUnitProgramRows();
+        $activities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        
+        $data = [
+            'pageTitle' => 'Uang Keluar',
+            'activeNav' => 'catat',
+            'backUrl' => site_url('catat'),
+            'units' => $units,
+            'activitySummaries' => $activities,
+            'activeContext' => [
+                'unit_slug' => $this->request->getGet('unit') ?? '',
+                'activity_slug' => $this->request->getGet('kegiatan') ?? '',
+                'query' => [
+                    'unit' => $this->request->getGet('unit') ?? '',
+                    'kegiatan' => $this->request->getGet('kegiatan') ?? '',
+                ]
+            ]
+        ];
 
         return view('pages/catat/keluar', $data);
     }
 
     public function catatBiaya(): string
     {
-        $data              = $this->prototypeData();
-        $data['pageTitle'] = 'Biaya / Belanja';
-        $data['activeNav'] = 'catat';
-        $data['backUrl']   = route_query('catat/keluar', $data['activeContext']['query']);
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        
+        $units = $this->loadUnitProgramRows();
+        $activities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        $accounts = $db->table('accounts')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        $categories = $db->table('transaction_categories')->where('institution_id', $institutionId)->where('type', 'keluar')->where('deleted_at', null)->get()->getResultArray();
+        
+        $data = [
+            'pageTitle' => 'Catat Biaya',
+            'activeNav' => 'catat',
+            'backUrl' => site_url('catat/keluar'),
+            'units' => $units,
+            'activitySummaries' => $activities,
+            'accounts' => $accounts,
+            'expenseCategories' => $categories,
+            'activeContext' => [
+                'unit_slug' => $this->request->getGet('unit') ?? '',
+                'activity_slug' => $this->request->getGet('kegiatan') ?? '',
+                'default_expense_account' => '',
+            ]
+        ];
 
         return view('pages/catat/biaya', $data);
     }
 
+    public function simpanBiaya()
+    {
+        $institutionId = $this->currentInstitutionId();
+        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
+
+        $rules = [
+            'unit_id'          => 'required|is_natural_no_zero',
+            'activity_id'      => 'required|is_natural_no_zero',
+            'amount'           => 'required',
+            'category_id'      => 'required|is_natural_no_zero',
+            'from_account_id'  => 'required|is_natural_no_zero',
+            'transaction_date' => 'required|valid_date[Y-m-d]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Semua kolom wajib diisi dengan benar.');
+        }
+
+        $amountStr = preg_replace('/[^0-9]/', '', (string) $this->request->getPost('amount'));
+        $amount = (int) $amountStr;
+
+        $adminFeePreset = $this->request->getPost('admin_fee_preset');
+        if ($adminFeePreset === 'manual') {
+            $adminFeeStr = preg_replace('/[^0-9]/', '', (string) $this->request->getPost('admin_fee_custom'));
+            $adminFee = (int) $adminFeeStr;
+        } else {
+            $adminFee = (int) $adminFeePreset;
+        }
+
+        $data = [
+            'institution_id'   => $institutionId,
+            'book_period_id'   => $bookPeriodId,
+            'type'             => 'keluar', // Atau bisa spesifik 'keluar_biaya' kalau mau, tapi enum-nya 'keluar'
+            'amount'           => $amount,
+            'admin_fee'        => $adminFee,
+            'unit_id'          => $this->request->getPost('unit_id'),
+            'activity_id'      => $this->request->getPost('activity_id'),
+            'category_id'      => $this->request->getPost('category_id'),
+            'from_account_id'  => $this->request->getPost('from_account_id'),
+            'to_account_id'    => null,
+            'receiver_id'      => null,
+            'transaction_date' => $this->request->getPost('transaction_date'),
+            'transaction_time' => date('H:i:s'),
+            'notes'            => $this->request->getPost('notes'),
+            'created_by'       => $this->currentUser()['id'],
+        ];
+
+        (new \App\Models\TransactionModel())->insert($data);
+
+        $action = $this->request->getPost('action');
+        if ($action === 'save_add') {
+            return redirect()->back()->with('success', 'Biaya berhasil dicatat. Silakan tambah lagi.');
+        }
+
+        return redirect()->to('catat/keluar')->with('success', 'Biaya berhasil dicatat.');
+    }
+
     public function catatHonorGaji(): string
     {
-        $data              = $this->prototypeData();
-        $data['pageTitle'] = 'Honor & Gaji';
-        $data['activeNav'] = 'catat';
-        $data['backUrl']   = route_query('catat/keluar', $data['activeContext']['query']);
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        
+        $units = $this->loadUnitProgramRows();
+        $accounts = $db->table('accounts')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        $receivers = $db->table('receivers')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        
+        // Find a specific category for honor
+        $honorCat = $db->table('transaction_categories')
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->where('type', 'keluar')
+            ->like('name', 'Honor', 'both')
+            ->get()->getRowArray();
+        
+        $activities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+
+        $data = [
+            'pageTitle'  => 'Honor & Gaji',
+            'activeNav'  => 'catat',
+            'backUrl'    => site_url('catat/keluar'),
+            'units'      => $units,
+            'accounts'   => $accounts,
+            'receivers'  => $receivers,
+            'activities' => $activities,
+            'honorCat'   => $honorCat,
+        ];
 
         return view('pages/catat/honor_gaji', $data);
     }
 
+    public function simpanHonorGaji()
+    {
+        $institutionId = $this->currentInstitutionId();
+        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
+
+        $rules = [
+            'amount' => 'required',
+            'receiver_id' => 'required|numeric',
+            'unit_id' => 'required|numeric',
+            'activity_id' => 'required|numeric',
+            'from_account_id' => 'required|numeric',
+            'transaction_date' => 'required',
+            'notes' => 'required',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Gagal menyimpan. Pastikan semua field terisi dengan benar.');
+        }
+
+        $amountStr = $this->request->getPost('amount');
+        $amount = (int) preg_replace('/[^0-9]/', '', $amountStr);
+
+        $adminFeeInput = $this->request->getPost('admin_fee');
+        if ($adminFeeInput === 'manual') {
+            $adminFeeStr = $this->request->getPost('admin_fee_manual');
+            $adminFee = (int) preg_replace('/[^0-9]/', '', $adminFeeStr);
+        } else {
+            $adminFee = (int) preg_replace('/[^0-9]/', '', $adminFeeInput);
+        }
+
+        $categoryId = $this->request->getPost('category_id');
+
+        $data = [
+            'institution_id' => $institutionId,
+            'book_period_id' => $bookPeriodId,
+            'type' => 'keluar',
+            'amount' => $amount,
+            'admin_fee' => $adminFee,
+            'receiver_id' => $this->request->getPost('receiver_id'),
+            'unit_id' => $this->request->getPost('unit_id'),
+            'activity_id' => $this->request->getPost('activity_id'),
+            'category_id' => $categoryId,
+            'from_account_id' => $this->request->getPost('from_account_id'),
+            'transaction_date' => date('Y-m-d', strtotime($this->request->getPost('transaction_date'))),
+            'transaction_time' => date('H:i:s'),
+            'notes' => $this->request->getPost('notes'),
+            'created_by' => 1,
+        ];
+
+        (new \App\Models\TransactionModel())->insert($data);
+
+        $action = $this->request->getPost('action');
+        if ($action === 'save_add') {
+            return redirect()->back()->with('success', 'Honor & Gaji berhasil dicatat. Silakan tambah lagi.');
+        }
+
+        return redirect()->to('beranda')->with('success', 'Honor & Gaji berhasil dicatat.');
+    }
+
     public function catatPindahDana(): string
     {
-        $data              = $this->prototypeData();
-        $data['pageTitle'] = 'Pindah Dana';
-        $data['activeNav'] = 'catat';
-        $data['backUrl']   = route_query('catat/keluar', $data['activeContext']['query']);
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        
+        $units = $this->loadUnitProgramRows();
+        $accounts = $db->table('accounts')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        $activities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+
+        $data = [
+            'pageTitle'  => 'Pindah Dana',
+            'activeNav'  => 'catat',
+            'backUrl'    => site_url('catat/keluar'),
+            'units'      => $units,
+            'accounts'   => $accounts,
+            'activities' => $activities,
+        ];
 
         return view('pages/catat/pindah_dana', $data);
     }
 
+    public function simpanPindahDana()
+    {
+        $institutionId = $this->currentInstitutionId();
+        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
+
+        $rules = [
+            'amount' => 'required',
+            'from_account_id' => 'required|numeric',
+            'to_account_id' => 'required|numeric',
+            'unit_id' => 'required|numeric',
+            'activity_id' => 'required|numeric',
+            'transaction_date' => 'required',
+            'notes' => 'required',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Gagal menyimpan. Pastikan semua field terisi dengan benar.');
+        }
+
+        $amountStr = $this->request->getPost('amount');
+        $amount = (int) preg_replace('/[^0-9]/', '', $amountStr);
+
+        $adminFeeInput = $this->request->getPost('admin_fee');
+        if ($adminFeeInput === 'manual') {
+            $adminFeeStr = $this->request->getPost('admin_fee_manual');
+            $adminFee = (int) preg_replace('/[^0-9]/', '', $adminFeeStr);
+        } else {
+            $adminFee = (int) preg_replace('/[^0-9]/', '', $adminFeeInput);
+        }
+
+        $data = [
+            'institution_id' => $institutionId,
+            'book_period_id' => $bookPeriodId,
+            'type' => 'pindah',
+            'amount' => $amount,
+            'admin_fee' => $adminFee,
+            'unit_id' => $this->request->getPost('unit_id'),
+            'activity_id' => $this->request->getPost('activity_id'),
+            'from_account_id' => $this->request->getPost('from_account_id'),
+            'to_account_id' => $this->request->getPost('to_account_id'),
+            'transaction_date' => date('Y-m-d', strtotime($this->request->getPost('transaction_date'))),
+            'transaction_time' => date('H:i:s'),
+            'notes' => $this->request->getPost('notes'),
+            'created_by' => 1,
+        ];
+
+        (new \App\Models\TransactionModel())->insert($data);
+
+        $action = $this->request->getPost('action');
+        if ($action === 'save_add') {
+            return redirect()->back()->with('success', 'Pindah Dana berhasil dicatat. Silakan tambah lagi.');
+        }
+
+        return redirect()->to('beranda')->with('success', 'Pindah Dana berhasil dicatat.');
+    }
+
     public function rekap(): string
     {
-        $data              = $this->prototypeData();
-        $data['pageTitle'] = 'Rekap';
-        $data['activeNav'] = 'rekap';
+        $institutionId = $this->currentInstitutionId();
+        $institution = $this->currentInstitution();
+        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
+        $db = \Config\Database::connect();
+        $request = service('request');
+
+        // Filters
+        $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
+        $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
+        $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
+
+        // 1. Load Filter Options
+        $periods = [['slug' => 'semua', 'label' => 'Semua Periode']];
+        $dbPeriods = $db->table('book_periods')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        foreach ($dbPeriods as $p) {
+            $periods[] = ['slug' => 'period-' . $p['id'], 'label' => 'TB ' . $p['start_year'] . '/' . $p['end_year'] . ($p['is_active'] ? ' (Aktif)' : '')];
+        }
+
+        $units = $this->loadUnitProgramRows();
+        
+        $filterActivities = [];
+        if ($selectedUnitSlug !== 'semua') {
+            $unitId = (int) str_replace('unit-', '', $selectedUnitSlug);
+            $filterActivities = $db->table('activities')->where('unit_id', $unitId)->where('deleted_at', null)->get()->getResultArray();
+        } else {
+            $filterActivities = $db->table('activities')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        }
+        foreach ($filterActivities as &$fa) {
+            $faUnit = $db->table('units')->where('id', $fa['unit_id'])->get()->getRowArray();
+            $fa['slug'] = 'act-' . $fa['id'];
+            $fa['unit_name'] = $faUnit['name'] ?? '';
+        }
+        unset($fa);
+
+        // Map selected slugs to IDs
+        $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
+        $filterUnitId = $selectedUnitSlug !== 'semua' ? (int) str_replace('unit-', '', $selectedUnitSlug) : null;
+        $filterActivityId = $selectedActivitySlug !== 'semua' ? (int) str_replace('act-', '', $selectedActivitySlug) : null;
+
+        // Base Query builder for transactions
+        $tBuilder = $db->table('transactions')->where('institution_id', $institutionId)->where('deleted_at', null);
+        if ($filterPeriodId) $tBuilder->where('book_period_id', $filterPeriodId);
+        if ($filterUnitId) $tBuilder->where('unit_id', $filterUnitId);
+        if ($filterActivityId) $tBuilder->where('activity_id', $filterActivityId);
+
+        // 2. Summary
+        $obBuilder = $db->table('opening_balances')->where('institution_id', $institutionId)->where('deleted_at', null);
+        if ($filterPeriodId) $obBuilder->where('book_period_id', $filterPeriodId);
+        $obSum = (float) ($obBuilder->selectSum('amount')->get()->getRow()->amount ?? 0);
+
+        $incSum = (float) (clone $tBuilder)->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
+        $expSum = (float) (clone $tBuilder)->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
+        $surplus = $incSum - $expSum;
+
+        $rekapSummary = [
+            'balance' => $obSum + $surplus,
+            'income' => $incSum,
+            'expense' => $expSum,
+            'surplus' => $surplus,
+        ];
+
+        // 3. Transactions List
+        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
+        $rekapTransactions = [];
+        $rekapTransferItems = [];
+        foreach ($recentRows as $row) {
+            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
+            $item = [
+                'id' => $row['id'],
+                'headline' => $cat['name'] ?? 'Transaksi',
+                'subline' => $row['notes'],
+                'meta' => date('d M Y', strtotime($row['transaction_date'])),
+                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
+                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
+                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
+                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
+                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
+                'amount' => $row['amount'] + $row['admin_fee'],
+            ];
+            if ($row['type'] === 'pindah') {
+                $rekapTransferItems[] = $item;
+            } else {
+                $rekapTransactions[] = $item;
+            }
+        }
+
+        // 4. Accounts
+        $accounts = $db->table('accounts')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
+        $rekapAccounts = [];
+        foreach ($accounts as $acc) {
+            $accOb = (float) ($db->table('opening_balances')->where('account_id', $acc['id'])->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
+            $accInc = (float) (clone $tBuilder)->where('to_account_id', $acc['id'])->selectSum('amount')->get()->getRow()->amount ?? 0;
+            $accExp = (float) (clone $tBuilder)->where('from_account_id', $acc['id'])->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
+            $rekapAccounts[] = [
+                'name' => $acc['name'],
+                'balance' => $accOb + $accInc - $accExp,
+                'income' => $accInc,
+                'expense' => $accExp,
+                'icon' => 'account_balance_wallet',
+                'color' => 'emerald',
+                'detail_url' => route_query('rekening/acc-' . $acc['id']),
+            ];
+        }
+
+        // 5. Units
+        $rekapUnits = [];
+        if ($filterUnitId) {
+            $unitRows = $db->table('units')->where('id', $filterUnitId)->where('deleted_at', null)->get()->getResultArray();
+        } else {
+            $unitRows = $units;
+        }
+        
+        foreach ($unitRows as $u) {
+            $uInc = (float) (clone $tBuilder)->where('unit_id', $u['id'])->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
+            $uExp = (float) (clone $tBuilder)->where('unit_id', $u['id'])->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
+            if ($uInc == 0 && $uExp == 0) continue; // Only units with transactions in this filter
+            
+            $uActCount = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->countAllResults();
+            $uFirstAct = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getRowArray();
+            
+            $u['slug'] = 'unit-' . $u['id'];
+            $u['income'] = $uInc;
+            $u['expense'] = $uExp;
+            $u['surplus'] = $uInc - $uExp;
+            $u['activities'] = array_fill(0, $uActCount, 1);
+            $u['quick_activity_name'] = $uFirstAct['name'] ?? '-';
+            $u['detail_url'] = '#';
+            $u['masuk_url'] = route_query('catat/masuk', ['unit' => $u['slug']]);
+            $u['keluar_url'] = route_query('catat/keluar', ['unit' => $u['slug']]);
+            $rekapUnits[] = $u;
+        }
+
+        // 6. Activities
+        $rekapActivities = [];
+        $actRows = $filterActivities;
+        foreach ($actRows as $a) {
+            $aInc = (float) (clone $tBuilder)->where('activity_id', $a['id'])->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
+            $aExp = (float) (clone $tBuilder)->where('activity_id', $a['id'])->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
+            if ($aInc == 0 && $aExp == 0) continue;
+            
+            $a['income'] = $aInc;
+            $a['expense'] = $aExp;
+            $a['surplus'] = $aInc - $aExp;
+            $a['detail_url'] = route_query('kegiatan/act-' . $a['id']);
+            $rekapActivities[] = $a;
+        }
+
+        $data = [
+            'pageTitle' => 'Rekap',
+            'activeNav' => 'rekap',
+            'periods' => $periods,
+            'selectedPeriodSlug' => $selectedPeriodSlug,
+            'units' => array_map(function($u) { $u['slug'] = 'unit-'.$u['id']; return $u; }, $units),
+            'selectedUnitSlug' => $selectedUnitSlug,
+            'filterActivities' => $filterActivities,
+            'selectedActivitySlug' => $selectedActivitySlug,
+            'rekapSummary' => $rekapSummary,
+            'rekapTransactions' => $rekapTransactions,
+            'rekapTransferItems' => $rekapTransferItems,
+            'rekapAccounts' => $rekapAccounts,
+            'rekapUnits' => $rekapUnits,
+            'rekapActivities' => $rekapActivities,
+            'rekapReceivers' => [],
+        ];
 
         return view('pages/rekap', $data);
     }
 
     public function pengaturan(): string
     {
-        $data                      = $this->prototypeData();
-        $data['pageTitle']         = 'Pengaturan';
-        $data['activeNav']         = 'beranda';
-        $data['backUrl']           = site_url('beranda');
-        $data['settingsShortcuts'] = $this->buildSettingsShortcuts($data);
+        $institution = $this->currentInstitution();
+        $units = $this->loadUnitProgramRows();
+        $activitySummaries = $this->loadActivityRows();
+        $accounts = $this->loadAccountRows();
+        $transactionCategories = $this->loadTransactionCategoryRows();
+        $reportPositions = $this->loadReportPositionRows();
+        $bookPeriods = $this->loadBookPeriodRows();
+        $openingBalances = $this->loadOpeningBalanceRows();
+        $receivers = $this->loadReceiverRows();
+
+        $data = [
+            'appName'               => $institution['app_name'] ?? 'Arusdana',
+            'pageTitle'             => 'Pengaturan',
+            'activeNav'             => 'beranda',
+            'backUrl'               => site_url('beranda'),
+            'institutionName'       => $institution['name'],
+            'units'                 => $units,
+            'activitySummaries'     => $activitySummaries,
+            'accounts'              => $accounts,
+            'transactionCategories' => $transactionCategories,
+            'reportPositions'       => $reportPositions,
+            'bookPeriods'           => $bookPeriods,
+            'openingBalances'       => $openingBalances,
+            'receivers'             => $receivers,
+        ];
+
+        $data['settingsShortcuts'] = $this->buildSettingsShortcuts([
+            'institutionName'       => $institution['name'],
+            'units'                 => $units,
+            'activitySummaries'     => $activitySummaries,
+            'accounts'              => $accounts,
+            'transactionCategories' => $transactionCategories,
+            'reportPositions'       => $reportPositions,
+            'bookPeriods'           => $bookPeriods,
+            'openingBalances'       => $openingBalances,
+            'receivers'             => $receivers,
+        ]);
 
         return view('pages/settings', $data);
     }
 
     public function profilLembaga(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Profil Lembaga';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan');
-        $data['editUrl']         = site_url('pengaturan/profil-lembaga/edit');
+        $data = [];
+        $institution = $this->currentInstitution();
+
+        $data['pageTitle'] = 'Profil Lembaga';
+        $data['activeNav'] = 'beranda';
+        $data['backUrl'] = site_url('pengaturan');
+        $data['editUrl'] = site_url('pengaturan/profil-lembaga/edit');
+        $data['institutionName'] = $institution['name'];
         $data['profileSections'] = [
-            ['label' => 'Nama Lembaga', 'value' => $data['institutionName']],
-            ['label' => 'Nama Aplikasi', 'value' => $data['appName']],
-            ['label' => 'Jenis Lembaga', 'value' => 'PT / Badan Usaha'],
-            ['label' => 'Email Operasional', 'value' => 'finance@majupendidikanbangsa.id'],
-            ['label' => 'Nomor WhatsApp', 'value' => '+62 812-0000-8899'],
-            ['label' => 'Alamat Singkat', 'value' => 'Bandung, Jawa Barat'],
+            ['label' => 'Nama Lembaga', 'value' => $institution['name']],
+            ['label' => 'Nama Aplikasi', 'value' => $institution['app_name']],
+            ['label' => 'Jenis Lembaga', 'value' => $institution['type']],
+            ['label' => 'Email Operasional', 'value' => $institution['email'] ?: '-'],
+            ['label' => 'Nomor WhatsApp', 'value' => $institution['whatsapp'] ?: '-'],
+            ['label' => 'Alamat Singkat', 'value' => $institution['address'] ?: '-'],
         ];
 
         return view('pages/master/profile', $data);
@@ -140,514 +796,454 @@ class Arus extends BaseController
 
     public function editProfilLembaga(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Form Profil Lembaga';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/profil-lembaga');
-        $data['formMode']        = 'Edit Profil';
-        $data['formTitle']       = 'Form Profil Lembaga';
-        $data['formDescription'] = 'Form dummy ini dipakai untuk memvalidasi field dasar identitas lembaga sebelum backend dan penyimpanan data dibuat.';
-        $data['saveLabel']       = 'Simpan Profil';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Lembaga', 'value' => $data['institutionName']],
-            ['type' => 'text', 'label' => 'Nama Aplikasi', 'value' => $data['appName']],
-            ['type' => 'select', 'label' => 'Jenis Lembaga', 'value' => 'PT / Badan Usaha', 'options' => ['PT / Badan Usaha', 'Yayasan', 'Lembaga Non-Profit']],
-            ['type' => 'textarea', 'label' => 'Alamat Singkat', 'value' => 'Bandung, Jawa Barat'],
-            ['type' => 'text', 'label' => 'Email Operasional', 'value' => 'finance@majupendidikanbangsa.id'],
-            ['type' => 'text', 'label' => 'Nomor WhatsApp', 'value' => '+62 812-0000-8899'],
-            ['type' => 'file', 'label' => 'Logo Lembaga', 'value' => 'Belum ada file baru dipilih'],
-        ];
+        return view('pages/master/form', $this->buildInstitutionFormData());
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanProfilLembaga(): RedirectResponse
+    {
+        $institution = $this->currentInstitution();
+        $name = trim((string) $this->request->getPost('name'));
+        $appName = trim((string) $this->request->getPost('app_name'));
+
+        if ($name === '' || $appName === '') {
+            return redirect()->back()->withInput()->with('error', 'Nama lembaga dan nama aplikasi wajib diisi.');
+        }
+
+        (new InstitutionModel())->update((int) $institution['id'], [
+            'name' => $name,
+            'app_name' => $appName,
+            'type' => trim((string) $this->request->getPost('type')) ?: 'Lembaga',
+            'address' => trim((string) $this->request->getPost('address')),
+            'email' => trim((string) $this->request->getPost('email')),
+            'whatsapp' => trim((string) $this->request->getPost('whatsapp')),
+            'logo' => trim((string) $this->request->getPost('logo')),
+        ]);
+
+        return redirect()->to(site_url('pengaturan/profil-lembaga/edit'))
+            ->with('success', 'Profil lembaga berhasil diperbarui.');
     }
 
     public function masterUnitProgram(): string
     {
-        $data               = $this->prototypeData();
+        $data               = [];
         $data['pageTitle']  = 'Master Unit / Program';
         $data['activeNav']  = 'beranda';
         $data['backUrl']    = site_url('pengaturan');
+        $data['units']      = $this->loadUnitProgramRows();
 
         return view('pages/master/units', $data);
     }
 
     public function tambahUnitProgram(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Unit / Program';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/unit-program');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Unit / Program';
-        $data['formDescription'] = 'Digunakan untuk menambah layer utama sebelum kegiatan diturunkan di bawahnya.';
-        $data['saveLabel']       = 'Simpan Unit';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Unit / Program', 'value' => ''],
-            ['type' => 'text', 'label' => 'Singkatan Unit', 'value' => ''],
-            ['type' => 'select', 'label' => 'Status', 'value' => 'Aktif', 'options' => ['Aktif', 'Nonaktif']],
-            ['type' => 'number', 'label' => 'Urutan Tampil', 'value' => '4'],
-            ['type' => 'textarea', 'label' => 'Catatan Singkat', 'value' => ''],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildUnitFormData());
     }
 
     public function editUnitProgram(string $slug): string
     {
-        $data = $this->prototypeData();
-        $unit = $this->findUnit($data['units'], $slug);
+        $unit = (new UnitModel())->where('slug', $slug)->where('deleted_at', null)->first();
 
-        if ($unit === null) {
+        if (! is_array($unit)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $data['pageTitle']       = 'Edit ' . $unit['name'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/unit-program');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Unit / Program';
-        $data['formDescription'] = 'Form dummy ini mengatur identitas unit dan bagaimana unit tampil di daftar utama.';
-        $data['saveLabel']       = 'Simpan Unit';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Unit / Program', 'value' => $unit['name']],
-            ['type' => 'text', 'label' => 'Singkatan Unit', 'value' => $unit['short_name'] ?? ''],
-            ['type' => 'select', 'label' => 'Status', 'value' => 'Aktif', 'options' => ['Aktif', 'Nonaktif']],
-            ['type' => 'number', 'label' => 'Urutan Tampil', 'value' => (string) ($this->findIndexBySlug($data['units'], $unit['slug']) + 1)],
-            ['type' => 'textarea', 'label' => 'Catatan Singkat', 'value' => 'Unit ini dipakai untuk mengelompokkan kegiatan dan ringkasan transaksi.'],
-        ];
+        return view('pages/master/form', $this->buildUnitFormData($unit, true));
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanUnitProgram(): RedirectResponse
+    {
+        return $this->persistUnitProgram();
+    }
+
+    public function updateUnitProgram(string $slug): RedirectResponse
+    {
+        return $this->persistUnitProgram($slug);
+    }
+
+    public function hapusUnitProgram(string $slug): RedirectResponse
+    {
+        $unitModel = new UnitModel();
+        $unit = $unitModel->where('slug', $slug)->first();
+
+        if (! is_array($unit)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        // Cek apakah unit masih memiliki kegiatan aktif
+        $activityCount = (new ActivityModel())
+            ->where('unit_id', (int) $unit['id'])
+            ->where('deleted_at', null)
+            ->countAllResults();
+
+        if ($activityCount > 0) {
+            return redirect()->to(site_url('pengaturan/unit-program'))
+                ->with('error', 'Unit <strong>' . esc($unit['name']) . '</strong> tidak bisa dihapus karena masih memiliki ' . $activityCount . ' kegiatan. Hapus kegiatan terlebih dahulu.');
+        }
+
+        // Soft delete via CI4 built-in
+        $unitModel->delete((int) $unit['id']);
+
+        return redirect()->to(site_url('pengaturan/unit-program'))
+            ->with('success', 'Unit <strong>' . esc($unit['name']) . '</strong> berhasil dihapus.');
     }
 
     public function masterKegiatan(): string
     {
-        $data               = $this->prototypeData();
-        $data['pageTitle']  = 'Master Kegiatan';
-        $data['activeNav']  = 'beranda';
-        $data['backUrl']    = site_url('pengaturan');
+        $data = [];
+        $data['pageTitle'] = 'Master Kegiatan';
+        $data['activeNav'] = 'beranda';
+        $data['backUrl'] = site_url('pengaturan');
+        $data['activitySummaries'] = $this->loadActivityRows();
 
         return view('pages/master/activities', $data);
     }
 
     public function tambahKegiatan(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Kegiatan';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/kegiatan');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Kegiatan';
-        $data['formDescription'] = 'Kegiatan adalah konteks aktif yang dipakai langsung saat mencatat transaksi.';
-        $data['saveLabel']       = 'Simpan Kegiatan';
-        $data['formFields']      = [
-            ['type' => 'select', 'label' => 'Unit Induk', 'value' => 'Konsultan Pendidikan', 'options' => array_column($data['units'], 'name')],
-            ['type' => 'text', 'label' => 'Nama Kegiatan', 'value' => ''],
-            ['type' => 'text', 'label' => 'Singkatan Kegiatan', 'value' => ''],
-            ['type' => 'text', 'label' => 'Rekening Terkait', 'value' => 'BRI PT, Dana Operasional Cago'],
-            ['type' => 'select', 'label' => 'Default Uang Masuk', 'value' => 'BRI PT', 'options' => array_column($data['accounts'], 'name')],
-            ['type' => 'select', 'label' => 'Default Biaya / Belanja', 'value' => 'Dana Operasional Cago', 'options' => array_column($data['accounts'], 'name')],
-            ['type' => 'text', 'label' => 'Saldo Terkait Dummy', 'value' => 'Rp 0'],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildActivityFormData());
     }
 
     public function editKegiatan(string $slug): string
     {
-        $data     = $this->prototypeData();
-        $activity = $this->findActivity($data['activitySummaries'], $slug);
+        $activity = (new ActivityModel())->where('slug', $slug)->where('deleted_at', null)->first();
 
-        if ($activity === null) {
+        if (! is_array($activity)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $rawActivity = $this->findActivityFromUnits($data['units'], $slug);
-        $defaultIncome = $rawActivity['default_income_account'] ?? ($activity['related_accounts'][0] ?? '');
-        $defaultExpense = $rawActivity['default_expense_account'] ?? ($activity['related_accounts'][0] ?? '');
+        return view('pages/master/form', $this->buildActivityFormData($activity, true));
+    }
 
-        $data['pageTitle']       = 'Edit ' . $activity['name'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/kegiatan');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Kegiatan';
-        $data['formDescription'] = 'Form dummy ini mengatur kegiatan, rekening yang terkait, dan default konteks pencatatan.';
-        $data['saveLabel']       = 'Simpan Kegiatan';
-        $data['formFields']      = [
-            ['type' => 'select', 'label' => 'Unit Induk', 'value' => $activity['unit_name'], 'options' => array_column($data['units'], 'name')],
-            ['type' => 'text', 'label' => 'Nama Kegiatan', 'value' => $activity['name']],
-            ['type' => 'text', 'label' => 'Singkatan Kegiatan', 'value' => $activity['short_name'] ?? ''],
-            ['type' => 'text', 'label' => 'Rekening Terkait', 'value' => implode(', ', $activity['related_accounts'])],
-            ['type' => 'select', 'label' => 'Default Uang Masuk', 'value' => $defaultIncome, 'options' => array_column($data['accounts'], 'name')],
-            ['type' => 'select', 'label' => 'Default Biaya / Belanja', 'value' => $defaultExpense, 'options' => array_column($data['accounts'], 'name')],
-            ['type' => 'text', 'label' => 'Saldo Terkait Dummy', 'value' => rupiah($activity['related_balance'])],
-        ];
+    public function simpanKegiatan(): RedirectResponse
+    {
+        return $this->persistActivity();
+    }
 
-        return view('pages/master/form', $data);
+    public function updateKegiatan(string $slug): RedirectResponse
+    {
+        return $this->persistActivity($slug);
+    }
+
+    public function hapusKegiatan(string $slug): RedirectResponse
+    {
+        $model = new ActivityModel();
+        $activity = $model->where('slug', $slug)->first();
+
+        if (! is_array($activity)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        // TODO: Saat tabel transactions sudah aktif, tambahkan pengecekan:
+        // $txCount = (new TransactionModel())->where('activity_id', $activity['id'])->where('deleted_at', null)->countAllResults();
+        // if ($txCount > 0) { return redirect()->with('error', '...'); }
+
+        $model->delete((int) $activity['id']);
+
+        return redirect()->to(site_url('pengaturan/kegiatan'))
+            ->with('success', 'Kegiatan <strong>' . esc($activity['name']) . '</strong> berhasil dihapus.');
     }
 
     public function masterRekeningDompet(): string
     {
-        $data               = $this->prototypeData();
-        $data['pageTitle']  = 'Master Rekening / Dompet';
-        $data['activeNav']  = 'beranda';
-        $data['backUrl']    = site_url('pengaturan');
+        $data = [];
+        $data['pageTitle'] = 'Master Rekening / Dompet';
+        $data['activeNav'] = 'beranda';
+        $data['backUrl'] = site_url('pengaturan');
+        $data['accountSummaries'] = $this->loadAccountRows();
 
         return view('pages/master/accounts', $data);
     }
 
     public function tambahRekeningDompet(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Rekening / Dompet';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/rekening-dompet');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Rekening / Dompet';
-        $data['formDescription'] = 'Sumber atau tujuan uang bergerak saat transaksi dicatat. Tetap statis untuk tahap prototype.';
-        $data['saveLabel']       = 'Simpan Rekening';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Rekening / Dompet', 'value' => ''],
-            ['type' => 'select', 'label' => 'Jenis Penyimpanan Dana', 'value' => 'Rekening', 'options' => ['Rekening', 'Dompet', 'Kas Tunai']],
-            ['type' => 'text', 'label' => 'Label / Singkatan', 'value' => ''],
-            ['type' => 'select', 'label' => 'Pos Laporan Terkait', 'value' => 'Kas di Bank BRI', 'options' => array_column($data['neracaPositions'], 'name')],
-            ['type' => 'text', 'label' => 'Saldo Dummy', 'value' => 'Rp 0'],
-            ['type' => 'textarea', 'label' => 'Catatan Penggunaan', 'value' => ''],
-            ['type' => 'select', 'label' => 'Status', 'value' => 'Aktif', 'options' => ['Aktif', 'Nonaktif']],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildAccountFormData());
     }
 
     public function editRekeningDompet(string $slug): string
     {
-        $data    = $this->prototypeData();
-        $account = $this->findAccount($data['accountSummaries'], $slug);
+        $account = (new AccountModel())->where('slug', $slug)->where('deleted_at', null)->first();
 
-        if ($account === null) {
+        if (! is_array($account)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $data['pageTitle']       = 'Edit ' . $account['name'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/rekening-dompet');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Rekening / Dompet';
-        $data['formDescription'] = 'Form dummy ini mengatur nama, jenis, tampilan label, dan saldo awal presentasi rekening atau dompet.';
-        $data['saveLabel']       = 'Simpan Rekening';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Rekening / Dompet', 'value' => $account['name']],
-            ['type' => 'select', 'label' => 'Jenis Penyimpanan Dana', 'value' => $account['kind'], 'options' => ['Rekening', 'Dompet', 'Kas Tunai']],
-            ['type' => 'text', 'label' => 'Label / Singkatan', 'value' => $account['mark']],
-            ['type' => 'select', 'label' => 'Pos Laporan Terkait', 'value' => $account['report_position_name'] ?? 'Kas dan Bank', 'options' => array_column($data['neracaPositions'], 'name')],
-            ['type' => 'text', 'label' => 'Saldo Dummy', 'value' => rupiah($account['balance'])],
-            ['type' => 'textarea', 'label' => 'Catatan Penggunaan', 'value' => $account['note']],
-            ['type' => 'select', 'label' => 'Status', 'value' => 'Aktif', 'options' => ['Aktif', 'Nonaktif']],
-        ];
+        return view('pages/master/form', $this->buildAccountFormData($account, true));
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanRekeningDompet(): RedirectResponse
+    {
+        return $this->persistAccount();
+    }
+
+    public function updateRekeningDompet(string $slug): RedirectResponse
+    {
+        return $this->persistAccount($slug);
+    }
+
+    public function hapusRekeningDompet(string $slug): RedirectResponse
+    {
+        $model = new AccountModel();
+        $account = $model->where('slug', $slug)->first();
+
+        if (! is_array($account)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        // TODO: Cek transaksi terkait saat tabel transactions sudah aktif
+        // $txCount = (new TransactionModel())->groupStart()
+        //     ->where('from_account_id', $account['id'])
+        //     ->orWhere('to_account_id', $account['id'])
+        // ->groupEnd()->where('deleted_at', null)->countAllResults();
+
+        $model->delete((int) $account['id']);
+
+        return redirect()->to(site_url('pengaturan/rekening-dompet'))
+            ->with('success', 'Rekening <strong>' . esc($account['name']) . '</strong> berhasil dihapus.');
     }
 
     public function masterKategoriBiaya(): string
     {
-        $data               = $this->prototypeData();
-        $data['pageTitle']  = 'Master Kategori Transaksi';
-        $data['activeNav']  = 'beranda';
-        $data['backUrl']    = site_url('pengaturan');
+        $data = [];
+        $data['pageTitle'] = 'Master Kategori Transaksi';
+        $data['activeNav'] = 'beranda';
+        $data['backUrl'] = site_url('pengaturan');
+        $data['transactionCategories'] = $this->loadTransactionCategoryRows();
 
         return view('pages/master/categories', $data);
     }
 
     public function tambahKategoriBiaya(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Kategori Transaksi';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/kategori-biaya');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Kategori Transaksi';
-        $data['formDescription'] = 'Satu master ini dipakai untuk uang masuk dan uang keluar. Jenis transaksinya menentukan kategori muncul di form yang mana.';
-        $data['saveLabel']       = 'Simpan Kategori';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Kategori', 'value' => ''],
-            ['type' => 'select', 'label' => 'Jenis Transaksi', 'value' => 'Keluar', 'options' => ['Masuk', 'Keluar']],
-            ['type' => 'number', 'label' => 'Urutan Tampil', 'value' => (string) (count($data['transactionCategories']) + 1)],
-            ['type' => 'select', 'label' => 'Pos Laporan Terkait', 'value' => 'Beban Operasional', 'options' => array_column($data['transactionPositions'], 'name')],
-            ['type' => 'select', 'label' => 'Muncul sebagai kategori cepat', 'value' => 'Ya', 'options' => ['Ya', 'Tidak']],
-            ['type' => 'select', 'label' => 'Status', 'value' => 'Aktif', 'options' => ['Aktif', 'Nonaktif']],
-            ['type' => 'textarea', 'label' => 'Catatan Penggunaan', 'value' => ''],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildTransactionCategoryFormData());
     }
 
-    public function editKategoriBiaya(string $slug): string
+    public function editKategoriBiaya(string $id): string
     {
-        $data     = $this->prototypeData();
-        $category = $this->findCategoryItem($data['transactionCategories'], $slug);
+        $category = (new TransactionCategoryModel())->find((int) $id);
 
-        if ($category === null) {
+        if (! is_array($category)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $data['pageTitle']       = 'Edit ' . $category['name'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/kategori-biaya');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Kategori Transaksi';
-        $data['formDescription'] = 'Kategori ini langsung menentukan apakah item muncul di form uang masuk atau uang keluar, sekaligus terhubung ke pos laporan.';
-        $data['saveLabel']       = 'Simpan Kategori';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Kategori', 'value' => $category['name']],
-            ['type' => 'select', 'label' => 'Jenis Transaksi', 'value' => $category['type'], 'options' => ['Masuk', 'Keluar']],
-            ['type' => 'number', 'label' => 'Urutan Tampil', 'value' => (string) $category['order']],
-            ['type' => 'select', 'label' => 'Pos Laporan Terkait', 'value' => $category['report_position_name'], 'options' => array_column($data['transactionPositions'], 'name')],
-            ['type' => 'select', 'label' => 'Muncul sebagai kategori cepat', 'value' => $category['is_quick'] ? 'Ya' : 'Tidak', 'options' => ['Ya', 'Tidak']],
-            ['type' => 'select', 'label' => 'Status', 'value' => 'Aktif', 'options' => ['Aktif', 'Nonaktif']],
-            ['type' => 'textarea', 'label' => 'Catatan Penggunaan', 'value' => $category['note']],
-        ];
+        return view('pages/master/form', $this->buildTransactionCategoryFormData($category, true));
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanKategoriBiaya(): RedirectResponse
+    {
+        return $this->persistTransactionCategory();
+    }
+
+    public function updateKategoriBiaya(string $id): RedirectResponse
+    {
+        return $this->persistTransactionCategory($id);
+    }
+
+    public function hapusKategoriBiaya(string $id): RedirectResponse
+    {
+        $model = new TransactionCategoryModel();
+        $item = $model->find((int) $id);
+        if (! is_array($item)) { throw PageNotFoundException::forPageNotFound(); }
+        $model->delete((int) $item['id']);
+        return redirect()->to(site_url('pengaturan/kategori-biaya'))
+            ->with('success', 'Kategori <strong>' . esc($item['name']) . '</strong> berhasil dihapus.');
     }
 
     public function masterPenerima(): string
     {
-        $data              = $this->prototypeData();
+        $data = [];
         $data['pageTitle'] = 'Penerima';
         $data['activeNav'] = 'beranda';
-        $data['backUrl']   = site_url('pengaturan');
+        $data['backUrl'] = site_url('pengaturan');
+        $data['receivers'] = $this->loadReceiverRows();
 
         return view('pages/master/receivers', $data);
     }
 
     public function tambahPenerima(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Penerima';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/penerima');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Penerima';
-        $data['formDescription'] = 'Penerima adalah daftar kontak atau vendor untuk mempercepat pencatatan transaksi.';
-        $data['saveLabel']       = 'Simpan Penerima';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Penerima / Kontak', 'value' => ''],
-            ['type' => 'select', 'label' => 'Jenis Kontak', 'value' => 'Vendor', 'options' => ['Tim Internal', 'Vendor', 'Klien', 'Lainnya']],
-            ['type' => 'text', 'label' => 'NIK (Opsional)', 'value' => ''],
-            ['type' => 'text', 'label' => 'NPWP (Opsional)', 'value' => ''],
-            ['type' => 'text', 'label' => 'Informasi Rekening (Opsional)', 'value' => ''],
-            ['type' => 'textarea', 'label' => 'Catatan', 'value' => ''],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildReceiverFormData());
     }
 
-    public function editPenerima(string $slug): string
+    public function editPenerima(string $id): string
     {
-        $data     = $this->prototypeData();
-        $receiver = $this->findReceiver($data['receivers'], $slug);
+        $receiver = (new ReceiverModel())->find((int) $id);
 
-        if ($receiver === null) {
+        if (! is_array($receiver)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $data['pageTitle']       = 'Edit ' . $receiver['name'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/penerima');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Penerima';
-        $data['formDescription'] = 'Penerima adalah daftar kontak atau vendor untuk mempercepat pencatatan transaksi.';
-        $data['saveLabel']       = 'Simpan Penerima';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Penerima / Kontak', 'value' => $receiver['name']],
-            ['type' => 'select', 'label' => 'Jenis Kontak', 'value' => $receiver['type'] ?? 'Vendor', 'options' => ['Tim Internal', 'Vendor', 'Klien', 'Lainnya']],
-            ['type' => 'text', 'label' => 'NIK (Opsional)', 'value' => $receiver['nik']],
-            ['type' => 'text', 'label' => 'NPWP (Opsional)', 'value' => $receiver['npwp']],
-            ['type' => 'text', 'label' => 'Informasi Rekening (Opsional)', 'value' => $receiver['bank_account']],
-            ['type' => 'textarea', 'label' => 'Catatan', 'value' => $receiver['note'] ?? ''],
-        ];
+        return view('pages/master/form', $this->buildReceiverFormData($receiver, true));
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanPenerima(): RedirectResponse
+    {
+        return $this->persistReceiver();
+    }
+
+    public function updatePenerima(string $id): RedirectResponse
+    {
+        return $this->persistReceiver($id);
+    }
+
+    public function hapusPenerima(string $id): RedirectResponse
+    {
+        $model = new ReceiverModel();
+        $item = $model->find((int) $id);
+        if (! is_array($item)) { throw PageNotFoundException::forPageNotFound(); }
+        $model->delete((int) $item['id']);
+        return redirect()->to(site_url('pengaturan/penerima'))
+            ->with('success', 'Penerima <strong>' . esc($item['name']) . '</strong> berhasil dihapus.');
     }
 
     public function masterPosLaporan(): string
     {
-        $data              = $this->prototypeData();
+        $data = [];
         $data['pageTitle'] = 'Pos Laporan';
         $data['activeNav'] = 'beranda';
-        $data['backUrl']   = site_url('pengaturan');
+        $data['backUrl'] = site_url('pengaturan');
+        $data['reportPositions'] = $this->loadReportPositionRows();
+        $data['reportGroups'] = [
+            ['name' => 'Laba Rugi'],
+            ['name' => 'Neraca'],
+        ];
 
         return view('pages/master/report_positions', $data);
     }
 
     public function tambahPosLaporan(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Pos Laporan';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/pos-laporan');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Pos Laporan';
-        $data['formDescription'] = 'Pos laporan adalah jembatan antara transaksi harian dengan laporan tahunan. Di sinilah beban, pendapatan, aset, hutang, dan modal disiapkan.';
-        $data['saveLabel']       = 'Simpan Pos';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Kode Pos', 'value' => ''],
-            ['type' => 'text', 'label' => 'Nama Pos Laporan', 'value' => ''],
-            ['type' => 'select', 'label' => 'Kelompok Laporan', 'value' => 'Laba Rugi', 'options' => array_column($data['reportGroups'], 'name')],
-            ['type' => 'select', 'label' => 'Jenis Pos', 'value' => 'Beban', 'options' => ['Pendapatan', 'Beban', 'Aset', 'Kewajiban', 'Modal']],
-            ['type' => 'select', 'label' => 'Saldo Normal', 'value' => 'Debit', 'options' => ['Debit', 'Kredit']],
-            ['type' => 'textarea', 'label' => 'Catatan Pos', 'value' => ''],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildReportPositionFormData());
     }
 
-    public function editPosLaporan(string $slug): string
+    public function editPosLaporan(string $id): string
     {
-        $data         = $this->prototypeData();
-        $reportPosition = $this->findReportPosition($data['reportPositions'], $slug);
+        $reportPosition = (new ReportPositionModel())->find((int) $id);
 
-        if ($reportPosition === null) {
+        if (! is_array($reportPosition)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $data['pageTitle']       = 'Edit ' . $reportPosition['name'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/pos-laporan');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Pos Laporan';
-        $data['formDescription'] = 'Form dummy ini menyiapkan struktur yang nanti dipakai laporan laba rugi, neraca, dan arus kas.';
-        $data['saveLabel']       = 'Simpan Pos';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Kode Pos', 'value' => $reportPosition['code']],
-            ['type' => 'text', 'label' => 'Nama Pos Laporan', 'value' => $reportPosition['name']],
-            ['type' => 'select', 'label' => 'Kelompok Laporan', 'value' => $reportPosition['group'], 'options' => array_column($data['reportGroups'], 'name')],
-            ['type' => 'select', 'label' => 'Jenis Pos', 'value' => $reportPosition['kind'], 'options' => ['Pendapatan', 'Beban', 'Aset', 'Kewajiban', 'Modal']],
-            ['type' => 'select', 'label' => 'Saldo Normal', 'value' => $reportPosition['normal_balance'], 'options' => ['Debit', 'Kredit']],
-            ['type' => 'textarea', 'label' => 'Catatan Pos', 'value' => $reportPosition['note']],
-        ];
+        return view('pages/master/form', $this->buildReportPositionFormData($reportPosition, true));
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanPosLaporan(): RedirectResponse
+    {
+        return $this->persistReportPosition();
+    }
+
+    public function updatePosLaporan(string $id): RedirectResponse
+    {
+        return $this->persistReportPosition($id);
+    }
+
+    public function hapusPosLaporan(string $id): RedirectResponse
+    {
+        $model = new ReportPositionModel();
+        $item = $model->find((int) $id);
+        if (! is_array($item)) { throw PageNotFoundException::forPageNotFound(); }
+        $model->delete((int) $item['id']);
+        return redirect()->to(site_url('pengaturan/pos-laporan'))
+            ->with('success', 'Pos Laporan <strong>' . esc($item['name']) . '</strong> berhasil dihapus.');
     }
 
     public function masterTahunBuku(): string
     {
-        $data              = $this->prototypeData();
+        $data = [];
         $data['pageTitle'] = 'Tahun Buku';
         $data['activeNav'] = 'beranda';
-        $data['backUrl']   = site_url('pengaturan');
+        $data['backUrl'] = site_url('pengaturan');
+        $data['bookPeriods'] = $this->loadBookPeriodRows();
 
         return view('pages/master/book_periods', $data);
     }
 
     public function tambahTahunBuku(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Tahun Buku';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/tahun-buku');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Tahun Buku';
-        $data['formDescription'] = 'Tahun buku dipakai untuk mengikat saldo awal dan nanti menjadi dasar filter laporan tahunan.';
-        $data['saveLabel']       = 'Simpan Tahun Buku';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Tahun Buku', 'value' => ''],
-            ['type' => 'text', 'label' => 'Tanggal Mulai', 'value' => '01 Jan 2027'],
-            ['type' => 'text', 'label' => 'Tanggal Selesai', 'value' => '31 Des 2027'],
-            ['type' => 'select', 'label' => 'Status', 'value' => 'Draft', 'options' => ['Draft', 'Aktif', 'Ditutup']],
-            ['type' => 'textarea', 'label' => 'Catatan Periode', 'value' => ''],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildBookPeriodFormData());
     }
 
     public function editTahunBuku(string $slug): string
     {
-        $data = $this->prototypeData();
-        $bookPeriod = $this->findBookPeriod($data['bookPeriods'], $slug);
+        $bookPeriod = (new BookPeriodModel())->where('slug', $slug)->first();
 
-        if ($bookPeriod === null) {
+        if (! is_array($bookPeriod)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $data['pageTitle']       = 'Edit ' . $bookPeriod['name'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/tahun-buku');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Tahun Buku';
-        $data['formDescription'] = 'Form dummy ini mengatur periode buku yang nanti mengikat transaksi, saldo awal, dan laporan tahunan.';
-        $data['saveLabel']       = 'Simpan Tahun Buku';
-        $data['formFields']      = [
-            ['type' => 'text', 'label' => 'Nama Tahun Buku', 'value' => $bookPeriod['name']],
-            ['type' => 'text', 'label' => 'Tanggal Mulai', 'value' => $bookPeriod['start']],
-            ['type' => 'text', 'label' => 'Tanggal Selesai', 'value' => $bookPeriod['end']],
-            ['type' => 'select', 'label' => 'Status', 'value' => $bookPeriod['status'], 'options' => ['Draft', 'Aktif', 'Ditutup']],
-            ['type' => 'textarea', 'label' => 'Catatan Periode', 'value' => $bookPeriod['note']],
-        ];
+        return view('pages/master/form', $this->buildBookPeriodFormData($bookPeriod, true));
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanTahunBuku(): RedirectResponse
+    {
+        return $this->persistBookPeriod();
+    }
+
+    public function updateTahunBuku(string $slug): RedirectResponse
+    {
+        return $this->persistBookPeriod($slug);
+    }
+
+    public function hapusTahunBuku(string $slug): RedirectResponse
+    {
+        $model = new BookPeriodModel();
+        $item = $model->where('slug', $slug)->first();
+        if (! is_array($item)) { throw PageNotFoundException::forPageNotFound(); }
+        $model->delete((int) $item['id']);
+        return redirect()->to(site_url('pengaturan/tahun-buku'))
+            ->with('success', 'Tahun Buku <strong>' . esc($item['name']) . '</strong> berhasil dihapus.');
     }
 
     public function masterSaldoAwal(): string
     {
-        $data              = $this->prototypeData();
+        $data = [];
         $data['pageTitle'] = 'Saldo Awal';
         $data['activeNav'] = 'beranda';
-        $data['backUrl']   = site_url('pengaturan');
+        $data['backUrl'] = site_url('pengaturan');
+        $data['openingBalances'] = $this->loadOpeningBalanceRows();
+        $data['bookPeriods'] = $this->loadBookPeriodRows();
 
         return view('pages/master/opening_balances', $data);
     }
 
     public function tambahSaldoAwal(): string
     {
-        $data                    = $this->prototypeData();
-        $data['pageTitle']       = 'Tambah Saldo Awal';
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/saldo-awal');
-        $data['formMode']        = 'Tambah Data';
-        $data['formTitle']       = 'Form Saldo Awal';
-        $data['formDescription'] = 'Saldo awal dipakai agar laporan tahunan nantinya punya titik awal yang valid, baik untuk kas maupun pos neraca lain.';
-        $data['saveLabel']       = 'Simpan Saldo Awal';
-        $data['formFields']      = [
-            ['type' => 'select', 'label' => 'Tahun Buku', 'value' => $data['bookPeriods'][0]['name'], 'options' => array_column($data['bookPeriods'], 'name')],
-            ['type' => 'select', 'label' => 'Pos / Sumber Saldo', 'value' => $data['openingBalanceSources'][0], 'options' => $data['openingBalanceSources']],
-            ['type' => 'select', 'label' => 'Pos Laporan Terkait', 'value' => $data['openingBalancePositions'][0], 'options' => $data['openingBalancePositions']],
-            ['type' => 'text', 'label' => 'Nilai Saldo Awal', 'value' => 'Rp 0'],
-            ['type' => 'textarea', 'label' => 'Catatan', 'value' => ''],
-        ];
-
-        return view('pages/master/form', $data);
+        return view('pages/master/form', $this->buildOpeningBalanceFormData());
     }
 
-    public function editSaldoAwal(string $slug): string
+    public function editSaldoAwal(string $id): string
     {
-        $data           = $this->prototypeData();
-        $openingBalance = $this->findOpeningBalance($data['openingBalances'], $slug);
+        $openingBalance = (new OpeningBalanceModel())->find((int) $id);
 
-        if ($openingBalance === null) {
+        if (! is_array($openingBalance)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $data['pageTitle']       = 'Edit ' . $openingBalance['label'];
-        $data['activeNav']       = 'beranda';
-        $data['backUrl']         = site_url('pengaturan/saldo-awal');
-        $data['formMode']        = 'Edit Data';
-        $data['formTitle']       = 'Edit Saldo Awal';
-        $data['formDescription'] = 'Form dummy ini mengikat saldo awal dengan tahun buku dan pos laporan yang benar.';
-        $data['saveLabel']       = 'Simpan Saldo Awal';
-        $data['formFields']      = [
-            ['type' => 'select', 'label' => 'Tahun Buku', 'value' => $openingBalance['book_period_name'], 'options' => array_column($data['bookPeriods'], 'name')],
-            ['type' => 'select', 'label' => 'Pos / Sumber Saldo', 'value' => $openingBalance['label'], 'options' => $data['openingBalanceSources']],
-            ['type' => 'select', 'label' => 'Pos Laporan Terkait', 'value' => $openingBalance['report_position_name'], 'options' => $data['openingBalancePositions']],
-            ['type' => 'text', 'label' => 'Nilai Saldo Awal', 'value' => rupiah($openingBalance['amount'])],
-            ['type' => 'textarea', 'label' => 'Catatan', 'value' => $openingBalance['note']],
-        ];
+        return view('pages/master/form', $this->buildOpeningBalanceFormData($openingBalance, true));
+    }
 
-        return view('pages/master/form', $data);
+    public function simpanSaldoAwal(): RedirectResponse
+    {
+        return $this->persistOpeningBalance();
+    }
+
+    public function updateSaldoAwal(string $id): RedirectResponse
+    {
+        return $this->persistOpeningBalance($id);
+    }
+
+    public function hapusSaldoAwal(string $id): RedirectResponse
+    {
+        $model = new OpeningBalanceModel();
+        $item = $model->find((int) $id);
+        if (! is_array($item)) { throw PageNotFoundException::forPageNotFound(); }
+        $model->delete((int) $item['id']);
+        return redirect()->to(site_url('pengaturan/saldo-awal'))
+            ->with('success', 'Saldo Awal <strong>' . esc($item['label'] ?? 'item') . '</strong> berhasil dihapus.');
     }
 
     public function transaksi(string $id): string
     {
-        $data = $this->prototypeData();
+        $data = [];
         $transaction = $this->findTransaction($data['transactions'], $id);
 
         if ($transaction === null) {
@@ -670,7 +1266,7 @@ class Arus extends BaseController
 
     public function editTransaksi(string $id): string
     {
-        $data = $this->prototypeData();
+        $data = [];
         $transaction = $this->findTransaction($data['transactions'], $id);
 
         if ($transaction === null) {
@@ -693,161 +1289,112 @@ class Arus extends BaseController
 
     public function rekening(string $slug): string
     {
-        $data = $this->prototypeData();
+        $institutionId = $this->currentInstitutionId();
+        $institution = $this->currentInstitution();
+        $bookPeriodId = $this->getActiveBookPeriodId($institutionId);
+        $db = \Config\Database::connect();
+        $request = service('request');
 
-        $account = $this->findAccount($data['accountSummaries'], $slug);
-
-        if ($account === null) {
+        $accountId = (int) str_replace('acc-', '', $slug);
+        $acc = $db->table('accounts')->where('id', $accountId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+        
+        if (! $acc) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $accountTransactions = $this->filterAccountTransactions($data['rekapTransactions'], $account['name']);
+        // Apply same filters as rekap to account details
+        $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
+        $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
+        $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
 
-        $data['pageTitle']           = $account['name'];
-        $data['activeNav']           = 'rekap';
-        $data['backUrl']             = route_query('rekap', $data['rekapQuery']);
-        $data['account']             = $account;
-        $data['accountTransactions'] = $accountTransactions;
-        $data['involvedReceivers']   = $this->buildRekapReceivers($data['receivers'], $accountTransactions);
-        $data['accountActivities']   = $this->buildAccountActivityBreakdown($accountTransactions, $account['name']);
+        $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
+        $filterUnitId = $selectedUnitSlug !== 'semua' ? (int) str_replace('unit-', '', $selectedUnitSlug) : null;
+        $filterActivityId = $selectedActivitySlug !== 'semua' ? (int) str_replace('act-', '', $selectedActivitySlug) : null;
 
-        return view('pages/account_detail', $data);
-    }
+        $tBuilder = $db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->groupStart()
+                ->where('to_account_id', $accountId)
+                ->orWhere('from_account_id', $accountId)
+            ->groupEnd();
+            
+        if ($filterPeriodId) $tBuilder->where('book_period_id', $filterPeriodId);
+        if ($filterUnitId) $tBuilder->where('unit_id', $filterUnitId);
+        if ($filterActivityId) $tBuilder->where('activity_id', $filterActivityId);
 
-    public function unit(string $slug): string
-    {
-        $data = $this->prototypeData([
-            'unit'     => $slug,
-            'activity' => $this->request->getGet('kegiatan'),
-        ]);
+        // Account balances
+        $accOb = (float) ($db->table('opening_balances')->where('account_id', $accountId)->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
+        $accInc = (float) (clone $tBuilder)->where('type', 'masuk')->where('to_account_id', $accountId)->selectSum('amount')->get()->getRow()->amount ?? 0;
+        $accExp = (float) (clone $tBuilder)->where('type', 'keluar')->where('from_account_id', $accountId)->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
 
-        $unit = $this->findUnit($data['units'], $slug);
-
-        if ($unit === null) {
-            throw PageNotFoundException::forPageNotFound();
-        }
-
-        $data['pageTitle']        = $unit['name'];
-        $data['activeNav']        = 'beranda';
-        $data['unit']             = $unit;
-        $data['unitTransactions'] = array_values(
-            array_filter(
-                $data['transactions'],
-                static fn(array $transaction): bool => $transaction['unit_slug'] === $slug
-            )
-        );
-        $data['involvedReceivers'] = $this->buildRekapReceivers($data['receivers'], $data['unitTransactions']);
-
-        return view('pages/unit_detail', $data);
-    }
-
-    public function kegiatan(string $slug): string
-    {
-        $data = $this->prototypeData([
-            'activity' => $slug,
-        ]);
-
-        $activity = $this->findActivity($data['activitySummaries'], $slug);
-
-        if ($activity === null) {
-            throw PageNotFoundException::forPageNotFound();
-        }
-
-        $activityTransactions = array_values(
-            array_filter(
-                $data['transactions'],
-                static fn(array $transaction): bool => $transaction['activity_slug'] === $slug
-            )
-        );
-
-        $categoryBreakdown = $this->buildCategorySummary($data['expenseCategories'], $activityTransactions);
-        $transferItems     = array_values(
-            array_filter(
-                $activityTransactions,
-                static fn(array $transaction): bool => $transaction['type'] === 'pindah'
-            )
-        );
-
-        $data['pageTitle']            = $activity['name'];
-        $data['activeNav']            = 'beranda';
-        $data['activity']             = $activity;
-        $data['activityTransactions'] = $activityTransactions;
-        $data['involvedReceivers']    = $this->buildRekapReceivers($data['receivers'], $activityTransactions);
-        $data['categoryBreakdown']    = $categoryBreakdown;
-        $data['transferItems']        = $transferItems;
-
-        return view('pages/activity_detail', $data);
-    }
-
-    private function prototypeData(array $options = []): array
-    {
-        $raw = $this->rawPrototypeData();
-
-        [$units, $unitMap, $activityMap] = $this->buildMaps($raw['units']);
-
-        $transactions = $this->decorateTransactions($raw['transactions']);
-        $activeContext = $this->resolveContext(
-            $units,
-            $activityMap,
-            $options['unit'] ?? $this->request->getGet('unit'),
-            $options['activity'] ?? $this->request->getGet('kegiatan')
-        );
-
-        $activeContext['query']             = [
-            'unit'     => $activeContext['unit_slug'],
-            'kegiatan' => $activeContext['activity_slug'],
+        $account = [
+            'name' => $acc['name'],
+            'balance' => $accOb + $accInc - $accExp,
+            'income' => $accInc,
+            'expense' => $accExp,
+            'transfer_in' => 0,
+            'transfer_out' => 0,
+            'icon' => 'account_balance_wallet',
+            'color' => 'emerald',
+            'surplus' => $accInc - $accExp,
+            'slug' => 'acc-' . $accountId,
+            'kind' => 'Rekening / Dompet',
+            'mark' => 'IDR',
+            'note' => 'Rekening aktif',
+            'movement_count' => count($recentRows),
         ];
-        $switchParams = $this->request->getGet();
-        unset($switchParams['unit'], $switchParams['kegiatan']);
-        $activeContext['switch_params']     = $switchParams;
-        $activeContext['switch_url']        = site_url(trim($this->request->getUri()->getPath(), '/'));
-        $activeContext['unit_url']          = route_query('unit/' . $activeContext['unit_slug'], ['kegiatan' => $activeContext['activity_slug']]);
-        $activeContext['activity_url']      = site_url('kegiatan/' . $activeContext['activity_slug']);
-        $activeContext['catat_url']         = route_query('catat', $activeContext['query']);
-        $activeContext['masuk_url']         = route_query('catat/masuk', $activeContext['query']);
-        $activeContext['keluar_url']        = route_query('catat/keluar', $activeContext['query']);
-        $activeContext['biaya_url']         = route_query('catat/keluar/biaya', $activeContext['query']);
-        $activeContext['pindah_dana_url']   = route_query('catat/keluar/pindah-dana', $activeContext['query']);
-        $activeContext['default_income_account'] = $activeContext['default_income_account'] ?? 'BRI PT';
-        $activeContext['default_expense_account'] = $activeContext['default_expense_account'] ?? 'Dana Operasional Cago';
-        $activeContext['default_transfer_from'] = $activeContext['default_transfer_from'] ?? 'BRI PT';
-        $activeContext['default_transfer_to'] = $activeContext['default_transfer_to'] ?? 'Dana Operasional Cago';
 
-        $contextTransactions = $this->filterTransactions(
-            $transactions,
-            'semua',
-            $activeContext['unit_slug'],
-            $activeContext['activity_slug']
-        );
+        $accountTransactions = [];
+        $accountActivities = []; // Track amount per activity
+        
+        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
+        
+        foreach ($recentRows as $row) {
+            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
+            $isIncome = ($row['to_account_id'] == $accountId);
+            $amount = $row['amount'] + ($isIncome ? 0 : $row['admin_fee']);
+            
+            $accountTransactions[] = [
+                'id' => $row['id'],
+                'headline' => $cat['name'] ?? 'Transaksi',
+                'subline' => $row['notes'],
+                'meta' => date('d M Y', strtotime($row['transaction_date'])),
+                'badge_class' => $isIncome ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
+                'badge_label' => $isIncome ? 'Masuk' : 'Keluar',
+                'icon' => $isIncome ? 'south_west' : 'north_east',
+                'amount_class' => $isIncome ? 'text-emerald-600' : 'text-rose-600',
+                'amount_prefix' => $isIncome ? '+' : '-',
+                'amount' => $amount,
+            ];
 
-        $reportGroups = $raw['report_groups'];
-        $reportPositions = $raw['report_positions'];
-        $transactionCategories = $this->buildTransactionCategories($raw['transaction_categories']);
-        $incomeCategories = $this->filterCategoriesByType($transactionCategories, 'Masuk');
-        $expenseCategories = $this->filterCategoriesByType($transactionCategories, 'Keluar');
-        $bookPeriods = $raw['book_periods'];
-        $openingBalances = $raw['opening_balances'];
-        $receivers = $raw['receivers'];
+            $actId = $row['activity_id'];
+            if ($actId) {
+                if (!isset($accountActivities[$actId])) {
+                    $a = $db->table('activities')->where('id', $actId)->get()->getRowArray();
+                    $u = $db->table('units')->where('id', $a['unit_id'])->get()->getRowArray();
+                    $accountActivities[$actId] = [
+                        'name' => $a['name'],
+                        'unit_name' => $u['name'],
+                        'amount' => 0,
+                        'income' => 0,
+                        'expense' => 0,
+                        'transfer_in' => 0,
+                        'transfer_out' => 0,
+                        'detail_url' => route_query('kegiatan/act-' . $actId),
+                    ];
+                }
+                $accountActivities[$actId]['amount'] += ($isIncome ? $amount : -$amount);
+                if ($isIncome) {
+                    $accountActivities[$actId]['income'] += $amount;
+                } else {
+                    $accountActivities[$actId]['expense'] += $amount;
+                }
+            }
+        }
 
-        $summary = $this->buildSummary($transactions, $raw['accounts']);
-        $units = $this->buildUnitSummaries($units, $transactions, $activeContext);
-        $activitySummaries = $this->buildActivitySummaries($units, $transactions);
-        $selectedCategory = $this->resolveCategory($expenseCategories, $this->request->getGet('kategori'));
-
-        $selectedPeriodSlug = $this->resolvePeriod($raw['periods'], $this->request->getGet('periode'));
-        [$selectedUnitSlug, $selectedActivitySlug] = $this->resolveRekapFilters(
-            $units,
-            $activityMap,
-            $this->request->getGet('unit'),
-            $this->request->getGet('kegiatan')
-        );
-
-        $rekapTransactions = $this->filterTransactions(
-            $transactions,
-            $selectedPeriodSlug,
-            $selectedUnitSlug !== 'semua' ? $selectedUnitSlug : null,
-            $selectedActivitySlug !== 'semua' ? $selectedActivitySlug : null
-        );
+        // Sort activities by absolute amount desc
+        usort($accountActivities, fn($a, $b) => abs($b['amount']) <=> abs($a['amount']));
 
         $rekapQuery = [
             'periode'  => $selectedPeriodSlug,
@@ -855,1364 +1402,1087 @@ class Arus extends BaseController
             'kegiatan' => $selectedActivitySlug,
         ];
 
-        $accountSummaries = $this->buildAccountSummaries(
-            $raw['accounts'],
-            $rekapTransactions,
-            $rekapQuery
-        );
-
-        $rekapAccounts = $this->buildDisplayedAccounts(
-            $accountSummaries,
-            $rekapTransactions,
-            $selectedUnitSlug,
-            $selectedActivitySlug,
-            $unitMap,
-            $activityMap
-        );
-
-        $rekapSummary = $this->buildSummary($rekapTransactions, $rekapAccounts);
-        $rekapUnits = $this->filterUnitSummaries(
-            $this->buildUnitSummaries($units, $rekapTransactions, $activeContext),
-            $selectedUnitSlug
-        );
-        $rekapActivities = $this->filterActivitySummaries(
-            $this->buildActivitySummaries($units, $rekapTransactions),
-            $selectedUnitSlug,
-            $selectedActivitySlug
-        );
-        $rekapReceivers = $this->buildRekapReceivers($receivers, $rekapTransactions);
-
-        $filterActivities = $this->buildFilterActivities($units, $selectedUnitSlug);
-
-        return [
-            'appName'            => 'Arusdana',
-            'institutionName'    => 'PT Maju Pendidikan Bangsa',
-            'activeContext'      => $activeContext,
-            'summary'            => $summary,
-            'units'              => $units,
-            'accounts'           => $raw['accounts'],
-            'transactionCategories' => $transactionCategories,
-            'incomeCategories'   => $incomeCategories,
-            'expenseCategories'  => $expenseCategories,
-            'reportGroups'       => $reportGroups,
-            'reportPositions'    => $reportPositions,
-            'transactionPositions' => $this->filterReportPositionsByKinds($reportPositions, ['Pendapatan', 'Beban']),
-            'neracaPositions'    => $this->filterReportPositionsByGroup($reportPositions, 'Neraca'),
-            'bookPeriods'        => $bookPeriods,
-            'openingBalances'    => $openingBalances,
-            'receivers'          => $receivers,
-            'openingBalanceSources' => $this->buildOpeningBalanceSources($raw['accounts'], $reportPositions),
-            'openingBalancePositions' => $this->buildOpeningBalancePositions($reportPositions),
-            'selectedCategory'   => $selectedCategory,
-            'transactions'       => $transactions,
-            'contextTransactions'=> $contextTransactions,
-            'activitySummaries'  => $activitySummaries,
-            'periods'            => $raw['periods'],
-            'selectedPeriodSlug' => $selectedPeriodSlug,
-            'selectedUnitSlug'   => $selectedUnitSlug,
-            'selectedActivitySlug' => $selectedActivitySlug,
-            'rekapSummary'       => $rekapSummary,
-            'accountSummaries'   => $accountSummaries,
-            'rekapAccounts'      => $rekapAccounts,
-            'rekapUnits'         => $rekapUnits,
-            'rekapActivities'    => $rekapActivities,
-            'rekapReceivers'     => $rekapReceivers,
-            'rekapTransactions'  => $rekapTransactions,
-            'rekapTransferItems' => array_values(
-                array_filter(
-                    $rekapTransactions,
-                    static fn(array $transaction): bool => $transaction['type'] === 'pindah'
-                )
-            ),
-            'filterActivities'   => $filterActivities,
-            'rekapQuery'         => $rekapQuery,
-            'rekapFilterSummary' => $this->buildRekapFilterSummary(
-                $raw['periods'],
-                $units,
-                $activityMap,
-                $selectedPeriodSlug,
-                $selectedUnitSlug,
-                $selectedActivitySlug
-            ),
-            'settingsShortcuts'  => $this->buildSettingsShortcuts([
-                'institutionName'   => 'PT Maju Pendidikan Bangsa',
-                'units'             => $units,
-                'activitySummaries' => $activitySummaries,
-                'accounts'          => $raw['accounts'],
-                'transactionCategories' => $transactionCategories,
-                'reportPositions'   => $reportPositions,
-                'bookPeriods'       => $bookPeriods,
-                'openingBalances'   => $openingBalances,
-                'receivers'         => $receivers,
-            ]),
+        $rekapFilterSummary = [
+            'period_label' => $selectedPeriodSlug === 'semua' ? 'Semua Periode' : 'Periode Terpilih',
+            'unit_label' => $selectedUnitSlug === 'semua' ? 'Semua Unit' : 'Unit Terpilih',
+            'activity_label' => $selectedActivitySlug === 'semua' ? 'Semua Kegiatan' : 'Kegiatan Terpilih',
         ];
+
+        $data = [
+            'pageTitle'           => $account['name'],
+            'activeNav'           => 'rekap',
+            'backUrl'             => route_query('rekap', $rekapQuery),
+            'account'             => $account,
+            'accountTransactions' => $accountTransactions,
+            'involvedReceivers'   => [],
+            'accountActivities'   => $accountActivities,
+            'rekapFilterSummary'  => $rekapFilterSummary,
+        ];
+
+        return view('pages/account_detail', $data);
+    }
+
+    public function unit(string $slug): string
+    {
+        $institutionId = $this->currentInstitutionId();
+        $institution = $this->currentInstitution();
+        $db = \Config\Database::connect();
+
+        $unitId = (int) str_replace('unit-', '', $slug);
+        $u = $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+        
+        if (! $u) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $tBuilder = $db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('unit_id', $unitId)
+            ->where('deleted_at', null);
+
+        $uInc = (float) (clone $tBuilder)->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
+        $uExp = (float) (clone $tBuilder)->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
+        $uActCount = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->countAllResults();
+        $uFirstAct = $db->table('activities')->where('unit_id', $u['id'])->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getRowArray();
+
+        $unit = [
+            'slug' => 'unit-' . $u['id'],
+            'name' => $u['name'],
+            'short_name' => substr($u['name'], 0, 4),
+            'income' => $uInc,
+            'expense' => $uExp,
+            'surplus' => $uInc - $uExp,
+            'activities' => array_fill(0, $uActCount, 1),
+            'quick_activity_name' => $uFirstAct['name'] ?? '-',
+            'detail_url' => '#',
+            'masuk_url' => route_query('catat/masuk', ['unit' => 'unit-' . $u['id']]),
+            'keluar_url' => route_query('catat/keluar', ['unit' => 'unit-' . $u['id']]),
+        ];
+
+        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
+        $unitTransactions = [];
+        
+        foreach ($recentRows as $row) {
+            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
+            $unitTransactions[] = [
+                'id' => $row['id'],
+                'headline' => $cat['name'] ?? 'Transaksi',
+                'subline' => $row['notes'],
+                'meta' => date('d M Y', strtotime($row['transaction_date'])),
+                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
+                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
+                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
+                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
+                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
+                'amount' => $row['amount'] + $row['admin_fee'],
+            ];
+        }
+
+        $data['pageTitle']        = $unit['name'];
+        $data['activeNav']        = 'beranda';
+        $data['unit']             = $unit;
+        $data['unitTransactions'] = $unitTransactions;
+        $data['involvedReceivers'] = [];
+
+        return view('pages/unit_detail', $data);
+    }
+
+    public function kegiatan(string $slug): string
+    {
+        $institutionId = $this->currentInstitutionId();
+        $institution = $this->currentInstitution();
+        $db = \Config\Database::connect();
+        
+        $activityId = (int) str_replace('act-', '', $slug);
+        $act = $db->table('activities')->where('id', $activityId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+        
+        if (! $act) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $unit = $db->table('units')->where('id', $act['unit_id'])->get()->getRowArray();
+
+        $tBuilder = $db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('activity_id', $activityId)
+            ->where('deleted_at', null);
+
+        $actInc = (float) (clone $tBuilder)->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0;
+        $actExp = (float) (clone $tBuilder)->where('type', 'keluar')->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0;
+
+        $activity = [
+            'name' => $act['name'],
+            'unit_name' => $unit['name'] ?? '',
+            'income' => $actInc,
+            'expense' => $actExp,
+            'surplus' => $actInc - $actExp,
+        ];
+
+        $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
+        
+        $activityTransactions = [];
+        $transferItems = [];
+        $categoryBreakdownMap = [];
+        
+        foreach ($recentRows as $row) {
+            $cat = $db->table('transaction_categories')->where('id', $row['category_id'])->get()->getRowArray();
+            $item = [
+                'id' => $row['id'],
+                'headline' => $cat['name'] ?? 'Transaksi',
+                'subline' => $row['notes'],
+                'meta' => date('d M Y', strtotime($row['transaction_date'])),
+                'badge_class' => $row['type'] === 'masuk' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900',
+                'badge_label' => $row['type'] === 'masuk' ? 'Masuk' : 'Keluar',
+                'icon' => $row['type'] === 'masuk' ? 'south_west' : 'north_east',
+                'amount_class' => $row['type'] === 'masuk' ? 'text-emerald-600' : 'text-rose-600',
+                'amount_prefix' => $row['type'] === 'masuk' ? '+' : '-',
+                'amount' => $row['amount'] + $row['admin_fee'],
+            ];
+
+            if ($row['type'] === 'pindah') {
+                $transferItems[] = $item;
+            } else {
+                $activityTransactions[] = $item;
+            }
+
+            if ($row['type'] === 'keluar') {
+                $catName = $cat['name'] ?? 'Lainnya';
+                if (!isset($categoryBreakdownMap[$catName])) {
+                    $categoryBreakdownMap[$catName] = 0;
+                }
+                $categoryBreakdownMap[$catName] += ($row['amount'] + $row['admin_fee']);
+            }
+        }
+
+        $categoryBreakdown = [];
+        foreach ($categoryBreakdownMap as $name => $amount) {
+            $categoryBreakdown[] = [
+                'category_name' => $name,
+                'total_amount' => $amount,
+                'percentage' => $actExp > 0 ? ($amount / $actExp) * 100 : 0,
+            ];
+        }
+        usort($categoryBreakdown, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
+
+        $data = [
+            'pageTitle'            => $activity['name'],
+            'activeNav'            => 'beranda',
+            'activity'             => $activity,
+            'activityTransactions' => $activityTransactions,
+            'involvedReceivers'    => [],
+            'categoryBreakdown'    => $categoryBreakdown,
+            'transferItems'        => $transferItems,
+        ];
+
+        return view('pages/activity_detail', $data);
+    }
+
+    private function prototypeData(array $options = []): array
+    {
+        return [];
     }
 
     private function rawPrototypeData(): array
     {
-        return [
-            'periods' => [
-                ['slug' => 'semua', 'label' => 'Semua Periode'],
-                ['slug' => 'mei-2026', 'label' => 'Mei 2026'],
-                ['slug' => 'april-2026', 'label' => 'April 2026'],
-            ],
-            'units' => [
-                [
-                    'slug'       => 'simpaud',
-                    'name'       => 'SIMPAUD',
-                    'short_name' => 'SMPD',
-                    'activities' => [
-                        [
-                            'slug'                   => 'jualan-aplikasi-semesteran',
-                            'name'                   => 'Jualan Aplikasi Semesteran',
-                            'short_name'             => 'JAS',
-                            'related_accounts'       => ['BRI PT'],
-                            'related_balance'        => 0,
-                            'default_income_account' => 'BRI PT',
-                            'default_expense_account'=> 'Dana Operasional Cago',
-                            'default_transfer_from'  => 'BRI PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                        [
-                            'slug'                   => 'pelatihan-simpaud',
-                            'name'                   => 'Pelatihan SIMPAUD',
-                            'short_name'             => 'PS',
-                            'related_accounts'       => ['BRI PT'],
-                            'related_balance'        => 0,
-                            'default_income_account' => 'BRI PT',
-                            'default_expense_account'=> 'Dana Operasional Cago',
-                            'default_transfer_from'  => 'BRI PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                        [
-                            'slug'                   => 'operasional-simpaud',
-                            'name'                   => 'Operasional SIMPAUD',
-                            'short_name'             => 'OPS',
-                            'related_accounts'       => ['Kas Tunai'],
-                            'related_balance'        => 0,
-                            'default_income_account' => 'Kas Tunai',
-                            'default_expense_account'=> 'Kas Tunai',
-                            'default_transfer_from'  => 'BRI PT',
-                            'default_transfer_to'    => 'Kas Tunai',
-                        ],
-                    ],
-                ],
-                [
-                    'slug'       => 'konsultan-pendidikan',
-                    'name'       => 'Konsultan Pendidikan',
-                    'short_name' => 'KP',
-                    'activities' => [
-                        [
-                            'slug'                   => 'perizinan-lkp-tax-session',
-                            'name'                   => 'Perizinan LKP Tax Session',
-                            'short_name'             => 'LKP',
-                            'related_accounts'       => ['BRI PT', 'Dana Operasional Cago'],
-                            'related_balance'        => 57250000,
-                            'default_income_account' => 'BRI PT',
-                            'default_expense_account'=> 'Dana Operasional Cago',
-                            'default_transfer_from'  => 'BRI PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                        [
-                            'slug'                   => 'perizinan-lsp',
-                            'name'                   => 'Perizinan LSP',
-                            'short_name'             => 'LSP',
-                            'related_accounts'       => ['BRI PT'],
-                            'related_balance'        => 0,
-                            'default_income_account' => 'BRI PT',
-                            'default_expense_account'=> 'Dana Operasional Cago',
-                            'default_transfer_from'  => 'BRI PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                        [
-                            'slug'                   => 'pendampingan-sekolah',
-                            'name'                   => 'Pendampingan Sekolah',
-                            'short_name'             => 'PSK',
-                            'related_accounts'       => ['BRI PT'],
-                            'related_balance'        => 0,
-                            'default_income_account' => 'BRI PT',
-                            'default_expense_account'=> 'Dana Operasional Cago',
-                            'default_transfer_from'  => 'BRI PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                    ],
-                ],
-                [
-                    'slug'       => 'kebagusancode',
-                    'name'       => 'KebagusanCode',
-                    'short_name' => 'KBC',
-                    'activities' => [
-                        [
-                            'slug'                   => 'project-website-client',
-                            'name'                   => 'Project Website Client',
-                            'short_name'             => 'PWC',
-                            'related_accounts'       => ['BCA PT'],
-                            'related_balance'        => 12000000,
-                            'default_income_account' => 'BCA PT',
-                            'default_expense_account'=> 'BCA PT',
-                            'default_transfer_from'  => 'BCA PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                        [
-                            'slug'                   => 'project-aplikasi-client',
-                            'name'                   => 'Project Aplikasi Client',
-                            'short_name'             => 'PAC',
-                            'related_accounts'       => ['BCA PT'],
-                            'related_balance'        => 0,
-                            'default_income_account' => 'BCA PT',
-                            'default_expense_account'=> 'BCA PT',
-                            'default_transfer_from'  => 'BCA PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                        [
-                            'slug'                   => 'maintenance-sistem',
-                            'name'                   => 'Maintenance Sistem',
-                            'short_name'             => 'MTS',
-                            'related_accounts'       => ['BCA PT'],
-                            'related_balance'        => 0,
-                            'default_income_account' => 'BCA PT',
-                            'default_expense_account'=> 'BCA PT',
-                            'default_transfer_from'  => 'BCA PT',
-                            'default_transfer_to'    => 'Dana Operasional Cago',
-                        ],
-                    ],
-                ],
-            ],
-            'accounts' => [
-                ['slug' => 'bri-pt', 'name' => 'BRI PT', 'kind' => 'Rekening', 'mark' => 'BRI', 'logo_asset' => 'images/bri-logo.png', 'balance' => 48000000, 'note' => 'Penerimaan utama proyek dan jasa', 'report_position_slug' => 'kas-bank-bri', 'report_position_name' => 'Kas di Bank BRI', 'report_group' => 'Neraca'],
-                ['slug' => 'bca-pt', 'name' => 'BCA PT', 'kind' => 'Rekening', 'mark' => 'BCA', 'balance' => 12000000, 'note' => 'Penerimaan project client digital', 'report_position_slug' => 'kas-bank-bca', 'report_position_name' => 'Kas di Bank BCA', 'report_group' => 'Neraca'],
-                ['slug' => 'dana-operasional-cago', 'name' => 'Dana Operasional Cago', 'kind' => 'Dompet', 'mark' => 'DANA', 'balance' => 9250000, 'note' => 'Biaya harian kegiatan dan operasional lapangan', 'report_position_slug' => 'kas-operasional', 'report_position_name' => 'Kas Operasional', 'report_group' => 'Neraca'],
-                ['slug' => 'kas-tunai', 'name' => 'Kas Tunai', 'kind' => 'Kas Tunai', 'mark' => 'KAS', 'balance' => 0, 'note' => 'Belum ada saldo tercatat bulan ini', 'report_position_slug' => 'kas-tunai', 'report_position_name' => 'Kas Tunai', 'report_group' => 'Neraca'],
-            ],
-            'report_groups' => [
-                ['slug' => 'laba-rugi', 'name' => 'Laba Rugi', 'description' => 'Pendapatan dan beban untuk membaca kinerja usaha.'],
-                ['slug' => 'neraca', 'name' => 'Neraca', 'description' => 'Aset, kewajiban, dan modal untuk membaca posisi keuangan.'],
-                ['slug' => 'arus-kas', 'name' => 'Arus Kas', 'description' => 'Jejak kas masuk dan kas keluar menurut aktivitasnya.'],
-            ],
-            'report_positions' => [
-                ['slug' => 'pendapatan-jasa', 'code' => '4-100', 'name' => 'Pendapatan Jasa', 'group' => 'Laba Rugi', 'kind' => 'Pendapatan', 'normal_balance' => 'Kredit', 'note' => 'Untuk jasa konsultasi, project client, dan layanan inti.'],
-                ['slug' => 'pendapatan-pelatihan', 'code' => '4-110', 'name' => 'Pendapatan Pelatihan', 'group' => 'Laba Rugi', 'kind' => 'Pendapatan', 'normal_balance' => 'Kredit', 'note' => 'Untuk pelatihan, workshop, dan program pembelajaran.'],
-                ['slug' => 'pendapatan-maintenance', 'code' => '4-120', 'name' => 'Pendapatan Maintenance', 'group' => 'Laba Rugi', 'kind' => 'Pendapatan', 'normal_balance' => 'Kredit', 'note' => 'Untuk retainer, maintenance sistem, dan perpanjangan layanan.'],
-                ['slug' => 'beban-transport', 'code' => '5-100', 'name' => 'Beban Transport', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Biaya perjalanan, pengiriman, dan transportasi operasional.'],
-                ['slug' => 'beban-konsumsi', 'code' => '5-110', 'name' => 'Beban Konsumsi', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Biaya makan, minum, dan konsumsi kegiatan.'],
-                ['slug' => 'beban-cetak-dokumen', 'code' => '5-120', 'name' => 'Beban Cetak Dokumen', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Untuk print, fotokopi, legalisasi, dan dokumen fisik.'],
-                ['slug' => 'beban-honor', 'code' => '5-130', 'name' => 'Beban Honor', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Untuk fee narasumber, tenaga bantu, dan honorarium.'],
-                ['slug' => 'beban-pemasaran', 'code' => '5-140', 'name' => 'Beban Pemasaran', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Untuk iklan, promosi, dan biaya akuisisi.' ],
-                ['slug' => 'beban-komunikasi', 'code' => '5-150', 'name' => 'Beban Komunikasi', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Untuk internet, pulsa, dan biaya komunikasi.'],
-                ['slug' => 'beban-sewa-venue', 'code' => '5-160', 'name' => 'Beban Sewa Venue', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Untuk sewa ruang, tempat, dan sarana event.'],
-                ['slug' => 'beban-atk', 'code' => '5-170', 'name' => 'Beban ATK', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Untuk alat tulis kantor dan kebutuhan administrasi ringan.'],
-                ['slug' => 'beban-operasional', 'code' => '5-180', 'name' => 'Beban Operasional', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Untuk biaya operasional umum yang tidak masuk kategori lain.'],
-                ['slug' => 'beban-lainnya', 'code' => '5-199', 'name' => 'Beban Lainnya', 'group' => 'Laba Rugi', 'kind' => 'Beban', 'normal_balance' => 'Debit', 'note' => 'Penampung sementara untuk biaya yang belum dipisah lebih rinci.'],
-                ['slug' => 'kas-bank-bri', 'code' => '1-110', 'name' => 'Kas di Bank BRI', 'group' => 'Neraca', 'kind' => 'Aset', 'normal_balance' => 'Debit', 'note' => 'Pos neraca untuk rekening BRI utama lembaga.'],
-                ['slug' => 'kas-bank-bca', 'code' => '1-120', 'name' => 'Kas di Bank BCA', 'group' => 'Neraca', 'kind' => 'Aset', 'normal_balance' => 'Debit', 'note' => 'Pos neraca untuk rekening BCA project client.'],
-                ['slug' => 'kas-operasional', 'code' => '1-130', 'name' => 'Kas Operasional', 'group' => 'Neraca', 'kind' => 'Aset', 'normal_balance' => 'Debit', 'note' => 'Pos neraca untuk dompet operasional lapangan.'],
-                ['slug' => 'kas-tunai', 'code' => '1-140', 'name' => 'Kas Tunai', 'group' => 'Neraca', 'kind' => 'Aset', 'normal_balance' => 'Debit', 'note' => 'Kas kecil atau dana tunai yang dipegang langsung.'],
-                ['slug' => 'piutang-usaha', 'code' => '1-210', 'name' => 'Piutang Usaha', 'group' => 'Neraca', 'kind' => 'Aset', 'normal_balance' => 'Debit', 'note' => 'Tagihan ke client atau pihak lain yang belum diterima.'],
-                ['slug' => 'hutang-usaha', 'code' => '2-110', 'name' => 'Hutang Usaha', 'group' => 'Neraca', 'kind' => 'Kewajiban', 'normal_balance' => 'Kredit', 'note' => 'Kewajiban pembayaran ke vendor atau pihak ketiga.'],
-                ['slug' => 'pendapatan-diterima-dimuka', 'code' => '2-120', 'name' => 'Pendapatan Diterima Dimuka', 'group' => 'Neraca', 'kind' => 'Kewajiban', 'normal_balance' => 'Kredit', 'note' => 'DP atau uang muka yang belum sepenuhnya menjadi pendapatan.'],
-                ['slug' => 'modal-awal', 'code' => '3-100', 'name' => 'Modal Awal', 'group' => 'Neraca', 'kind' => 'Modal', 'normal_balance' => 'Kredit', 'note' => 'Pos modal pembuka untuk menyeimbangkan saldo awal.'],
-            ],
-            'transaction_categories' => [
-                ['slug' => 'jasa-konsultasi', 'name' => 'Jasa Konsultasi', 'type' => 'Masuk', 'order' => 1, 'is_quick' => false, 'report_position_slug' => 'pendapatan-jasa', 'report_position_name' => 'Pendapatan Jasa', 'report_group' => 'Laba Rugi', 'note' => 'Untuk jasa konsultasi, pendampingan, dan project layanan.'],
-                ['slug' => 'project-client', 'name' => 'Project Client', 'type' => 'Masuk', 'order' => 2, 'is_quick' => false, 'report_position_slug' => 'pendapatan-jasa', 'report_position_name' => 'Pendapatan Jasa', 'report_group' => 'Laba Rugi', 'note' => 'Untuk project website, aplikasi, dan kebutuhan client.'],
-                ['slug' => 'pelatihan-workshop', 'name' => 'Pelatihan / Workshop', 'type' => 'Masuk', 'order' => 3, 'is_quick' => false, 'report_position_slug' => 'pendapatan-pelatihan', 'report_position_name' => 'Pendapatan Pelatihan', 'report_group' => 'Laba Rugi', 'note' => 'Untuk pelatihan berbayar, workshop, dan program edukasi.'],
-                ['slug' => 'maintenance-retainer', 'name' => 'Maintenance / Retainer', 'type' => 'Masuk', 'order' => 4, 'is_quick' => false, 'report_position_slug' => 'pendapatan-maintenance', 'report_position_name' => 'Pendapatan Maintenance', 'report_group' => 'Laba Rugi', 'note' => 'Untuk kontrak maintenance dan perpanjangan layanan.'],
-                ['slug' => 'transport', 'name' => 'Transport', 'type' => 'Keluar', 'order' => 5, 'is_quick' => true, 'chip_label' => 'Transport', 'report_position_slug' => 'beban-transport', 'report_position_name' => 'Beban Transport', 'report_group' => 'Laba Rugi', 'note' => 'Biaya perjalanan, pengiriman, dan transportasi operasional.'],
-                ['slug' => 'konsumsi', 'name' => 'Konsumsi', 'type' => 'Keluar', 'order' => 6, 'is_quick' => true, 'chip_label' => 'Konsumsi', 'report_position_slug' => 'beban-konsumsi', 'report_position_name' => 'Beban Konsumsi', 'report_group' => 'Laba Rugi', 'note' => 'Biaya makan, minum, dan konsumsi kegiatan.'],
-                ['slug' => 'cetak-dokumen', 'name' => 'Cetak Dokumen', 'type' => 'Keluar', 'order' => 7, 'is_quick' => true, 'chip_label' => 'Cetak', 'report_position_slug' => 'beban-cetak-dokumen', 'report_position_name' => 'Beban Cetak Dokumen', 'report_group' => 'Laba Rugi', 'note' => 'Untuk print, fotokopi, legalisasi, dan dokumen fisik.'],
-                ['slug' => 'honor', 'name' => 'Honor', 'type' => 'Keluar', 'order' => 8, 'is_quick' => true, 'chip_label' => 'Honor', 'report_position_slug' => 'beban-honor', 'report_position_name' => 'Beban Honor', 'report_group' => 'Laba Rugi', 'note' => 'Untuk fee narasumber, tenaga bantu, dan honorarium.'],
-                ['slug' => 'iklan', 'name' => 'Iklan', 'type' => 'Keluar', 'order' => 9, 'is_quick' => false, 'report_position_slug' => 'beban-pemasaran', 'report_position_name' => 'Beban Pemasaran', 'report_group' => 'Laba Rugi', 'note' => 'Untuk iklan, promosi, dan biaya akuisisi.'],
-                ['slug' => 'internet-pulsa', 'name' => 'Internet/Pulsa', 'type' => 'Keluar', 'order' => 10, 'is_quick' => false, 'report_position_slug' => 'beban-komunikasi', 'report_position_name' => 'Beban Komunikasi', 'report_group' => 'Laba Rugi', 'note' => 'Untuk internet, pulsa, dan biaya komunikasi.'],
-                ['slug' => 'sewa-venue', 'name' => 'Sewa/Venue', 'type' => 'Keluar', 'order' => 11, 'is_quick' => false, 'report_position_slug' => 'beban-sewa-venue', 'report_position_name' => 'Beban Sewa Venue', 'report_group' => 'Laba Rugi', 'note' => 'Untuk sewa ruang, tempat, dan sarana event.'],
-                ['slug' => 'atk', 'name' => 'ATK', 'type' => 'Keluar', 'order' => 12, 'is_quick' => false, 'report_position_slug' => 'beban-atk', 'report_position_name' => 'Beban ATK', 'report_group' => 'Laba Rugi', 'note' => 'Untuk alat tulis kantor dan kebutuhan administrasi ringan.'],
-                ['slug' => 'operasional', 'name' => 'Operasional', 'type' => 'Keluar', 'order' => 13, 'is_quick' => false, 'report_position_slug' => 'beban-operasional', 'report_position_name' => 'Beban Operasional', 'report_group' => 'Laba Rugi', 'note' => 'Untuk biaya operasional umum yang tidak masuk kategori lain.'],
-                ['slug' => 'lainnya', 'name' => 'Lainnya', 'type' => 'Keluar', 'order' => 14, 'is_quick' => true, 'chip_label' => 'Lainnya', 'report_position_slug' => 'beban-lainnya', 'report_position_name' => 'Beban Lainnya', 'report_group' => 'Laba Rugi', 'note' => 'Penampung sementara untuk biaya yang belum dipisah lebih rinci.'],
-            ],
-            'book_periods' => [
-                ['slug' => 'tb-2026', 'name' => 'Tahun Buku 2026', 'start' => '01 Jan 2026', 'end' => '31 Des 2026', 'status' => 'Aktif', 'note' => 'Dipakai untuk seluruh transaksi prototype saat ini.'],
-                ['slug' => 'tb-2025', 'name' => 'Tahun Buku 2025', 'start' => '01 Jan 2025', 'end' => '31 Des 2025', 'status' => 'Ditutup', 'note' => 'Periode sebelumnya, sudah final untuk kebutuhan laporan tahunan.'],
-            ],
-            'opening_balances' => [
-                ['slug' => 'saldo-awal-bri-2026', 'label' => 'BRI PT', 'type' => 'Rekening / Dompet', 'report_position_slug' => 'kas-bank-bri', 'report_position_name' => 'Kas di Bank BRI', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 48000000, 'note' => 'Saldo pembuka rekening utama.'],
-                ['slug' => 'saldo-awal-bca-2026', 'label' => 'BCA PT', 'type' => 'Rekening / Dompet', 'report_position_slug' => 'kas-bank-bca', 'report_position_name' => 'Kas di Bank BCA', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 12000000, 'note' => 'Saldo pembuka rekening digital project client.'],
-                ['slug' => 'saldo-awal-dana-2026', 'label' => 'Dana Operasional Cago', 'type' => 'Rekening / Dompet', 'report_position_slug' => 'kas-operasional', 'report_position_name' => 'Kas Operasional', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 9250000, 'note' => 'Saldo pembuka dompet operasional.'],
-                ['slug' => 'saldo-awal-kas-2026', 'label' => 'Kas Tunai', 'type' => 'Rekening / Dompet', 'report_position_slug' => 'kas-tunai', 'report_position_name' => 'Kas Tunai', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 0, 'note' => 'Kas tunai belum memiliki saldo pembuka.'],
-                ['slug' => 'saldo-awal-modal-2026', 'label' => 'Modal Awal', 'type' => 'Pos Laporan', 'report_position_slug' => 'modal-awal', 'report_position_name' => 'Modal Awal', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 69250000, 'note' => 'Pos penyeimbang saldo awal untuk prototype.'],
-                ['slug' => 'saldo-awal-hutang-2026', 'label' => 'Hutang Usaha', 'type' => 'Pos Laporan', 'report_position_slug' => 'hutang-usaha', 'report_position_name' => 'Hutang Usaha', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 0, 'note' => 'Disiapkan walau belum ada transaksi kewajiban.'],
-                ['slug' => 'saldo-awal-piutang-2026', 'label' => 'Piutang Usaha', 'type' => 'Pos Laporan', 'report_position_slug' => 'piutang-usaha', 'report_position_name' => 'Piutang Usaha', 'book_period_slug' => 'tb-2026', 'book_period_name' => 'Tahun Buku 2026', 'amount' => 0, 'note' => 'Disiapkan walau belum ada transaksi tagihan berjalan.'],
-            ],
-            'receivers' => [
-                ['slug' => 'penerima-1', 'name' => 'Budi Santoso', 'type' => 'Tim Internal', 'nik' => '3271234567890001', 'npwp' => '12.345.678.9-000.000', 'bank_account' => 'BCA 1234567890', 'note' => 'Staff Lapangan'],
-                ['slug' => 'penerima-2', 'name' => 'CV Maju Jaya', 'type' => 'Vendor', 'nik' => '', 'npwp' => '98.765.432.1-111.000', 'bank_account' => 'Mandiri 0987654321', 'note' => 'Konsultan IT'],
-                ['slug' => 'penerima-3', 'name' => 'Toko Laris', 'type' => 'Vendor', 'nik' => '', 'npwp' => '', 'bank_account' => 'BRI 111122223333', 'note' => 'Vendor ATK rutin'],
-                ['slug' => 'penerima-4', 'name' => 'PT Harapan Bangsa', 'type' => 'Klien', 'nik' => '', 'npwp' => '11.222.333.4-555.000', 'bank_account' => '', 'note' => 'Klien project website'],
-            ],
-            'transactions' => [
-                [
-                    'type'          => 'masuk',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 58000000,
-                    'category'      => 'Jasa Konsultasi',
-                    'unit_slug'     => 'konsultan-pendidikan',
-                    'unit_name'     => 'Konsultan Pendidikan',
-                    'activity_slug' => 'perizinan-lkp-tax-session',
-                    'activity_name' => 'Perizinan LKP Tax Session',
-                    'to_account'    => 'BRI PT',
-                    'note'          => 'Pembayaran proyek masuk termin April',
-                    'date'          => '17 Mei 2026',
-                    'time'          => '09.20',
-                ],
-                [
-                    'type'          => 'pindah',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 10000000,
-                    'unit_slug'     => 'konsultan-pendidikan',
-                    'unit_name'     => 'Konsultan Pendidikan',
-                    'activity_slug' => 'perizinan-lkp-tax-session',
-                    'activity_name' => 'Perizinan LKP Tax Session',
-                    'from_account'  => 'BRI PT',
-                    'to_account'    => 'Dana Operasional Cago',
-                    'admin_fee'     => 6500,
-                    'note'          => 'Alokasi dana lapangan dan pengeluaran cepat',
-                    'date'          => '16 Mei 2026',
-                    'time'          => '14.10',
-                ],
-                [
-                    'type'          => 'honor',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 3500000,
-                    'receiver_name' => 'Budi Santoso',
-                    'category'      => 'Beban Honor',
-                    'unit_slug'     => 'simpaud',
-                    'unit_name'     => 'SIMPAUD',
-                    'activity_slug' => 'operasional-simpaud',
-                    'activity_name' => 'Operasional SIMPAUD',
-                    'from_account'  => 'BRI PT',
-                    'admin_fee'     => 2500,
-                    'note'          => 'Gaji bulan Mei untuk Budi Santoso',
-                    'date'          => '15 Mei 2026',
-                    'time'          => '10.00',
-                ],
-                [
-                    'type'          => 'biaya',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 5000000,
-                    'receiver_name' => 'CV Maju Jaya',
-                    'category'      => 'Operasional',
-                    'unit_slug'     => 'simpaud',
-                    'unit_name'     => 'SIMPAUD',
-                    'activity_slug' => 'operasional-simpaud',
-                    'activity_name' => 'Operasional SIMPAUD',
-                    'from_account'  => 'BRI PT',
-                    'note'          => 'Pembayaran termin pertama IT maintenance',
-                    'date'          => '14 Mei 2026',
-                    'time'          => '11.30',
-                ],
-                [
-                    'type'          => 'biaya',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 450000,
-                    'receiver_name' => 'Toko Laris',
-                    'category'      => 'ATK',
-                    'unit_slug'     => 'simpaud',
-                    'unit_name'     => 'SIMPAUD',
-                    'activity_slug' => 'operasional-simpaud',
-                    'activity_name' => 'Operasional SIMPAUD',
-                    'from_account'  => 'Dana Operasional Cago',
-                    'note'          => 'Belanja alat tulis kantor bulanan',
-                    'date'          => '12 Mei 2026',
-                    'time'          => '09.15',
-                ],
-                [
-                    'type'          => 'biaya',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 1250000,
-                    'receiver_name' => 'PT Harapan Bangsa',
-                    'category'      => 'Lainnya',
-                    'unit_slug'     => 'kebagusancode',
-                    'unit_name'     => 'KebagusanCode',
-                    'activity_slug' => 'project-website-client',
-                    'activity_name' => 'Project Website Client',
-                    'from_account'  => 'BCA PT',
-                    'note'          => 'Refund kelebihan transfer klien',
-                    'date'          => '11 Mei 2026',
-                    'time'          => '14.00',
-                ],
-                [
-                    'type'          => 'biaya',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 250000,
-                    'category'      => 'Transport',
-                    'unit_slug'     => 'konsultan-pendidikan',
-                    'unit_name'     => 'Konsultan Pendidikan',
-                    'activity_slug' => 'perizinan-lkp-tax-session',
-                    'activity_name' => 'Perizinan LKP Tax Session',
-                    'from_account'  => 'Dana Operasional Cago',
-                    'note'          => 'Transport koordinasi dan pengantaran dokumen',
-                    'date'          => '15 Mei 2026',
-                    'time'          => '08.45',
-                ],
-                [
-                    'type'          => 'biaya',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 500000,
-                    'category'      => 'Konsumsi',
-                    'unit_slug'     => 'konsultan-pendidikan',
-                    'unit_name'     => 'Konsultan Pendidikan',
-                    'activity_slug' => 'perizinan-lkp-tax-session',
-                    'activity_name' => 'Perizinan LKP Tax Session',
-                    'from_account'  => 'Dana Operasional Cago',
-                    'note'          => 'Konsumsi meeting koordinasi dan visit lapangan',
-                    'date'          => '13 Mei 2026',
-                    'time'          => '12.30',
-                ],
-                [
-                    'type'          => 'masuk',
-                    'period_slug'   => 'mei-2026',
-                    'amount'        => 12000000,
-                    'category'      => 'Project Client',
-                    'unit_slug'     => 'kebagusancode',
-                    'unit_name'     => 'KebagusanCode',
-                    'activity_slug' => 'project-website-client',
-                    'activity_name' => 'Project Website Client',
-                    'to_account'    => 'BCA PT',
-                    'note'          => 'Down payment project website client',
-                    'date'          => '11 Mei 2026',
-                    'time'          => '10.05',
-                ],
-            ],
-        ];
+        return [];
     }
 
-    private function buildMaps(array $units): array
+    private function loadUnitProgramRows(): array
     {
-        $unitMap     = [];
-        $activityMap = [];
+        $unitModel = new UnitModel();
+        $activityModel = new ActivityModel();
+        $units = $unitModel
+            ->where('institution_id', $this->currentInstitutionId())
+            ->where('deleted_at', null)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
 
         foreach ($units as &$unit) {
-            $unitMap[$unit['slug']] = &$unit;
+            $unitActivities = $activityModel
+                ->where('unit_id', $unit['id'])
+                ->where('deleted_at', null)
+                ->orderBy('sort_order', 'ASC')
+                ->orderBy('name', 'ASC')
+                ->findAll();
 
-            foreach ($unit['activities'] as &$activity) {
-                $activity['unit_slug'] = $unit['slug'];
-                $activity['unit_name'] = $unit['name'];
-                $activityMap[$activity['slug']] = $activity;
-            }
-            unset($activity);
-        }
-        unset($unit);
-
-        return [$units, $unitMap, $activityMap];
-    }
-
-    private function decorateTransactions(array $transactions): array
-    {
-        foreach ($transactions as $index => &$transaction) {
-            $transaction['id'] = $transaction['id'] ?? 'trx-' . str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT);
-
-            if ($transaction['type'] === 'masuk') {
-                $transaction['badge_label']   = 'Uang Masuk';
-                $transaction['badge_class']   = 'bg-emerald-50 text-emerald-700';
-                $transaction['amount_class']  = 'text-emerald-600';
-                $transaction['amount_prefix'] = '+';
-                $transaction['headline']      = 'Masuk ke ' . $transaction['to_account'];
-                $transaction['subline']       = $transaction['category'] . ' · ' . $transaction['activity_name'];
-                $transaction['meta']          = $transaction['unit_name'] . ' · ' . $transaction['date'] . ' · ' . $transaction['time'];
-                $transaction['icon']          = 'arrow_downward';
-            }
-
-            if ($transaction['type'] === 'biaya') {
-                $transaction['badge_label']   = 'Biaya / Belanja';
-                $transaction['badge_class']   = 'bg-rose-50 text-rose-600';
-                $transaction['amount_class']  = 'text-rose-500';
-                $transaction['amount_prefix'] = '-';
-                $transaction['headline']      = $transaction['category'];
-                
-                $subline = 'Keluar dari ' . $transaction['from_account'];
-                if (!empty($transaction['admin_fee'])) {
-                    $subline .= ' · Admin: ' . rupiah($transaction['admin_fee']);
-                }
-                $transaction['subline']       = $subline;
-                
-                $transaction['meta']          = $transaction['unit_name'] . ' · ' . $transaction['date'] . ' · ' . $transaction['time'];
-                $transaction['icon']          = 'receipt_long';
-            }
-
-            if ($transaction['type'] === 'honor') {
-                $transaction['badge_label']   = 'Honor & Gaji';
-                $transaction['badge_class']   = 'bg-fuchsia-50 text-fuchsia-600';
-                $transaction['amount_class']  = 'text-rose-500';
-                $transaction['amount_prefix'] = '-';
-                $transaction['headline']      = 'Honor: ' . $transaction['receiver_name'];
-                
-                $subline = 'Keluar dari ' . $transaction['from_account'];
-                if (!empty($transaction['admin_fee'])) {
-                    $subline .= ' · Admin: ' . rupiah($transaction['admin_fee']);
-                }
-                $transaction['subline']       = $subline;
-                
-                $transaction['meta']          = $transaction['unit_name'] . ' · ' . $transaction['date'] . ' · ' . $transaction['time'];
-                $transaction['icon']          = 'payments';
-            }
-
-            if ($transaction['type'] === 'pindah') {
-                $transaction['badge_label']   = 'Pindah Dana';
-                $transaction['badge_class']   = 'bg-sky-50 text-sky-700';
-                $transaction['amount_class']  = 'text-zinc-700';
-                $transaction['amount_prefix'] = '';
-                $transaction['headline']      = esc($transaction['from_account']) . ' <span class="material-symbols-rounded text-[1em] align-middle px-0.5" style="vertical-align: -0.125em;">arrow_right_alt</span> ' . esc($transaction['to_account']);
-                
-                $subline = 'Tidak dihitung sebagai biaya';
-                if (!empty($transaction['admin_fee'])) {
-                    $subline .= ' · Admin: ' . rupiah($transaction['admin_fee']);
-                }
-                $transaction['subline']       = $subline;
-                
-                $transaction['meta']          = $transaction['unit_name'] . ' · ' . $transaction['date'] . ' · ' . $transaction['time'];
-                $transaction['icon']          = 'swap_horiz';
-            }
-        }
-        unset($transaction);
-
-        return $transactions;
-    }
-
-    private function resolveContext(array $units, array $activityMap, ?string $requestedUnitSlug, ?string $requestedActivitySlug): array
-    {
-        $defaultUnit = $this->findUnit($units, 'konsultan-pendidikan') ?? $units[0];
-        $defaultActivity = $defaultUnit['activities'][0];
-
-        $requestedActivity = $requestedActivitySlug !== null && isset($activityMap[$requestedActivitySlug]) ? $activityMap[$requestedActivitySlug] : null;
-        $requestedUnit = $requestedUnitSlug !== null ? $this->findUnit($units, $requestedUnitSlug) : null;
-
-        if ($requestedActivity !== null) {
-            $requestedUnit = $this->findUnit($units, $requestedActivity['unit_slug']) ?? $requestedUnit;
-        }
-
-        $unit = $requestedUnit ?? $defaultUnit;
-
-        if ($requestedActivity !== null && $requestedActivity['unit_slug'] === $unit['slug']) {
-            $activity = $requestedActivity;
-        } else {
-            $activity = $unit['activities'][0] ?? $defaultActivity;
-        }
-
-        return [
-            'unit_slug'               => $unit['slug'],
-            'unit_name'               => $unit['name'],
-            'activity_slug'           => $activity['slug'],
-            'activity_name'           => $activity['name'],
-            'display'                 => $unit['name'] . ' / ' . $activity['name'],
-            'related_balance'         => $activity['related_balance'] ?? 0,
-            'related_accounts'        => $activity['related_accounts'] ?? [],
-            'default_income_account'  => $activity['default_income_account'] ?? null,
-            'default_expense_account' => $activity['default_expense_account'] ?? null,
-            'default_transfer_from'   => $activity['default_transfer_from'] ?? null,
-            'default_transfer_to'     => $activity['default_transfer_to'] ?? null,
-        ];
-    }
-
-    private function buildSummary(array $transactions, array $accounts): array
-    {
-        $income = 0;
-        $expense = 0;
-
-        foreach ($transactions as $transaction) {
-            if ($transaction['type'] === 'masuk') {
-                $income += $transaction['amount'];
-            }
-
-            if ($transaction['type'] === 'biaya') {
-                $expense += $transaction['amount'];
-            }
-        }
-
-        return [
-            'balance' => array_sum(array_column($accounts, 'balance')),
-            'income'  => $income,
-            'expense' => $expense,
-            'surplus' => $income - $expense,
-        ];
-    }
-
-    private function buildUnitSummaries(array $units, array $transactions, array $activeContext): array
-    {
-        foreach ($units as &$unit) {
+            $unit['activities'] = $unitActivities;
             $unit['income'] = 0;
             $unit['expense'] = 0;
             $unit['surplus'] = 0;
-
-            $quickActivity = $unit['slug'] === $activeContext['unit_slug']
-                ? $this->findActivity($unit['activities'], $activeContext['activity_slug'])
-                : null;
-
-            if ($quickActivity === null) {
-                $quickActivity = $unit['activities'][0];
-            }
-
-            $unit['quick_activity_slug'] = $quickActivity['slug'];
-            $unit['quick_activity_name'] = $quickActivity['name'];
-            $unit['detail_url']          = route_query('unit/' . $unit['slug'], ['kegiatan' => $quickActivity['slug']]);
-            $unit['masuk_url']           = route_query('catat/masuk', ['unit' => $unit['slug'], 'kegiatan' => $quickActivity['slug']]);
-            $unit['keluar_url']          = route_query('catat/keluar', ['unit' => $unit['slug'], 'kegiatan' => $quickActivity['slug']]);
-
-            foreach ($unit['activities'] as &$activity) {
-                $activity['income'] = 0;
-                $activity['expense'] = 0;
-                $activity['surplus'] = 0;
-                $activity['detail_url'] = site_url('kegiatan/' . $activity['slug']);
-                $activity['is_current'] = $activity['slug'] === $activeContext['activity_slug'];
-            }
-            unset($activity);
-        }
-        unset($unit);
-
-        foreach ($transactions as $transaction) {
-            foreach ($units as &$unit) {
-                if ($unit['slug'] !== $transaction['unit_slug']) {
-                    continue;
-                }
-
-                if ($transaction['type'] === 'masuk') {
-                    $unit['income'] += $transaction['amount'];
-                }
-
-                if ($transaction['type'] === 'biaya') {
-                    $unit['expense'] += $transaction['amount'];
-                }
-
-                foreach ($unit['activities'] as &$activity) {
-                    if ($activity['slug'] !== $transaction['activity_slug']) {
-                        continue;
-                    }
-
-                    if ($transaction['type'] === 'masuk') {
-                        $activity['income'] += $transaction['amount'];
-                    }
-
-                    if ($transaction['type'] === 'biaya') {
-                        $activity['expense'] += $transaction['amount'];
-                    }
-                }
-                unset($activity);
-            }
-            unset($unit);
-        }
-
-        foreach ($units as &$unit) {
-            $unit['surplus'] = $unit['income'] - $unit['expense'];
-
-            foreach ($unit['activities'] as &$activity) {
-                $activity['surplus'] = $activity['income'] - $activity['expense'];
-            }
-            unset($activity);
+            $unit['status_label'] = (int) ($unit['is_active'] ?? 0) === 1 ? 'Aktif' : 'Nonaktif';
+            $unit['note'] = 'Unit tersimpan di database. Ringkasan transaksi nyata akan mengikuti setelah modul transaksi disambungkan.';
         }
         unset($unit);
 
         return $units;
     }
 
-    private function buildActivitySummaries(array $units, array $transactions): array
+    private function buildUnitFormData(?array $unit = null, bool $isEdit = false): array
     {
-        $activities = [];
+        $existingUnits = $this->loadUnitProgramRows();
+        $sortOrder = $isEdit
+            ? (string) ($unit['sort_order'] ?? 0)
+            : (string) (count($existingUnits) + 1);
 
-        foreach ($units as $unit) {
-            foreach ($unit['activities'] as $activity) {
-                $activities[] = [
-                    'slug'            => $activity['slug'],
-                    'name'            => $activity['name'],
-                    'short_name'      => $activity['short_name'] ?? null,
-                    'unit_slug'       => $unit['slug'],
-                    'unit_name'       => $unit['name'],
-                    'income'          => $activity['income'],
-                    'expense'         => $activity['expense'],
-                    'surplus'         => $activity['surplus'],
-                    'related_balance' => $activity['related_balance'] ?? 0,
-                    'related_accounts'=> $activity['related_accounts'] ?? [],
-                    'detail_url'      => site_url('kegiatan/' . $activity['slug']),
-                ];
+        return [
+            'pageTitle' => $isEdit ? 'Edit ' . ($unit['name'] ?? 'Unit') : 'Tambah Unit / Program',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/unit-program'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Unit / Program',
+            'formDescription' => 'Data ini sekarang tersimpan ke database dan akan dipakai sebagai fondasi konteks aktif serta relasi kegiatan.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Unit',
+            'formAction' => $isEdit && isset($unit['slug'])
+                ? site_url('pengaturan/unit-program/' . $unit['slug'])
+                : site_url('pengaturan/unit-program'),
+            'formMethod' => 'post',
+            'formFields' => [
+                [
+                    'type' => 'text',
+                    'name' => 'name',
+                    'label' => 'Nama Unit / Program',
+                    'value' => old('name', $unit['name'] ?? ''),
+                ],
+                [
+                    'type' => 'text',
+                    'name' => 'short_name',
+                    'label' => 'Singkatan Unit',
+                    'value' => old('short_name', $unit['short_name'] ?? ''),
+                ],
+                [
+                    'type' => 'select',
+                    'name' => 'status',
+                    'label' => 'Status',
+                    'value' => old('status', ((int) ($unit['is_active'] ?? 1) === 1 ? 'Aktif' : 'Nonaktif')),
+                    'options' => ['Aktif', 'Nonaktif'],
+                ],
+                [
+                    'type' => 'number',
+                    'name' => 'sort_order',
+                    'label' => 'Urutan Tampil',
+                    'value' => old('sort_order', $sortOrder),
+                ],
+                [
+                    'type' => 'textarea',
+                    'name' => 'note',
+                    'label' => 'Catatan Singkat',
+                    'value' => old('note', $unit['note'] ?? ''),
+                ],
+            ],
+        ];
+    }
+
+    private function persistUnitProgram(?string $slug = null): RedirectResponse
+    {
+        $unitModel = new UnitModel();
+        $isEdit = $slug !== null;
+        $current = null;
+
+        if ($isEdit) {
+            $current = $unitModel->where('slug', $slug)->where('deleted_at', null)->first();
+
+            if (! is_array($current)) {
+                throw PageNotFoundException::forPageNotFound();
             }
         }
+
+        $name = trim((string) $this->request->getPost('name'));
+        $shortName = strtoupper(trim((string) $this->request->getPost('short_name')));
+        $sortOrder = (int) $this->request->getPost('sort_order');
+        $status = (string) $this->request->getPost('status');
+        $note = trim((string) $this->request->getPost('note'));
+
+        if ($name === '') {
+            return redirect()->back()->withInput()->with('error', 'Nama unit / program wajib diisi.');
+        }
+
+        if ($shortName === '') {
+            return redirect()->back()->withInput()->with('error', 'Singkatan unit wajib diisi.');
+        }
+
+        $baseSlug = url_title($name, '-', true);
+        $finalSlug = $baseSlug;
+        $suffix = 2;
+
+        while (true) {
+            $conflict = $unitModel->where('slug', $finalSlug)->where('deleted_at', null)->first();
+
+            if (! is_array($conflict) || ($isEdit && (int) $conflict['id'] === (int) $current['id'])) {
+                break;
+            }
+
+            $finalSlug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+
+        $institutionId = (int) ($this->session->get('auth_institution_id') ?? 1);
+
+        $payload = [
+            'institution_id' => $institutionId,
+            'name' => $name,
+            'slug' => $finalSlug,
+            'short_name' => $shortName,
+            'is_active' => $status === 'Aktif' ? 1 : 0,
+            'sort_order' => $sortOrder > 0 ? $sortOrder : 1,
+        ];
+
+        if ($isEdit) {
+            $unitModel->update((int) $current['id'], $payload);
+
+            return redirect()->to(site_url('pengaturan/unit-program/' . $finalSlug . '/edit'))
+                ->with('success', 'Unit / Program berhasil diperbarui.');
+        }
+
+        $unitModel->insert($payload);
+
+        return redirect()->to(site_url('pengaturan/unit-program/' . $payload['slug'] . '/edit'))
+            ->with('success', 'Unit / Program berhasil ditambahkan.');
+    }
+
+    private function buildInstitutionFormData(): array
+    {
+        $institution = $this->currentInstitution();
+
+        return [
+            'pageTitle' => 'Form Profil Lembaga',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/profil-lembaga'),
+            'formMode' => 'Edit Profil',
+            'formTitle' => 'Form Profil Lembaga',
+            'formDescription' => 'Profil lembaga sekarang tersimpan ke database dan menjadi identitas utama aplikasi.',
+            'saveLabel' => 'Simpan Profil',
+            'formAction' => site_url('pengaturan/profil-lembaga'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'text', 'name' => 'name', 'label' => 'Nama Lembaga', 'value' => old('name', $institution['name'])],
+                ['type' => 'text', 'name' => 'app_name', 'label' => 'Nama Aplikasi', 'value' => old('app_name', $institution['app_name'])],
+                ['type' => 'select', 'name' => 'type', 'label' => 'Jenis Lembaga', 'value' => old('type', $institution['type']), 'options' => ['PT', 'Yayasan', 'Lembaga', 'Komunitas']],
+                ['type' => 'textarea', 'name' => 'address', 'label' => 'Alamat Singkat', 'value' => old('address', $institution['address'] ?? '')],
+                ['type' => 'text', 'name' => 'email', 'label' => 'Email Operasional', 'value' => old('email', $institution['email'] ?? '')],
+                ['type' => 'text', 'name' => 'whatsapp', 'label' => 'Nomor WhatsApp', 'value' => old('whatsapp', $institution['whatsapp'] ?? '')],
+                ['type' => 'text', 'name' => 'logo', 'label' => 'Path Logo Lembaga', 'value' => old('logo', $institution['logo'] ?? '')],
+            ],
+        ];
+    }
+
+    private function loadActivityRows(): array
+    {
+        $activityModel = new ActivityModel();
+        $unitMap = [];
+        foreach ($this->loadUnitProgramRows() as $unit) {
+            $unitMap[(int) $unit['id']] = $unit;
+        }
+
+        $unitIds = array_keys($unitMap) ?: [0];
+        $activities = $activityModel
+            ->whereIn('unit_id', $unitIds)
+            ->where('deleted_at', null)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        foreach ($activities as &$activity) {
+            $unit = $unitMap[(int) $activity['unit_id']] ?? null;
+            $activity['slug'] = $activity['slug'] ?? (string) $activity['id'];
+            $activity['unit_name'] = $unit['name'] ?? 'Tanpa Unit';
+            $activity['income'] = 0;
+            $activity['expense'] = 0;
+            $activity['related_balance'] = 0;
+            $activity['related_accounts'] = [];
+        }
+        unset($activity);
 
         return $activities;
     }
 
-    private function buildAccountSummaries(array $accounts, array $transactions, array $rekapQuery): array
+    private function buildActivityFormData(?array $activity = null, bool $isEdit = false): array
     {
-        $accountIndexes = [];
+        $units = $this->loadUnitProgramRows();
+        $selectedUnitId = (string) old('unit_id', $activity['unit_id'] ?? ($units[0]['id'] ?? ''));
+        $sortOrder = $isEdit ? (string) ($activity['sort_order'] ?? 0) : (string) (count($this->loadActivityRows()) + 1);
 
-        foreach ($accounts as $index => $account) {
-            $accounts[$index]['income'] = 0;
-            $accounts[$index]['expense'] = 0;
-            $accounts[$index]['transfer_in'] = 0;
-            $accounts[$index]['transfer_out'] = 0;
-            $accounts[$index]['movement_count'] = 0;
-            $accounts[$index]['activity_map'] = [];
-            $accounts[$index]['detail_url'] = route_query('rekening/' . $account['slug'], $rekapQuery);
-            $accountIndexes[$account['name']] = $index;
-        }
+        return [
+            'pageTitle' => $isEdit ? 'Edit ' . ($activity['name'] ?? 'Kegiatan') : 'Tambah Kegiatan',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/kegiatan'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Kegiatan',
+            'formDescription' => 'Kegiatan tersimpan ke database dan menjadi konteks aktif level 2 saat pencatatan.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Kegiatan',
+            'formAction' => $isEdit ? site_url('pengaturan/kegiatan/' . $activity['slug']) : site_url('pengaturan/kegiatan'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'select', 'name' => 'unit_id', 'label' => 'Unit Induk', 'value' => $selectedUnitId, 'options' => $this->buildSelectOptions($units)],
+                ['type' => 'text', 'name' => 'name', 'label' => 'Nama Kegiatan', 'value' => old('name', $activity['name'] ?? '')],
+                ['type' => 'text', 'name' => 'short_name', 'label' => 'Singkatan Kegiatan', 'value' => old('short_name', $activity['short_name'] ?? '')],
+                ['type' => 'select', 'name' => 'status', 'label' => 'Status', 'value' => old('status', ((int) ($activity['is_active'] ?? 1) === 1 ? 'Aktif' : 'Nonaktif')), 'options' => ['Aktif', 'Nonaktif']],
+                ['type' => 'number', 'name' => 'sort_order', 'label' => 'Urutan Tampil', 'value' => old('sort_order', $sortOrder)],
+            ],
+        ];
+    }
 
-        foreach ($transactions as $transaction) {
-            $touchedIndexes = [];
+    private function persistActivity(?string $slug = null): RedirectResponse
+    {
+        $model = new ActivityModel();
+        $current = null;
 
-            if ($transaction['type'] === 'masuk' && isset($accountIndexes[$transaction['to_account']])) {
-                $index = $accountIndexes[$transaction['to_account']];
-                $accounts[$index]['income'] += $transaction['amount'];
-                $touchedIndexes[] = $index;
-            }
-
-            if ($transaction['type'] === 'biaya' && isset($accountIndexes[$transaction['from_account']])) {
-                $index = $accountIndexes[$transaction['from_account']];
-                $accounts[$index]['expense'] += $transaction['amount'];
-                $touchedIndexes[] = $index;
-            }
-
-            if ($transaction['type'] === 'pindah') {
-                if (isset($accountIndexes[$transaction['from_account']])) {
-                    $index = $accountIndexes[$transaction['from_account']];
-                    $accounts[$index]['transfer_out'] += $transaction['amount'];
-                    $touchedIndexes[] = $index;
-                }
-
-                if (isset($accountIndexes[$transaction['to_account']])) {
-                    $index = $accountIndexes[$transaction['to_account']];
-                    $accounts[$index]['transfer_in'] += $transaction['amount'];
-                    $touchedIndexes[] = $index;
-                }
-            }
-
-            foreach (array_unique($touchedIndexes) as $index) {
-                $accounts[$index]['movement_count']++;
-                $accounts[$index]['activity_map'][$transaction['activity_slug']] = $transaction['activity_name'];
+        if ($slug !== null) {
+            $current = $model->where('slug', $slug)->where('deleted_at', null)->first();
+            if (! is_array($current)) {
+                throw PageNotFoundException::forPageNotFound();
             }
         }
+
+        $unitId = (int) $this->request->getPost('unit_id');
+        $name = trim((string) $this->request->getPost('name'));
+        $shortName = strtoupper(trim((string) $this->request->getPost('short_name')));
+
+        if ($unitId <= 0 || $name === '' || $shortName === '') {
+            return redirect()->back()->withInput()->with('error', 'Unit induk, nama kegiatan, dan singkatan wajib diisi.');
+        }
+
+        $payload = [
+            'unit_id' => $unitId,
+            'name' => $name,
+            'slug' => $this->uniqueSlug(new ActivityModel(), $name, $current['id'] ?? null),
+            'short_name' => $shortName,
+            'is_active' => $this->request->getPost('status') === 'Aktif' ? 1 : 0,
+            'sort_order' => max(1, (int) $this->request->getPost('sort_order')),
+        ];
+
+        if (is_array($current)) {
+            $model->update((int) $current['id'], $payload);
+            return redirect()->to(site_url('pengaturan/kegiatan/' . $payload['slug'] . '/edit'))->with('success', 'Kegiatan berhasil diperbarui.');
+        }
+
+        $model->insert($payload);
+        return redirect()->to(site_url('pengaturan/kegiatan/' . $payload['slug'] . '/edit'))->with('success', 'Kegiatan berhasil ditambahkan.');
+    }
+
+    private function loadAccountRows(): array
+    {
+        $accountModel = new AccountModel();
+        $positionMap = $this->reportPositionNameMap();
+        $openingByPosition = $this->openingBalanceTotalByPosition();
+
+        $accounts = $accountModel
+            ->where('institution_id', $this->currentInstitutionId())
+            ->where('deleted_at', null)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
 
         foreach ($accounts as &$account) {
-            $account['incoming_total'] = $account['income'] + $account['transfer_in'];
-            $account['outgoing_total'] = $account['expense'] + $account['transfer_out'];
-            $account['activity_count'] = count($account['activity_map']);
-            $account['preview_activity'] = $account['activity_map'] === []
-                ? 'Belum ada mutasi pada filter ini'
-                : reset($account['activity_map']);
-            unset($account['activity_map']);
+            $positionId = (int) ($account['report_position_id'] ?? 0);
+            $account['balance'] = (float) ($openingByPosition[$positionId] ?? 0);
+            $account['report_position_name'] = $positionMap[$positionId] ?? 'Belum dipilih';
+            $account['preview_activity'] = $account['report_position_name'];
+            $account['movement_count'] = 0;
+            $account['detail_url'] = site_url('pengaturan/rekening-dompet/' . $account['slug'] . '/edit');
         }
         unset($account);
 
         return $accounts;
     }
 
-    private function filterTransactions(array $transactions, string $periodSlug, ?string $unitSlug, ?string $activitySlug): array
+    private function buildAccountFormData(?array $account = null, bool $isEdit = false): array
     {
-        return array_values(
-            array_filter(
-                $transactions,
-                static function (array $transaction) use ($periodSlug, $unitSlug, $activitySlug): bool {
-                    if ($periodSlug !== 'semua' && $transaction['period_slug'] !== $periodSlug) {
-                        return false;
-                    }
-
-                    if ($unitSlug !== null && $transaction['unit_slug'] !== $unitSlug) {
-                        return false;
-                    }
-
-                    if ($activitySlug !== null && $transaction['activity_slug'] !== $activitySlug) {
-                        return false;
-                    }
-
-                    return true;
-                }
-            )
-        );
-    }
-
-    private function buildCategorySummary(array $categories, array $transactions): array
-    {
-        $summary = [];
-
-        foreach ($categories as $category) {
-            $summary[] = [
-                'name'   => $category['name'],
-                'amount' => 0,
-            ];
-        }
-
-        foreach ($transactions as $transaction) {
-            if ($transaction['type'] !== 'biaya') {
-                continue;
-            }
-
-            foreach ($summary as &$item) {
-                if ($item['name'] === $transaction['category']) {
-                    $item['amount'] += $transaction['amount'];
-                    break;
-                }
-            }
-            unset($item);
-        }
-
-        return $summary;
-    }
-
-    private function filterAccountTransactions(array $transactions, string $accountName): array
-    {
-        return array_values(
-            array_filter(
-                $transactions,
-                static function (array $transaction) use ($accountName): bool {
-                    return ($transaction['from_account'] ?? null) === $accountName
-                        || ($transaction['to_account'] ?? null) === $accountName;
-                }
-            )
-        );
-    }
-
-    private function buildAccountActivityBreakdown(array $transactions, string $accountName): array
-    {
-        $activities = [];
-
-        foreach ($transactions as $transaction) {
-            $slug = $transaction['activity_slug'];
-
-            if (! isset($activities[$slug])) {
-                $activities[$slug] = [
-                    'slug' => $slug,
-                    'name' => $transaction['activity_name'],
-                    'unit_name' => $transaction['unit_name'],
-                    'detail_url' => site_url('kegiatan/' . $slug),
-                    'income' => 0,
-                    'expense' => 0,
-                    'transfer_in' => 0,
-                    'transfer_out' => 0,
-                    'movement_total' => 0,
-                ];
-            }
-
-            if ($transaction['type'] === 'masuk' && ($transaction['to_account'] ?? null) === $accountName) {
-                $activities[$slug]['income'] += $transaction['amount'];
-                $activities[$slug]['movement_total'] += $transaction['amount'];
-            }
-
-            if ($transaction['type'] === 'biaya' && ($transaction['from_account'] ?? null) === $accountName) {
-                $activities[$slug]['expense'] += $transaction['amount'];
-                $activities[$slug]['movement_total'] += $transaction['amount'];
-            }
-
-            if ($transaction['type'] === 'pindah') {
-                if (($transaction['to_account'] ?? null) === $accountName) {
-                    $activities[$slug]['transfer_in'] += $transaction['amount'];
-                    $activities[$slug]['movement_total'] += $transaction['amount'];
-                }
-
-                if (($transaction['from_account'] ?? null) === $accountName) {
-                    $activities[$slug]['transfer_out'] += $transaction['amount'];
-                    $activities[$slug]['movement_total'] += $transaction['amount'];
-                }
-            }
-        }
-
-        usort(
-            $activities,
-            static fn(array $left, array $right): int => $right['movement_total'] <=> $left['movement_total']
-        );
-
-        return array_values($activities);
-    }
-
-    private function resolveCategory(array $categories, ?string $requestedCategory): string
-    {
-        $names = array_column($categories, 'name');
-
-        if ($requestedCategory !== null && in_array($requestedCategory, $names, true)) {
-            return $requestedCategory;
-        }
-
-        return $names[0] ?? '';
-    }
-
-    private function resolvePeriod(array $periods, ?string $requestedPeriod): string
-    {
-        $available = array_column($periods, 'slug');
-
-        if ($requestedPeriod !== null && in_array($requestedPeriod, $available, true)) {
-            return $requestedPeriod;
-        }
-
-        return 'mei-2026';
-    }
-
-    private function resolveRekapFilters(array $units, array $activityMap, ?string $requestedUnitSlug, ?string $requestedActivitySlug): array
-    {
-        $selectedUnitSlug = $requestedUnitSlug !== null && $this->findUnit($units, $requestedUnitSlug) !== null ? $requestedUnitSlug : 'semua';
-        $selectedActivitySlug = 'semua';
-
-        if ($requestedActivitySlug !== null && isset($activityMap[$requestedActivitySlug])) {
-            $activity = $activityMap[$requestedActivitySlug];
-
-            if ($selectedUnitSlug === 'semua' || $selectedUnitSlug === $activity['unit_slug']) {
-                $selectedActivitySlug = $requestedActivitySlug;
-                $selectedUnitSlug = $activity['unit_slug'];
-            }
-        }
-
-        return [$selectedUnitSlug, $selectedActivitySlug];
-    }
-
-    private function buildDisplayedAccounts(array $accounts, array $transactions, string $selectedUnitSlug, string $selectedActivitySlug, array $unitMap, array $activityMap): array
-    {
-        if ($selectedUnitSlug === 'semua' && $selectedActivitySlug === 'semua') {
-            return $accounts;
-        }
-
-        $usedNames = [];
-
-        foreach ($transactions as $transaction) {
-            if (isset($transaction['from_account'])) {
-                $usedNames[] = $transaction['from_account'];
-            }
-
-            if (isset($transaction['to_account'])) {
-                $usedNames[] = $transaction['to_account'];
-            }
-        }
-
-        if ($usedNames === [] && $selectedActivitySlug !== 'semua' && isset($activityMap[$selectedActivitySlug])) {
-            $usedNames = $activityMap[$selectedActivitySlug]['related_accounts'] ?? [];
-        }
-
-        if ($usedNames === [] && $selectedUnitSlug !== 'semua' && isset($unitMap[$selectedUnitSlug])) {
-            foreach ($unitMap[$selectedUnitSlug]['activities'] as $activity) {
-                foreach ($activity['related_accounts'] ?? [] as $accountName) {
-                    $usedNames[] = $accountName;
-                }
-            }
-        }
-
-        if ($usedNames === []) {
-            return $accounts;
-        }
-
-        $usedNames = array_values(array_unique($usedNames));
-
-        return array_values(
-            array_filter(
-                $accounts,
-                static fn(array $account): bool => in_array($account['name'], $usedNames, true)
-            )
-        );
-    }
-
-    private function filterUnitSummaries(array $units, string $selectedUnitSlug): array
-    {
-        if ($selectedUnitSlug === 'semua') {
-            return $units;
-        }
-
-        return array_values(
-            array_filter(
-                $units,
-                static fn(array $unit): bool => $unit['slug'] === $selectedUnitSlug
-            )
-        );
-    }
-
-    private function filterActivitySummaries(array $activities, string $selectedUnitSlug, string $selectedActivitySlug): array
-    {
-        return array_values(
-            array_filter(
-                $activities,
-                static function (array $activity) use ($selectedUnitSlug, $selectedActivitySlug): bool {
-                    if ($selectedActivitySlug !== 'semua') {
-                        return $activity['slug'] === $selectedActivitySlug;
-                    }
-
-                    if ($selectedUnitSlug !== 'semua') {
-                        return $activity['unit_slug'] === $selectedUnitSlug;
-                    }
-
-                    return true;
-                }
-            )
-        );
-    }
-
-    private function buildFilterActivities(array $units, string $selectedUnitSlug): array
-    {
-        $activities = [];
-
-        foreach ($units as $unit) {
-            if ($selectedUnitSlug !== 'semua' && $unit['slug'] !== $selectedUnitSlug) {
-                continue;
-            }
-
-            foreach ($unit['activities'] as $activity) {
-                $activities[] = [
-                    'slug'      => $activity['slug'],
-                    'name'      => $activity['name'],
-                    'unit_name' => $unit['name'],
-                ];
-            }
-        }
-
-        return $activities;
-    }
-
-    private function buildRekapFilterSummary(array $periods, array $units, array $activityMap, string $selectedPeriodSlug, string $selectedUnitSlug, string $selectedActivitySlug): array
-    {
-        $periodLabel = 'Semua Periode';
-
-        foreach ($periods as $period) {
-            if ($period['slug'] === $selectedPeriodSlug) {
-                $periodLabel = $period['label'];
-                break;
-            }
-        }
-
-        $unitLabel = 'Semua Unit / Program';
-
-        if ($selectedUnitSlug !== 'semua') {
-            $unit = $this->findUnit($units, $selectedUnitSlug);
-            $unitLabel = $unit['name'] ?? $unitLabel;
-        }
-
-        $activityLabel = 'Semua Kegiatan';
-
-        if ($selectedActivitySlug !== 'semua' && isset($activityMap[$selectedActivitySlug])) {
-            $activityLabel = $activityMap[$selectedActivitySlug]['name'];
-        }
+        $positions = $this->loadReportPositionRows('Neraca');
+        $sortOrder = $isEdit ? (string) ($account['sort_order'] ?? 0) : (string) (count($this->loadAccountRows()) + 1);
 
         return [
-            'period_label' => $periodLabel,
-            'unit_label' => $unitLabel,
-            'activity_label' => $activityLabel,
-        ];
-    }
-
-    private function buildTransactionCategories(array $items): array
-    {
-        foreach ($items as &$item) {
-            $item['status'] = $item['status'] ?? 'Aktif';
-            $item['chip_label'] = $item['chip_label'] ?? $item['name'];
-        }
-        unset($item);
-
-        usort(
-            $items,
-            static fn(array $left, array $right): int => $left['order'] <=> $right['order']
-        );
-
-        return $items;
-    }
-
-    private function filterCategoriesByType(array $categories, string $type): array
-    {
-        return array_values(
-            array_filter(
-                $categories,
-                static fn(array $category): bool => $category['type'] === $type
-            )
-        );
-    }
-
-    private function filterReportPositionsByKind(array $positions, string $kind): array
-    {
-        return array_values(
-            array_filter(
-                $positions,
-                static fn(array $position): bool => $position['kind'] === $kind
-            )
-        );
-    }
-
-    private function buildRekapReceivers(array $receivers, array $transactions): array
-    {
-        $involvedNames = [];
-        foreach ($transactions as $trx) {
-            if (!empty($trx['receiver_name'])) {
-                $involvedNames[] = $trx['receiver_name'];
-            }
-        }
-        $involvedNames = array_unique($involvedNames);
-
-        $rekapReceivers = [];
-        foreach ($receivers as $receiver) {
-            if (in_array($receiver['name'], $involvedNames, true)) {
-                
-                // Calculate amount received
-                $totalReceived = 0;
-                foreach ($transactions as $trx) {
-                    if (!empty($trx['receiver_name']) && $trx['receiver_name'] === $receiver['name']) {
-                        $totalReceived += $trx['amount'];
-                    }
-                }
-                
-                $receiver['total_received'] = $totalReceived;
-                $rekapReceivers[] = $receiver;
-            }
-        }
-
-        return $rekapReceivers;
-    }
-
-    private function filterReportPositionsByKinds(array $positions, array $kinds): array
-    {
-        return array_values(
-            array_filter(
-                $positions,
-                static fn(array $position): bool => in_array($position['kind'], $kinds, true)
-            )
-        );
-    }
-
-    private function filterReportPositionsByGroup(array $positions, string $group): array
-    {
-        return array_values(
-            array_filter(
-                $positions,
-                static fn(array $position): bool => $position['group'] === $group
-            )
-        );
-    }
-
-    private function buildOpeningBalanceSources(array $accounts, array $positions): array
-    {
-        $sources = array_map(static fn(array $account): string => $account['name'], $accounts);
-
-        foreach ($positions as $position) {
-            if (in_array($position['kind'], ['Aset', 'Kewajiban', 'Modal'], true)) {
-                $sources[] = $position['name'];
-            }
-        }
-
-        return array_values(array_unique($sources));
-    }
-
-    private function buildOpeningBalancePositions(array $positions): array
-    {
-        return array_values(
-            array_map(
-                static fn(array $position): string => $position['name'],
-                $this->filterReportPositionsByGroup($positions, 'Neraca')
-            )
-        );
-    }
-
-    private function buildSettingsShortcuts(array $data): array
-    {
-        return [
-            [
-                'group' => 'Operasional Harian',
-                'title' => 'Profil Lembaga',
-                'description' => 'Identitas utama aplikasi dan lembaga yang memakai Arus.',
-                'meta' => $data['institutionName'],
-                'href' => site_url('pengaturan/profil-lembaga'),
-                'icon' => 'badge',
-            ],
-            [
-                'group' => 'Operasional Harian',
-                'title' => 'Unit / Program',
-                'description' => 'Struktur usaha atau layanan yang menaungi kegiatan.',
-                'meta' => count($data['units']) . ' unit',
-                'href' => site_url('pengaturan/unit-program'),
-                'icon' => 'domain',
-            ],
-            [
-                'group' => 'Operasional Harian',
-                'title' => 'Kegiatan',
-                'description' => 'Turunan dari unit yang dipakai sebagai konteks aktif pencatatan.',
-                'meta' => count($data['activitySummaries']) . ' kegiatan',
-                'href' => site_url('pengaturan/kegiatan'),
-                'icon' => 'workspaces',
-            ],
-            [
-                'group' => 'Operasional Harian',
-                'title' => 'Rekening / Dompet',
-                'description' => 'Sumber dan tujuan uang bergerak saat transaksi dicatat.',
-                'meta' => count($data['accounts']) . ' rekening / dompet',
-                'href' => site_url('pengaturan/rekening-dompet'),
-                'icon' => 'account_balance_wallet',
-            ],
-            [
-                'group' => 'Operasional Harian',
-                'title' => 'Kategori Transaksi',
-                'description' => 'Satu master kategori untuk uang masuk dan uang keluar, langsung terhubung ke pos laporan.',
-                'meta' => count($data['transactionCategories']) . ' kategori',
-                'href' => site_url('pengaturan/kategori-biaya'),
-                'icon' => 'inventory_2',
-            ],
-            [
-                'group' => 'Operasional Harian',
-                'title' => 'Penerima / Kontak',
-                'description' => 'Master data kontak, tim, vendor, atau klien pihak yang bertransaksi.',
-                'meta' => count($data['receivers']) . ' penerima',
-                'href' => site_url('pengaturan/penerima'),
-                'icon' => 'person',
-            ],
-            [
-                'group' => 'Fondasi Laporan Tahunan',
-                'title' => 'Pos Laporan',
-                'description' => 'Struktur pendapatan, beban, aset, hutang, dan modal untuk laporan tahunan.',
-                'meta' => count($data['reportPositions']) . ' pos',
-                'href' => site_url('pengaturan/pos-laporan'),
-                'icon' => 'account_tree',
-            ],
-            [
-                'group' => 'Fondasi Laporan Tahunan',
-                'title' => 'Tahun Buku',
-                'description' => 'Periode resmi yang nanti dipakai untuk saldo awal dan laporan tahunan.',
-                'meta' => count($data['bookPeriods']) . ' periode',
-                'href' => site_url('pengaturan/tahun-buku'),
-                'icon' => 'calendar_month',
-            ],
-            [
-                'group' => 'Fondasi Laporan Tahunan',
-                'title' => 'Saldo Awal',
-                'description' => 'Titik awal neraca agar laporan tahunan bisa dieksekusi tanpa bongkar data ulang.',
-                'meta' => count($data['openingBalances']) . ' saldo',
-                'href' => site_url('pengaturan/saldo-awal'),
-                'icon' => 'stacked_line_chart',
+            'pageTitle' => $isEdit ? 'Edit ' . ($account['name'] ?? 'Rekening') : 'Tambah Rekening / Dompet',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/rekening-dompet'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Rekening / Dompet',
+            'formDescription' => 'Master rekening sekarang langsung tersimpan ke database dan menyimpan pos laporan terkait.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Rekening',
+            'formAction' => $isEdit ? site_url('pengaturan/rekening-dompet/' . $account['slug']) : site_url('pengaturan/rekening-dompet'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'text', 'name' => 'name', 'label' => 'Nama Rekening / Dompet', 'value' => old('name', $account['name'] ?? '')],
+                ['type' => 'select', 'name' => 'kind', 'label' => 'Jenis Penyimpanan Dana', 'value' => old('kind', $account['kind'] ?? 'Rekening'), 'options' => ['Rekening', 'Dompet Digital', 'Kas Tunai']],
+                ['type' => 'text', 'name' => 'mark', 'label' => 'Label / Singkatan', 'value' => old('mark', $account['mark'] ?? '')],
+                ['type' => 'text', 'name' => 'account_number', 'label' => 'Nomor Rekening', 'value' => old('account_number', $account['account_number'] ?? '')],
+                ['type' => 'select', 'name' => 'report_position_id', 'label' => 'Pos Laporan Terkait', 'value' => (string) old('report_position_id', $account['report_position_id'] ?? ($positions[0]['id'] ?? '')), 'options' => $this->buildSelectOptions($positions)],
+                ['type' => 'file', 'name' => 'logo_file', 'label' => 'Logo Rekening (Opsional)', 'value' => $account['logo_asset'] ?? ''],
+                ['type' => 'textarea', 'name' => 'note', 'label' => 'Catatan Penggunaan', 'value' => old('note', $account['note'] ?? '')],
+                ['type' => 'select', 'name' => 'status', 'label' => 'Status', 'value' => old('status', ((int) ($account['is_active'] ?? 1) === 1 ? 'Aktif' : 'Nonaktif')), 'options' => ['Aktif', 'Nonaktif']],
+                ['type' => 'number', 'name' => 'sort_order', 'label' => 'Urutan Tampil', 'value' => old('sort_order', $sortOrder)],
             ],
         ];
     }
 
-    private function findUnit(array $units, string $slug): ?array
+    private function persistAccount(?string $slug = null): RedirectResponse
     {
-        foreach ($units as $unit) {
-            if ($unit['slug'] === $slug) {
-                return $unit;
+        $model = new AccountModel();
+        $current = null;
+
+        if ($slug !== null) {
+            $current = $model->where('slug', $slug)->where('deleted_at', null)->first();
+            if (! is_array($current)) {
+                throw PageNotFoundException::forPageNotFound();
             }
         }
 
-        return null;
-    }
+        $name = trim((string) $this->request->getPost('name'));
+        $mark = strtoupper(trim((string) $this->request->getPost('mark')));
+        if ($name === '' || $mark === '') {
+            return redirect()->back()->withInput()->with('error', 'Nama rekening dan label singkatan wajib diisi.');
+        }
 
-    private function findActivity(array $activities, string $slug): ?array
-    {
-        foreach ($activities as $activity) {
-            if ($activity['slug'] === $slug) {
-                return $activity;
+        // Handle logo upload
+        $logoAsset = $current['logo_asset'] ?? ''; // keep existing
+        $logoFile = $this->request->getFile('logo_file');
+        if ($logoFile !== null && $logoFile->isValid() && ! $logoFile->hasMoved()) {
+            $uploadDir = FCPATH . 'uploads/accounts';
+            if (! is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            $newName = $logoFile->getRandomName();
+            $logoFile->move($uploadDir, $newName);
+            $logoAsset = 'uploads/accounts/' . $newName;
+
+            // Hapus logo lama jika ada
+            $oldLogo = $current['logo_asset'] ?? '';
+            if ($oldLogo !== '' && is_file(FCPATH . $oldLogo)) {
+                @unlink(FCPATH . $oldLogo);
             }
         }
 
-        return null;
-    }
+        $payload = [
+            'institution_id' => $this->currentInstitutionId(),
+            'name' => $name,
+            'slug' => $this->uniqueSlug(new AccountModel(), $name, $current['id'] ?? null),
+            'kind' => (string) $this->request->getPost('kind'),
+            'mark' => $mark,
+            'account_number' => trim((string) $this->request->getPost('account_number')),
+            'logo_asset' => $logoAsset,
+            'note' => trim((string) $this->request->getPost('note')),
+            'report_position_id' => (int) $this->request->getPost('report_position_id') ?: null,
+            'is_active' => $this->request->getPost('status') === 'Aktif' ? 1 : 0,
+            'sort_order' => max(1, (int) $this->request->getPost('sort_order')),
+        ];
 
-    private function findAccount(array $accounts, string $slug): ?array
-    {
-        foreach ($accounts as $account) {
-            if (($account['slug'] ?? null) === $slug) {
-                return $account;
-            }
+        if (is_array($current)) {
+            $model->update((int) $current['id'], $payload);
+            return redirect()->to(site_url('pengaturan/rekening-dompet/' . $payload['slug'] . '/edit'))->with('success', 'Rekening / dompet berhasil diperbarui.');
         }
 
-        return null;
+        $model->insert($payload);
+        return redirect()->to(site_url('pengaturan/rekening-dompet/' . $payload['slug'] . '/edit'))->with('success', 'Rekening / dompet berhasil ditambahkan.');
     }
 
-    private function findCategoryItem(array $categories, string $slug): ?array
+    private function loadTransactionCategoryRows(): array
     {
-        foreach ($categories as $category) {
-            if (($category['slug'] ?? null) === $slug) {
-                return $category;
-            }
+        $positionMap = $this->reportPositionNameMap();
+        $rows = (new TransactionCategoryModel())
+            ->where('institution_id', $this->currentInstitutionId())
+            ->where('deleted_at', null)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        foreach ($rows as &$row) {
+            $row['slug'] = (string) $row['id'];
+            $row['type'] = $row['kind'];
+            $row['order'] = (int) $row['sort_order'];
+            $row['report_position_name'] = $positionMap[(int) ($row['report_position_id'] ?? 0)] ?? 'Belum dipilih';
+            $row['note'] = $row['chip_label'] ?: 'Kategori transaksi untuk ' . strtolower($row['kind']) . '.';
         }
+        unset($row);
 
-        return null;
+        return $rows;
     }
 
-    private function findTransaction(array $transactions, string $id): ?array
+    private function buildTransactionCategoryFormData(?array $category = null, bool $isEdit = false): array
     {
-        foreach ($transactions as $transaction) {
-            if (($transaction['id'] ?? null) === $id) {
-                return $transaction;
-            }
-        }
+        $positions = $this->loadReportPositionRows('Laba Rugi');
+        $sortOrder = $isEdit ? (string) ($category['sort_order'] ?? 0) : (string) (count($this->loadTransactionCategoryRows()) + 1);
 
-        return null;
-    }
-
-    private function buildTransactionFormData(array $transaction, array $data): array
-    {
         return [
-            'unit_options' => array_column($data['units'], 'name'),
-            'activity_options' => array_map(
-                static fn(array $activity): string => $activity['name'] . ' · ' . $activity['unit_name'],
-                $data['activitySummaries']
-            ),
-            'income_category_options' => array_column($data['incomeCategories'], 'name'),
-            'expense_category_options' => array_column($data['expenseCategories'], 'name'),
-            'account_options' => array_column($data['accounts'], 'name'),
-            'unit_value' => $transaction['unit_name'],
-            'activity_value' => $transaction['activity_name'] . ' · ' . $transaction['unit_name'],
-            'nominal_value' => rupiah($transaction['amount']),
-            'date_value' => $transaction['date'],
-            'description_value' => $transaction['note'],
+            'pageTitle' => $isEdit ? 'Edit ' . ($category['name'] ?? 'Kategori') : 'Tambah Kategori Transaksi',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/kategori-biaya'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Kategori Transaksi',
+            'formDescription' => 'Kategori transaksi langsung menentukan pilihan di form uang masuk atau uang keluar.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Kategori',
+            'formAction' => $isEdit ? site_url('pengaturan/kategori-biaya/' . $category['id']) : site_url('pengaturan/kategori-biaya'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'text', 'name' => 'name', 'label' => 'Nama Kategori', 'value' => old('name', $category['name'] ?? '')],
+                ['type' => 'select', 'name' => 'kind', 'label' => 'Jenis Transaksi', 'value' => old('kind', $category['kind'] ?? 'Keluar'), 'options' => ['Masuk', 'Keluar']],
+                ['type' => 'select', 'name' => 'report_position_id', 'label' => 'Pos Laporan Terkait', 'value' => (string) old('report_position_id', $category['report_position_id'] ?? ($positions[0]['id'] ?? '')), 'options' => $this->buildSelectOptions($positions)],
+                ['type' => 'text', 'name' => 'chip_label', 'label' => 'Label Chip Cepat', 'value' => old('chip_label', $category['chip_label'] ?? '')],
+                ['type' => 'select', 'name' => 'is_quick', 'label' => 'Muncul sebagai kategori cepat', 'value' => old('is_quick', ((int) ($category['is_quick'] ?? 0) === 1 ? 'Ya' : 'Tidak')), 'options' => ['Ya', 'Tidak']],
+                ['type' => 'select', 'name' => 'status', 'label' => 'Status', 'value' => old('status', ((int) ($category['is_active'] ?? 1) === 1 ? 'Aktif' : 'Nonaktif')), 'options' => ['Aktif', 'Nonaktif']],
+                ['type' => 'number', 'name' => 'sort_order', 'label' => 'Urutan Tampil', 'value' => old('sort_order', $sortOrder)],
+            ],
         ];
     }
 
-    private function findReportPosition(array $positions, string $slug): ?array
+    private function persistTransactionCategory(?string $id = null): RedirectResponse
     {
-        foreach ($positions as $position) {
-            if (($position['slug'] ?? null) === $slug) {
-                return $position;
-            }
+        $model = new TransactionCategoryModel();
+        $current = $id !== null ? $model->find((int) $id) : null;
+
+        if ($id !== null && ! is_array($current)) {
+            throw PageNotFoundException::forPageNotFound();
         }
 
-        return null;
+        $name = trim((string) $this->request->getPost('name'));
+        if ($name === '') {
+            return redirect()->back()->withInput()->with('error', 'Nama kategori wajib diisi.');
+        }
+
+        $payload = [
+            'institution_id' => $this->currentInstitutionId(),
+            'name' => $name,
+            'kind' => (string) $this->request->getPost('kind'),
+            'report_position_id' => (int) $this->request->getPost('report_position_id') ?: null,
+            'is_quick' => $this->request->getPost('is_quick') === 'Ya' ? 1 : 0,
+            'chip_label' => trim((string) $this->request->getPost('chip_label')),
+            'is_active' => $this->request->getPost('status') === 'Aktif' ? 1 : 0,
+            'sort_order' => max(1, (int) $this->request->getPost('sort_order')),
+        ];
+
+        if (is_array($current)) {
+            $model->update((int) $current['id'], $payload);
+            return redirect()->to(site_url('pengaturan/kategori-biaya/' . $current['id'] . '/edit'))->with('success', 'Kategori transaksi berhasil diperbarui.');
+        }
+
+        $model->insert($payload);
+        $newId = (string) $model->getInsertID();
+        return redirect()->to(site_url('pengaturan/kategori-biaya/' . $newId . '/edit'))->with('success', 'Kategori transaksi berhasil ditambahkan.');
     }
 
-    private function findBookPeriod(array $periods, string $slug): ?array
+    private function loadReceiverRows(): array
     {
-        foreach ($periods as $period) {
-            if (($period['slug'] ?? null) === $slug) {
-                return $period;
-            }
-        }
+        $rows = (new ReceiverModel())
+            ->where('institution_id', $this->currentInstitutionId())
+            ->where('deleted_at', null)
+            ->orderBy('name', 'ASC')
+            ->findAll();
 
-        return null;
+        foreach ($rows as &$row) {
+            $row['slug'] = (string) $row['id'];
+            $row['note'] = $row['notes'] ?? '';
+        }
+        unset($row);
+
+        return $rows;
     }
 
-    private function findReceiver(array $receivers, string $slug): ?array
+    private function buildReceiverFormData(?array $receiver = null, bool $isEdit = false): array
     {
-        foreach ($receivers as $receiver) {
-            if (($receiver['slug'] ?? null) === $slug) {
-                return $receiver;
-            }
-        }
-
-        return null;
+        return [
+            'pageTitle' => $isEdit ? 'Edit ' . ($receiver['name'] ?? 'Penerima') : 'Tambah Penerima',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/penerima'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Penerima',
+            'formDescription' => 'Penerima dipakai sebagai daftar kontak, vendor, dan pihak terkait saat transaksi keluar dicatat.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Penerima',
+            'formAction' => $isEdit ? site_url('pengaturan/penerima/' . $receiver['id']) : site_url('pengaturan/penerima'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'text', 'name' => 'name', 'label' => 'Nama Penerima / Kontak', 'value' => old('name', $receiver['name'] ?? '')],
+                ['type' => 'select', 'name' => 'type', 'label' => 'Jenis Kontak', 'value' => old('type', $receiver['type'] ?? 'Vendor'), 'options' => ['Tim Internal', 'Vendor', 'Klien', 'Lainnya']],
+                ['type' => 'text', 'name' => 'nik', 'label' => 'NIK (Opsional)', 'value' => old('nik', $receiver['nik'] ?? '')],
+                ['type' => 'text', 'name' => 'npwp', 'label' => 'NPWP (Opsional)', 'value' => old('npwp', $receiver['npwp'] ?? '')],
+                ['type' => 'text', 'name' => 'bank_account', 'label' => 'Informasi Rekening (Opsional)', 'value' => old('bank_account', $receiver['bank_account'] ?? '')],
+                ['type' => 'textarea', 'name' => 'notes', 'label' => 'Catatan', 'value' => old('notes', $receiver['notes'] ?? '')],
+            ],
+        ];
     }
 
-    private function findOpeningBalance(array $balances, string $slug): ?array
+    private function persistReceiver(?string $id = null): RedirectResponse
     {
-        foreach ($balances as $balance) {
-            if (($balance['slug'] ?? null) === $slug) {
-                return $balance;
-            }
+        $model = new ReceiverModel();
+        $current = $id !== null ? $model->find((int) $id) : null;
+
+        if ($id !== null && ! is_array($current)) {
+            throw PageNotFoundException::forPageNotFound();
         }
 
-        return null;
+        $name = trim((string) $this->request->getPost('name'));
+        if ($name === '') {
+            return redirect()->back()->withInput()->with('error', 'Nama penerima wajib diisi.');
+        }
+
+        $payload = [
+            'institution_id' => $this->currentInstitutionId(),
+            'name' => $name,
+            'type' => (string) $this->request->getPost('type'),
+            'nik' => trim((string) $this->request->getPost('nik')),
+            'npwp' => trim((string) $this->request->getPost('npwp')),
+            'bank_account' => trim((string) $this->request->getPost('bank_account')),
+            'notes' => trim((string) $this->request->getPost('notes')),
+        ];
+
+        if (is_array($current)) {
+            $model->update((int) $current['id'], $payload);
+            return redirect()->to(site_url('pengaturan/penerima/' . $current['id'] . '/edit'))->with('success', 'Penerima berhasil diperbarui.');
+        }
+
+        $model->insert($payload);
+        $newId = (string) $model->getInsertID();
+        return redirect()->to(site_url('pengaturan/penerima/' . $newId . '/edit'))->with('success', 'Penerima berhasil ditambahkan.');
     }
 
-    private function findActivityFromUnits(array $units, string $slug): ?array
+    private function loadReportPositionRows(?string $group = null): array
     {
-        foreach ($units as $unit) {
-            foreach ($unit['activities'] as $activity) {
-                if ($activity['slug'] === $slug) {
-                    return $activity;
-                }
-            }
+        $model = new ReportPositionModel();
+        $builder = $model
+            ->where('institution_id', $this->currentInstitutionId())
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC');
+        if ($group !== null) {
+            $builder = $builder->where('group', $group);
         }
+        $rows = $builder->findAll();
 
-        return null;
+        foreach ($rows as &$row) {
+            $row['slug'] = (string) $row['id'];
+            $row['code'] = 'POS-' . str_pad((string) $row['id'], 3, '0', STR_PAD_LEFT);
+            $row['note'] = 'Pos laporan untuk kelompok ' . strtolower($row['group']) . '.';
+            $row['normal_balance'] = $this->normalBalanceForKind($row['kind']);
+        }
+        unset($row);
+
+        return $rows;
     }
 
-    private function findIndexBySlug(array $items, string $slug): int
+    private function buildReportPositionFormData(?array $position = null, bool $isEdit = false): array
     {
-        foreach (array_values($items) as $index => $item) {
-            if (($item['slug'] ?? null) === $slug) {
-                return $index;
-            }
+        return [
+            'pageTitle' => $isEdit ? 'Edit ' . ($position['name'] ?? 'Pos') : 'Tambah Pos Laporan',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/pos-laporan'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Pos Laporan',
+            'formDescription' => 'Pos laporan menjadi fondasi akhir untuk laporan tahunan, tetapi tetap dikelola sederhana dari sekarang.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Pos',
+            'formAction' => $isEdit ? site_url('pengaturan/pos-laporan/' . $position['id']) : site_url('pengaturan/pos-laporan'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'text', 'name' => 'name', 'label' => 'Nama Pos Laporan', 'value' => old('name', $position['name'] ?? '')],
+                ['type' => 'select', 'name' => 'group', 'label' => 'Kelompok Laporan', 'value' => old('group', $position['group'] ?? 'Laba Rugi'), 'options' => ['Laba Rugi', 'Neraca']],
+                ['type' => 'select', 'name' => 'kind', 'label' => 'Jenis Pos', 'value' => old('kind', $position['kind'] ?? 'Beban'), 'options' => ['Pendapatan', 'Beban', 'Aset', 'Kewajiban', 'Modal']],
+                ['type' => 'number', 'name' => 'sort_order', 'label' => 'Urutan Tampil', 'value' => old('sort_order', $position['sort_order'] ?? (count($this->loadReportPositionRows()) + 1))],
+            ],
+        ];
+    }
+
+    private function persistReportPosition(?string $id = null): RedirectResponse
+    {
+        $model = new ReportPositionModel();
+        $current = $id !== null ? $model->find((int) $id) : null;
+
+        if ($id !== null && ! is_array($current)) {
+            throw PageNotFoundException::forPageNotFound();
         }
 
-        return 0;
+        $name = trim((string) $this->request->getPost('name'));
+        if ($name === '') {
+            return redirect()->back()->withInput()->with('error', 'Nama pos laporan wajib diisi.');
+        }
+
+        $payload = [
+            'institution_id' => $this->currentInstitutionId(),
+            'name' => $name,
+            'group' => (string) $this->request->getPost('group'),
+            'kind' => (string) $this->request->getPost('kind'),
+            'sort_order' => max(1, (int) $this->request->getPost('sort_order')),
+        ];
+
+        if (is_array($current)) {
+            $model->update((int) $current['id'], $payload);
+            return redirect()->to(site_url('pengaturan/pos-laporan/' . $current['id'] . '/edit'))->with('success', 'Pos laporan berhasil diperbarui.');
+        }
+
+        $model->insert($payload);
+        $newId = (string) $model->getInsertID();
+        return redirect()->to(site_url('pengaturan/pos-laporan/' . $newId . '/edit'))->with('success', 'Pos laporan berhasil ditambahkan.');
+    }
+
+    private function getActiveBookPeriodId(int $institutionId): ?int
+    {
+        $activePeriod = (new \App\Models\BookPeriodModel())
+            ->where('institution_id', $institutionId)
+            ->where('is_active', true)
+            ->first();
+        return $activePeriod['id'] ?? null;
+    }
+
+    private function loadBookPeriodRows(): array
+    {
+        $rows = (new BookPeriodModel())
+            ->where('institution_id', $this->currentInstitutionId())
+            ->orderBy('start_date', 'DESC')
+            ->findAll();
+
+        foreach ($rows as &$row) {
+            $row['start'] = $row['start_date'];
+            $row['end'] = $row['end_date'];
+            $row['status'] = (int) $row['is_locked'] === 1 ? 'Ditutup' : ((int) $row['is_active'] === 1 ? 'Aktif' : 'Draft');
+            $row['note'] = (int) $row['is_locked'] === 1 ? 'Periode sudah ditutup.' : 'Periode buku aktif untuk fondasi laporan.';
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function buildBookPeriodFormData(?array $period = null, bool $isEdit = false): array
+    {
+        return [
+            'pageTitle' => $isEdit ? 'Edit ' . ($period['name'] ?? 'Tahun Buku') : 'Tambah Tahun Buku',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/tahun-buku'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Tahun Buku',
+            'formDescription' => 'Tahun buku mengikat saldo awal dan nanti akan menjadi pintu masuk filter laporan.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Tahun Buku',
+            'formAction' => $isEdit ? site_url('pengaturan/tahun-buku/' . $period['slug']) : site_url('pengaturan/tahun-buku'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'text', 'name' => 'name', 'label' => 'Nama Tahun Buku', 'value' => old('name', $period['name'] ?? '')],
+                ['type' => 'date', 'name' => 'start_date', 'label' => 'Tanggal Mulai', 'value' => old('start_date', $period['start_date'] ?? '')],
+                ['type' => 'date', 'name' => 'end_date', 'label' => 'Tanggal Selesai', 'value' => old('end_date', $period['end_date'] ?? '')],
+                ['type' => 'select', 'name' => 'status', 'label' => 'Status', 'value' => old('status', ((int) ($period['is_locked'] ?? 0) === 1 ? 'Ditutup' : ((int) ($period['is_active'] ?? 0) === 1 ? 'Aktif' : 'Draft'))), 'options' => ['Draft', 'Aktif', 'Ditutup']],
+            ],
+        ];
+    }
+
+    private function persistBookPeriod(?string $slug = null): RedirectResponse
+    {
+        $model = new BookPeriodModel();
+        $current = $slug !== null ? $model->where('slug', $slug)->first() : null;
+
+        if ($slug !== null && ! is_array($current)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $name = trim((string) $this->request->getPost('name'));
+        $startDate = (string) $this->request->getPost('start_date');
+        $endDate = (string) $this->request->getPost('end_date');
+        $status = (string) $this->request->getPost('status');
+
+        if ($name === '' || $startDate === '' || $endDate === '') {
+            return redirect()->back()->withInput()->with('error', 'Nama tahun buku dan rentang tanggal wajib diisi.');
+        }
+
+        $payload = [
+            'institution_id' => $this->currentInstitutionId(),
+            'name' => $name,
+            'slug' => $this->uniqueSlug(new BookPeriodModel(), $name, $current['id'] ?? null),
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'is_active' => $status === 'Aktif' ? 1 : 0,
+            'is_locked' => $status === 'Ditutup' ? 1 : 0,
+        ];
+
+        if ($status === 'Aktif') {
+            $model->where('institution_id', $this->currentInstitutionId())->set(['is_active' => 0])->update();
+        }
+
+        if (is_array($current)) {
+            $model->update((int) $current['id'], $payload);
+            return redirect()->to(site_url('pengaturan/tahun-buku/' . $payload['slug'] . '/edit'))->with('success', 'Tahun buku berhasil diperbarui.');
+        }
+
+        $model->insert($payload);
+        return redirect()->to(site_url('pengaturan/tahun-buku/' . $payload['slug'] . '/edit'))->with('success', 'Tahun buku berhasil ditambahkan.');
+    }
+
+    private function loadOpeningBalanceRows(): array
+    {
+        $periodMap = [];
+        foreach ($this->loadBookPeriodRows() as $period) {
+            $periodMap[(int) $period['id']] = $period;
+        }
+        $positionMap = $this->reportPositionNameMap();
+        $accountMap = [];
+        foreach ($this->loadAccountRows() as $acc) {
+            $accountMap[(int) $acc['id']] = $acc['name'] . ' (' . $acc['mark'] . ')';
+        }
+
+        $rows = (new OpeningBalanceModel())
+            ->where('institution_id', $this->currentInstitutionId())
+            ->where('deleted_at', null)
+            ->orderBy('book_period_id', 'DESC')
+            ->findAll();
+
+        foreach ($rows as &$row) {
+            $row['slug'] = (string) $row['id'];
+            $row['label'] = $row['source_label'];
+            $row['book_period_name'] = $periodMap[(int) $row['book_period_id']]['name'] ?? 'Tanpa Periode';
+            $row['report_position_name'] = $positionMap[(int) $row['report_position_id']] ?? 'Belum dipilih';
+            $row['account_name'] = !empty($row['account_id']) ? ($accountMap[(int) $row['account_id']] ?? '') : '';
+            $row['type'] = !empty($row['account_name']) ? 'Rekening' : 'Pos Neraca';
+            $row['note'] = 'Saldo awal untuk ' . strtolower($row['report_position_name']) . '.';
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function buildOpeningBalanceFormData(?array $balance = null, bool $isEdit = false): array
+    {
+        $periods = $this->loadBookPeriodRows();
+        $positions = $this->loadReportPositionRows();
+        $accounts = $this->loadAccountRows();
+
+        // Build account options: first = "none", then real accounts
+        $accountOptions = [['value' => '', 'label' => '— Tidak terkait rekening —']];
+        foreach ($accounts as $acc) {
+            $accountOptions[] = ['value' => (string) $acc['id'], 'label' => $acc['name'] . ' (' . $acc['mark'] . ')'];
+        }
+
+        return [
+            'pageTitle' => $isEdit ? 'Edit ' . ($balance['source_label'] ?? 'Saldo Awal') : 'Tambah Saldo Awal',
+            'activeNav' => 'beranda',
+            'backUrl' => site_url('pengaturan/saldo-awal'),
+            'formMode' => $isEdit ? 'Edit Data' : 'Tambah Data',
+            'formTitle' => 'Form Saldo Awal',
+            'formDescription' => 'Saldo awal menyimpan posisi awal tiap rekening atau pos neraca sebelum transaksi berjalan mulai dicatat.',
+            'saveLabel' => $isEdit ? 'Simpan Perubahan' : 'Simpan Saldo Awal',
+            'formAction' => $isEdit ? site_url('pengaturan/saldo-awal/' . $balance['id']) : site_url('pengaturan/saldo-awal'),
+            'formMethod' => 'post',
+            'formFields' => [
+                ['type' => 'select', 'name' => 'book_period_id', 'label' => 'Tahun Buku', 'value' => (string) old('book_period_id', $balance['book_period_id'] ?? ($periods[0]['id'] ?? '')), 'options' => $this->buildSelectOptions($periods)],
+                ['type' => 'select', 'name' => 'account_id', 'label' => 'Rekening / Dompet (Opsional)', 'value' => (string) old('account_id', $balance['account_id'] ?? ''), 'options' => $accountOptions],
+                ['type' => 'text', 'name' => 'source_label', 'label' => 'Pos / Sumber Saldo', 'value' => old('source_label', $balance['source_label'] ?? '')],
+                ['type' => 'select', 'name' => 'report_position_id', 'label' => 'Pos Laporan Terkait', 'value' => (string) old('report_position_id', $balance['report_position_id'] ?? ($positions[0]['id'] ?? '')), 'options' => $this->buildSelectOptions($positions)],
+                ['type' => 'text', 'name' => 'amount', 'label' => 'Nilai Saldo Awal', 'value' => old('amount', isset($balance['amount']) ? rupiah((float) $balance['amount']) : 'Rp 0')],
+            ],
+        ];
+    }
+
+    private function persistOpeningBalance(?string $id = null): RedirectResponse
+    {
+        $model = new OpeningBalanceModel();
+        $current = $id !== null ? $model->find((int) $id) : null;
+
+        if ($id !== null && ! is_array($current)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $sourceLabel = trim((string) $this->request->getPost('source_label'));
+        if ($sourceLabel === '') {
+            return redirect()->back()->withInput()->with('error', 'Pos / sumber saldo wajib diisi.');
+        }
+
+        $accountId = $this->request->getPost('account_id');
+
+        $payload = [
+            'institution_id' => $this->currentInstitutionId(),
+            'account_id' => ($accountId !== '' && $accountId !== null) ? (int) $accountId : null,
+            'book_period_id' => (int) $this->request->getPost('book_period_id'),
+            'report_position_id' => (int) $this->request->getPost('report_position_id'),
+            'source_label' => $sourceLabel,
+            'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
+        ];
+
+        if (is_array($current)) {
+            $model->update((int) $current['id'], $payload);
+            return redirect()->to(site_url('pengaturan/saldo-awal/' . $current['id'] . '/edit'))->with('success', 'Saldo awal berhasil diperbarui.');
+        }
+
+        $model->insert($payload);
+        $newId = (string) $model->getInsertID();
+        return redirect()->to(site_url('pengaturan/saldo-awal/' . $newId . '/edit'))->with('success', 'Saldo awal berhasil ditambahkan.');
+    }
+
+    private function currentInstitutionId(): int
+    {
+        return (int) ($this->session->get('auth_institution_id') ?? 1);
+    }
+
+    private function currentInstitution(): array
+    {
+        $institution = (new InstitutionModel())->find($this->currentInstitutionId());
+
+        if (is_array($institution)) {
+            return $institution;
+        }
+
+        return [
+            'id' => 1,
+            'name' => 'PT Maju Pendidikan Bangsa',
+            'app_name' => 'Arus',
+            'type' => 'Lembaga',
+            'email' => '',
+            'whatsapp' => '',
+            'address' => '',
+            'logo' => '',
+        ];
+    }
+
+    private function buildSelectOptions(array $rows, string $valueKey = 'id', string $labelKey = 'name'): array
+    {
+        return array_map(
+            static fn(array $row): array => [
+                'value' => (string) ($row[$valueKey] ?? ''),
+                'label' => (string) ($row[$labelKey] ?? ''),
+            ],
+            $rows
+        );
+    }
+
+    private function uniqueSlug(object $model, string $name, ?int $ignoreId = null): string
+    {
+        $baseSlug = url_title($name, '-', true);
+        $finalSlug = $baseSlug;
+        $suffix = 2;
+
+        while (true) {
+            $conflict = $model->where('slug', $finalSlug)->first();
+            if (! is_array($conflict) || ($ignoreId !== null && (int) $conflict['id'] === $ignoreId)) {
+                return $finalSlug;
+            }
+
+            $finalSlug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+    }
+
+    private function reportPositionNameMap(): array
+    {
+        $map = [];
+        foreach ((new ReportPositionModel())->where('institution_id', $this->currentInstitutionId())->findAll() as $position) {
+            $map[(int) $position['id']] = $position['name'];
+        }
+
+        return $map;
+    }
+
+    private function openingBalanceTotalByPosition(): array
+    {
+        $totals = [];
+        foreach ((new OpeningBalanceModel())->findAll() as $row) {
+            $positionId = (int) $row['report_position_id'];
+            $totals[$positionId] = ($totals[$positionId] ?? 0) + (float) $row['amount'];
+        }
+
+        return $totals;
+    }
+
+    private function normalBalanceForKind(string $kind): string
+    {
+        return in_array($kind, ['Pendapatan', 'Kewajiban', 'Modal'], true) ? 'Kredit' : 'Debit';
+    }
+
+    private function normalizeMoney(string $raw): float
+    {
+        $normalized = preg_replace('/[^0-9,.-]/', '', $raw) ?? '0';
+        $normalized = str_replace('.', '', $normalized);
+        $normalized = str_replace(',', '.', $normalized);
+
+        return (float) $normalized;
     }
 
 }

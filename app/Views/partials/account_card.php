@@ -17,12 +17,24 @@ $notchClass = $notchClass ?? 'bg-white';
             <?php endif; ?>
         </div>
 
-        <div class="mt-1 flex items-center gap-1 text-zinc-950">
-            <span class="text-xs font-black text-zinc-950"><?= esc(surface_tail($account['slug'])) ?></span>
-            <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
-            <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
-            <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
-            <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
+        <div class="mt-1 flex items-center gap-1.5 text-zinc-950">
+            <?php if (!empty($account['account_number'])): ?>
+                <span class="text-xs font-bold tracking-wide text-zinc-950/70"><?= esc($account['account_number']) ?></span>
+                <button
+                    type="button"
+                    class="flex items-center justify-center text-zinc-400 hover:text-zinc-950 transition"
+                    onclick="event.preventDefault(); event.stopPropagation(); copyToClipboard('<?= esc($account['account_number'], 'js') ?>', this)"
+                    title="Salin nomor rekening"
+                >
+                    <span class="material-symbols-rounded text-sm">content_copy</span>
+                </button>
+            <?php else: ?>
+                <span class="text-xs font-black text-zinc-950"><?= esc(surface_tail($account['slug'])) ?></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-zinc-950"></span>
+            <?php endif; ?>
         </div>
 
         <div class="mt-4 flex items-end justify-between gap-3">

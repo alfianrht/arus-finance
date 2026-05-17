@@ -26,35 +26,45 @@
         </div>
     </section>
 
-    <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <?php foreach ($transactionCategories as $category): ?>
-            <a href="<?= site_url('pengaturan/kategori-biaya/' . $category['slug'] . '/edit') ?>" class="block rounded-3xl bg-white p-4 shadow-sm">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="text-xs text-zinc-500">Kategori <?= esc($category['order']) ?></p>
-                        <p class="mt-2 text-base font-semibold text-zinc-950"><?= esc($category['name']) ?></p>
-                        <p class="mt-1 text-sm text-zinc-500"><?= esc($category['note']) ?></p>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <p class="<?= $category['type'] === 'Masuk' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600' ?> inline-flex rounded-full px-3 py-2 text-xs font-medium"><?= esc($category['type']) ?></p>
-                            <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700"><?= esc($category['report_position_name']) ?></p>
+    <section class="space-y-3">
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="rounded-3xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-950"><?= (string) session()->getFlashdata('error') ?></div>
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('success')): ?>
+            <div class="rounded-3xl border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-medium text-lime-950"><?= (string) session()->getFlashdata('success') ?></div>
+        <?php endif; ?>
+
+        <?php if (empty($transactionCategories)): ?>
+            <?= view('partials/empty_state', [
+                'icon' => 'category', 'title' => 'Belum Ada Kategori',
+                'message' => 'Kategori transaksi digunakan untuk mengelompokkan uang masuk dan keluar. Tambahkan kategori pertama.',
+                'actionUrl' => site_url('pengaturan/kategori-biaya/tambah'), 'actionLabel' => 'Tambah Kategori',
+            ]) ?>
+        <?php else: ?>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <?php foreach ($transactionCategories as $category): ?>
+                    <div class="rounded-3xl bg-white p-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs text-zinc-500">Kategori <?= esc($category['order']) ?></p>
+                                <p class="mt-2 text-base font-semibold text-zinc-950"><?= esc($category['name']) ?></p>
+                                <p class="mt-1 text-sm text-zinc-500"><?= esc($category['note']) ?></p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <p class="<?= $category['type'] === 'Masuk' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600' ?> inline-flex rounded-full px-3 py-2 text-xs font-medium"><?= esc($category['type']) ?></p>
+                                    <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700"><?= esc($category['report_position_name']) ?></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-center justify-end gap-3 border-t border-zinc-100 pt-3">
+                            <button type="button" onclick="openDeleteModal('<?= site_url('pengaturan/kategori-biaya/' . $category['slug'] . '/hapus') ?>', '<?= esc($category['name'], 'js') ?>', '<?= csrf_hash() ?>')" class="text-sm font-medium text-rose-600">Hapus</button>
+                            <a href="<?= site_url('pengaturan/kategori-biaya/' . $category['slug'] . '/edit') ?>" class="text-sm font-medium text-zinc-700">Edit</a>
                         </div>
                     </div>
-                    <span class="rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700">Edit</span>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </section>
-
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-zinc-950">Field yang Disiapkan</h2>
-            <a href="<?= site_url('pengaturan/kategori-biaya/tambah') ?>" class="text-sm font-medium text-zinc-700">Buka Form</a>
-        </div>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            <?php foreach (['Nama kategori', 'Jenis transaksi', 'Pos laporan terkait', 'Urutan tampil', 'Muncul sebagai kategori cepat', 'Catatan penggunaan'] as $field): ?>
-                <a href="<?= site_url('pengaturan/kategori-biaya/tambah') ?>" class="block rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-700"><?= esc($field) ?></a>
-            <?php endforeach; ?>
-        </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 </div>
+
+<?= view('partials/confirm_delete_modal') ?>
 <?= $this->endSection() ?>

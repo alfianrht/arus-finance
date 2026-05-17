@@ -2,6 +2,8 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-8">
+    <?= $this->include('partials/auth_flash') ?>
+
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold tracking-tight text-zinc-950">Daftar Akun</h1>
@@ -12,12 +14,14 @@
         </div>
     </div>
 
-    <form action="<?= site_url('auth/otp') ?>" method="get" class="space-y-6">
+    <form action="<?= site_url('auth/request-otp') ?>" method="post" class="space-y-6">
+        <?= csrf_field() ?>
+        <input type="hidden" name="flow" value="register">
         <div class="space-y-4">
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-950">Nama Lengkap</label>
                 <div class="flex rounded-2xl border border-zinc-200 bg-white focus-within:border-lime-400 focus-within:ring-1 focus-within:ring-lime-400 shadow-sm transition-shadow">
-                    <input type="text" placeholder="Cago Andalas" class="h-14 flex-1 border-0 bg-transparent px-4 text-base font-medium text-zinc-950 placeholder-zinc-400 focus:ring-0">
+                    <input type="text" name="name" value="<?= esc(old('name', '')) ?>" placeholder="Cago Andalas" class="h-14 flex-1 border-0 bg-transparent px-4 text-base font-medium text-zinc-950 placeholder-zinc-400 focus:ring-0">
                 </div>
             </div>
 
@@ -34,10 +38,18 @@
                         </div>
                     </div>
                     <div class="w-px bg-zinc-200 my-3"></div>
-                    <input type="tel" placeholder="812-3456-7890" class="h-14 flex-1 border-0 bg-transparent px-4 text-base font-medium text-zinc-950 placeholder-zinc-400 focus:ring-0">
+                    <input type="tel" name="whatsapp" value="<?= esc(old('whatsapp', '')) ?>" placeholder="812-3456-7890" class="h-14 flex-1 border-0 bg-transparent px-4 text-base font-medium text-zinc-950 placeholder-zinc-400 focus:ring-0">
                 </div>
             </div>
         </div>
+
+        <label class="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+            <div>
+                <p class="text-sm font-semibold text-zinc-950">Ingat perangkat ini</p>
+                <p class="mt-1 text-xs text-zinc-500">Setelah verifikasi OTP, perangkat tetap login hingga 30 hari.</p>
+            </div>
+            <input type="checkbox" name="remember_device" value="1" class="h-5 w-5 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-950" <?= old('remember_device') !== null ? 'checked' : 'checked' ?>>
+        </label>
 
         <button type="submit" class="w-full rounded-full bg-zinc-950 py-4 text-sm font-semibold text-white shadow-md hover:bg-zinc-800 transition-colors">
             Daftar & Kirim OTP

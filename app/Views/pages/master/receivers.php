@@ -26,46 +26,54 @@
         </div>
     </section>
 
-    <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <?php foreach ($receivers as $receiver): ?>
-            <a href="<?= site_url('pengaturan/penerima/' . $receiver['slug'] . '/edit') ?>" class="block rounded-3xl bg-white p-4 shadow-sm">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="text-xs font-medium text-blue-600 mb-1"><?= esc($receiver['type'] ?? 'Lainnya') ?></p>
-                        <p class="truncate text-base font-semibold text-zinc-950"><?= esc($receiver['name']) ?></p>
-                        <?php if (!empty($receiver['bank_account'])): ?>
-                            <p class="mt-1 truncate text-sm text-zinc-500"><?= esc($receiver['bank_account']) ?></p>
-                        <?php endif; ?>
-                        
-                        <?php if (!empty($receiver['note'])): ?>
-                            <p class="mt-2 text-xs text-zinc-500 line-clamp-2"><?= esc($receiver['note']) ?></p>
-                        <?php endif; ?>
+    <section class="space-y-3">
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="rounded-3xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-950"><?= (string) session()->getFlashdata('error') ?></div>
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('success')): ?>
+            <div class="rounded-3xl border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-medium text-lime-950"><?= (string) session()->getFlashdata('success') ?></div>
+        <?php endif; ?>
 
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <?php if (!empty($receiver['nik'])): ?>
-                                <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-[10px] font-medium text-zinc-700">NIK: <?= esc($receiver['nik']) ?></p>
-                            <?php endif; ?>
-                            <?php if (!empty($receiver['npwp'])): ?>
-                                <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-[10px] font-medium text-zinc-700">NPWP: <?= esc($receiver['npwp']) ?></p>
-                            <?php endif; ?>
+        <?php if (empty($receivers)): ?>
+            <?= view('partials/empty_state', [
+                'icon' => 'contacts', 'title' => 'Belum Ada Penerima',
+                'message' => 'Penerima mempercepat pencatatan pengeluaran. Tambahkan kontak vendor, staf, atau pihak ketiga lainnya.',
+                'actionUrl' => site_url('pengaturan/penerima/tambah'), 'actionLabel' => 'Tambah Penerima',
+            ]) ?>
+        <?php else: ?>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <?php foreach ($receivers as $receiver): ?>
+                    <div class="rounded-3xl bg-white p-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-xs font-medium text-blue-600 mb-1"><?= esc($receiver['type'] ?? 'Lainnya') ?></p>
+                                <p class="truncate text-base font-semibold text-zinc-950"><?= esc($receiver['name']) ?></p>
+                                <?php if (!empty($receiver['bank_account'])): ?>
+                                    <p class="mt-1 truncate text-sm text-zinc-500"><?= esc($receiver['bank_account']) ?></p>
+                                <?php endif; ?>
+                                <?php if (!empty($receiver['note'])): ?>
+                                    <p class="mt-2 text-xs text-zinc-500 line-clamp-2"><?= esc($receiver['note']) ?></p>
+                                <?php endif; ?>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <?php if (!empty($receiver['nik'])): ?>
+                                        <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-[10px] font-medium text-zinc-700">NIK: <?= esc($receiver['nik']) ?></p>
+                                    <?php endif; ?>
+                                    <?php if (!empty($receiver['npwp'])): ?>
+                                        <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-[10px] font-medium text-zinc-700">NPWP: <?= esc($receiver['npwp']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-center justify-end gap-3 border-t border-zinc-100 pt-3">
+                            <button type="button" onclick="openDeleteModal('<?= site_url('pengaturan/penerima/' . $receiver['slug'] . '/hapus') ?>', '<?= esc($receiver['name'], 'js') ?>', '<?= csrf_hash() ?>')" class="text-sm font-medium text-rose-600">Hapus</button>
+                            <a href="<?= site_url('pengaturan/penerima/' . $receiver['slug'] . '/edit') ?>" class="text-sm font-medium text-zinc-700">Edit</a>
                         </div>
                     </div>
-                    <span class="shrink-0 rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700">Edit</span>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </section>
-
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-zinc-950">Field yang Disiapkan</h2>
-            <a href="<?= site_url('pengaturan/penerima/tambah') ?>" class="text-sm font-medium text-zinc-700">Buka Form</a>
-        </div>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            <?php foreach (['Nama Kontak', 'Jenis Kontak', 'NIK (Opsional)', 'NPWP (Opsional)', 'Informasi Rekening', 'Catatan'] as $field): ?>
-                <a href="<?= site_url('pengaturan/penerima/tambah') ?>" class="block rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-700"><?= esc($field) ?></a>
-            <?php endforeach; ?>
-        </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 </div>
+
+<?= view('partials/confirm_delete_modal') ?>
 <?= $this->endSection() ?>

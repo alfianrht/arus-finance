@@ -2,6 +2,8 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-8">
+    <?= $this->include('partials/auth_flash') ?>
+
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold tracking-tight text-zinc-950">Pemulihan Akun</h1>
@@ -12,7 +14,9 @@
         </div>
     </div>
 
-    <form action="<?= site_url('auth/otp') ?>" method="get" class="space-y-6">
+    <form action="<?= site_url('auth/request-otp') ?>" method="post" class="space-y-6">
+        <?= csrf_field() ?>
+        <input type="hidden" name="flow" value="recovery">
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-950">No. WhatsApp Terdaftar</label>
             <div class="flex rounded-2xl border border-zinc-200 bg-white focus-within:border-lime-400 focus-within:ring-1 focus-within:ring-lime-400 shadow-sm transition-shadow">
@@ -26,7 +30,7 @@
                     </div>
                 </div>
                 <div class="w-px bg-zinc-200 my-3"></div>
-                <input type="tel" placeholder="812-3456-7890" class="h-14 flex-1 border-0 bg-transparent px-4 text-base font-medium text-zinc-950 placeholder-zinc-400 focus:ring-0">
+                <input type="tel" name="whatsapp" value="<?= esc(old('whatsapp', '')) ?>" placeholder="812-3456-7890" class="h-14 flex-1 border-0 bg-transparent px-4 text-base font-medium text-zinc-950 placeholder-zinc-400 focus:ring-0">
             </div>
         </div>
 
