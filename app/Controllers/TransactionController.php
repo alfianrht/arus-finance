@@ -519,32 +519,47 @@ class TransactionController extends BaseController
 
     private function buildActiveContext(array $units): array
     {
-        $selection = $this->resolveActiveContextSelection($units);
+        $accounts = $this->loadAccounts();
+        $selection = $this->resolveActiveContextSelection($units, $accounts);
         $query = [
             'unit' => $selection['unit_slug'] ?: null,
             'kegiatan' => $selection['activity_slug'] ?: null,
+            'rekening' => $selection['account_slug'] ?: null,
         ];
 
-        $accounts = $this->loadAccounts();
         $defaultExpenseAccount = $accounts[0]['name'] ?? '';
+        $defaultExpenseAccountId = (int) ($accounts[0]['id'] ?? 0);
         $defaultIncomeAccount = $accounts[0]['name'] ?? '';
+        $defaultIncomeAccountId = (int) ($accounts[0]['id'] ?? 0);
         foreach ($accounts as $account) {
             if (str_contains(strtolower($account['name']), 'bri')) {
                 $defaultIncomeAccount = $account['name'];
+                $defaultIncomeAccountId = (int) $account['id'];
             }
             if (str_contains(strtolower($account['name']), 'dana operasional')) {
                 $defaultExpenseAccount = $account['name'];
+                $defaultExpenseAccountId = (int) $account['id'];
             }
+        }
+
+        if ($selection['account_id'] > 0) {
+            $defaultExpenseAccount = $selection['account_name'];
+            $defaultExpenseAccountId = $selection['account_id'];
+            $defaultIncomeAccount = $selection['account_name'];
+            $defaultIncomeAccountId = $selection['account_id'];
         }
 
         return [
             'unit_id' => $selection['unit_id'],
             'activity_id' => $selection['activity_id'],
+            'account_id' => $selection['account_id'],
             'unit_slug' => $selection['unit_slug'],
             'activity_slug' => $selection['activity_slug'],
+            'account_slug' => $selection['account_slug'],
             'unit_name' => $selection['unit_name'],
             'activity_name' => $selection['activity_name'],
-            'display' => $selection['unit_name'] . ' / ' . $selection['activity_name'],
+            'account_name' => $selection['account_name'],
+            'display' => $selection['unit_name'] . ' / ' . $selection['activity_name'] . ' / ' . $selection['account_name'],
             'query' => $query,
             'switch_url' => site_url('konteks-aktif'),
             'switch_redirect' => site_url('catat'),
@@ -555,7 +570,13 @@ class TransactionController extends BaseController
             'biaya_url' => route_query('catat/keluar/biaya', $query),
             'pindah_dana_url' => route_query('catat/keluar/pindah-dana', $query),
             'default_income_account' => $defaultIncomeAccount,
+            'default_income_account_id' => $defaultIncomeAccountId,
             'default_expense_account' => $defaultExpenseAccount,
+            'default_expense_account_id' => $defaultExpenseAccountId,
+            'account_options' => array_map(static fn(array $account): array => [
+                'slug' => (string) ($account['slug'] ?? ''),
+                'name' => (string) ($account['name'] ?? ''),
+            ], $accounts),
         ];
     }
 
@@ -655,7 +676,19 @@ class TransactionController extends BaseController
         return [
             'unit' => $unit['slug'] ?? null,
             'kegiatan' => $activity['slug'] ?? null,
+            'rekening' => $this->resolveAccountSlugFromPost(),
         ];
+    }
+
+    private function resolveAccountSlugFromPost(): ?string
+    {
+        $accountId = (int) ($this->request->getPost('from_account_id') ?: $this->request->getPost('to_account_id'));
+        if ($accountId < 1) {
+            return null;
+        }
+
+        $account = (new AccountModel())->find($accountId);
+        return is_array($account) ? (($account['slug'] ?? '') ?: null) : null;
     }
 
     private function resolveAdminFee(string $preset, string $custom): float

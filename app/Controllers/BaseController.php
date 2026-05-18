@@ -64,13 +64,14 @@ abstract class BaseController extends Controller
      * @param array<int, array<string, mixed>> $units
      * @return array<string, mixed>
      */
-    protected function resolveActiveContextSelection(array $units): array
+    protected function resolveActiveContextSelection(array $units, array $accounts = []): array
     {
         $stored = $this->session->get(self::ACTIVE_CONTEXT_SESSION_KEY);
         $stored = is_array($stored) ? $stored : [];
 
         $requestedUnitSlug = trim((string) ($this->request->getGet('unit') ?? ''));
         $requestedActivitySlug = trim((string) ($this->request->getGet('kegiatan') ?? ''));
+        $requestedAccountSlug = trim((string) ($this->request->getGet('rekening') ?? ''));
 
         $selectedUnitSlug = $requestedUnitSlug !== ''
             ? $requestedUnitSlug
@@ -101,16 +102,47 @@ abstract class BaseController extends Controller
 
         $selectedActivity ??= $activities[0] ?? null;
 
+        $selectedAccountSlug = $requestedAccountSlug !== ''
+            ? $requestedAccountSlug
+            : trim((string) ($stored['account_slug'] ?? ''));
+
+        $selectedAccount = null;
+        foreach ($accounts as $account) {
+            if (($account['slug'] ?? '') === $selectedAccountSlug) {
+                $selectedAccount = $account;
+                break;
+            }
+            if ($selectedAccountSlug !== '' && (int) $selectedAccountSlug > 0 && (int) ($account['id'] ?? 0) === (int) $selectedAccountSlug) {
+                $selectedAccount = $account;
+                break;
+            }
+        }
+
+        if ($selectedAccount === null) {
+            $storedAccountId = (int) ($stored['account_id'] ?? 0);
+            foreach ($accounts as $account) {
+                if ((int) ($account['id'] ?? 0) === $storedAccountId) {
+                    $selectedAccount = $account;
+                    break;
+                }
+            }
+        }
+
+        $selectedAccount ??= $accounts[0] ?? null;
+
         $selection = [
             'unit_id' => (int) ($selectedUnit['id'] ?? 0),
             'activity_id' => (int) ($selectedActivity['id'] ?? 0),
+            'account_id' => (int) ($selectedAccount['id'] ?? 0),
             'unit_slug' => (string) ($selectedUnit['slug'] ?? ''),
             'activity_slug' => (string) ($selectedActivity['slug'] ?? ''),
+            'account_slug' => (string) ($selectedAccount['slug'] ?? ''),
             'unit_name' => (string) ($selectedUnit['name'] ?? 'Tanpa Unit'),
             'activity_name' => (string) ($selectedActivity['name'] ?? 'Tanpa Kegiatan'),
+            'account_name' => (string) ($selectedAccount['name'] ?? 'Tanpa Rekening'),
         ];
 
-        if ($selection['unit_id'] > 0 || $selection['activity_id'] > 0) {
+        if ($selection['unit_id'] > 0 || $selection['activity_id'] > 0 || $selection['account_id'] > 0) {
             $this->session->set(self::ACTIVE_CONTEXT_SESSION_KEY, $selection);
         }
 
@@ -125,13 +157,16 @@ abstract class BaseController extends Controller
         $payload = [
             'unit_id' => (int) ($selection['unit_id'] ?? 0),
             'activity_id' => (int) ($selection['activity_id'] ?? 0),
+            'account_id' => (int) ($selection['account_id'] ?? 0),
             'unit_slug' => (string) ($selection['unit_slug'] ?? ''),
             'activity_slug' => (string) ($selection['activity_slug'] ?? ''),
+            'account_slug' => (string) ($selection['account_slug'] ?? ''),
             'unit_name' => (string) ($selection['unit_name'] ?? 'Tanpa Unit'),
             'activity_name' => (string) ($selection['activity_name'] ?? 'Tanpa Kegiatan'),
+            'account_name' => (string) ($selection['account_name'] ?? 'Tanpa Rekening'),
         ];
 
-        if ($payload['unit_id'] > 0 || $payload['activity_id'] > 0) {
+        if ($payload['unit_id'] > 0 || $payload['activity_id'] > 0 || $payload['account_id'] > 0) {
             $this->session->set(self::ACTIVE_CONTEXT_SESSION_KEY, $payload);
         }
     }

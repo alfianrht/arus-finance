@@ -63,7 +63,7 @@
             <div class="relative">
                 <select name="from_account_id" class="h-12 w-full appearance-none rounded-2xl border border-zinc-100 bg-white pl-4 pr-10 text-sm text-zinc-950 outline-none transition focus:border-zinc-300 focus:ring-2 focus:ring-lime-400" required>
                     <?php foreach ($accounts as $account): ?>
-                        <option value="<?= esc($account['id']) ?>" <?= (string) old('from_account_id', '') === (string) $account['id'] || (old('from_account_id') === null && $account['name'] === $activeContext['default_expense_account']) ? 'selected' : '' ?>><?= esc($account['name']) ?></option>
+                        <option value="<?= esc($account['id']) ?>" <?= (string) old('from_account_id', '') === (string) $account['id'] || (old('from_account_id') === null && (string) ($activeContext['default_expense_account_id'] ?? 0) === (string) $account['id']) ? 'selected' : '' ?>><?= esc($account['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 material-symbols-rounded text-[20px] text-zinc-400">expand_more</span>

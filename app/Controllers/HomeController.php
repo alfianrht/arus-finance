@@ -30,7 +30,8 @@ class HomeController extends BaseController
         $bookPeriodId = is_array($period) ? (int) $period['id'] : 0;
 
         $units = $this->loadUnitsWithActivities($institutionId);
-        $contextSelection = $this->resolveActiveContextSelection($units);
+        $accounts = $this->loadAccounts($institutionId);
+        $contextSelection = $this->resolveActiveContextSelection($units, $accounts);
 
         $db = \Config\Database::connect();
 
@@ -119,14 +120,18 @@ class HomeController extends BaseController
         $activeContext = [
             'unit_id' => $contextSelection['unit_id'],
             'activity_id' => $contextSelection['activity_id'],
+            'account_id' => $contextSelection['account_id'],
             'unit_slug' => $contextSelection['unit_slug'],
             'activity_slug' => $contextSelection['activity_slug'],
+            'account_slug' => $contextSelection['account_slug'],
             'unit_name' => $contextSelection['unit_name'],
             'activity_name' => $contextSelection['activity_name'],
-            'display' => $contextSelection['unit_name'] . ' / ' . $contextSelection['activity_name'],
+            'account_name' => $contextSelection['account_name'],
+            'display' => $contextSelection['unit_name'] . ' / ' . $contextSelection['activity_name'] . ' / ' . $contextSelection['account_name'],
             'query' => [
                 'unit' => $contextSelection['unit_slug'] ?: null,
                 'kegiatan' => $contextSelection['activity_slug'] ?: null,
+                'rekening' => $contextSelection['account_slug'] ?: null,
             ],
             'switch_url' => site_url('konteks-aktif'),
             'switch_redirect' => site_url('catat'),
@@ -134,6 +139,10 @@ class HomeController extends BaseController
             'activity_url' => $contextSelection['activity_slug'] !== '' ? site_url('kegiatan/' . $contextSelection['activity_slug']) : site_url('catat'),
             'masuk_url' => site_url('catat/masuk'),
             'keluar_url' => site_url('catat/keluar'),
+            'account_options' => array_map(static fn(array $account): array => [
+                'slug' => (string) ($account['slug'] ?? ''),
+                'name' => (string) ($account['name'] ?? ''),
+            ], $accounts),
         ];
 
         // 5. Build settings shortcuts for the dashboard
@@ -194,6 +203,17 @@ class HomeController extends BaseController
         unset($unit);
 
         return $units;
+    }
+
+    private function loadAccounts(int $institutionId): array
+    {
+        return (new AccountModel())
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->where('is_active', 1)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
     }
 
     private function currentInstitution(): array
