@@ -33,18 +33,18 @@ foreach ($selectorUnits as $selectorUnit) {
             <div class="min-w-0">
                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks Aktif</p>
                 <div class="mt-2 flex flex-wrap gap-2">
-                    <span class="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['unit_name']) ?></span>
-                    <span class="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['activity_name']) ?></span>
-                    <span class="inline-flex items-center rounded-full bg-lime-100 px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['account_name']) ?></span>
+                    <span class="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm"><?= esc($activeContext['unit_name']) ?></span>
+                    <span class="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm"><?= esc($activeContext['activity_name']) ?></span>
+                    <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['account_name']) ?></span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <a href="<?= esc($activeContext['activity_url']) ?>" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm">
                     <span class="material-symbols-rounded text-base" aria-hidden="true">open_in_new</span>
                 </a>
-                <button type="button" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-zinc-950 bg-zinc-950 px-3.5 text-xs font-semibold text-white shadow-sm" data-context-open>
+                <button type="button" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 text-xs font-semibold text-zinc-700 shadow-sm" data-context-open>
                     <span class="material-symbols-rounded text-sm" aria-hidden="true">edit</span>
-                    <span>Edit</span>
+                    <span>Ubah</span>
                 </button>
             </div>
         </div>
