@@ -53,7 +53,7 @@ foreach ($selectorUnits as $selectorUnit) {
     <form
         method="post"
         action="<?= esc($activeContext['switch_url']) ?>"
-        class="hidden overflow-hidden rounded-3xl border border-zinc-100 bg-white shadow-sm"
+        class="hidden overflow-hidden rounded-3xl bg-white shadow-sm"
         data-context-form
         data-context-switcher
         data-units='<?= esc(json_encode($selectorUnits, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>'
@@ -64,20 +64,21 @@ foreach ($selectorUnits as $selectorUnit) {
             <input type="hidden" name="<?= esc($key) ?>" value="<?= esc((string) $value) ?>">
         <?php endforeach; ?>
 
-        <div class="relative border-b border-zinc-100 bg-zinc-50/80 px-4 py-4 sm:px-5">
+        <div class="border-b border-zinc-100 bg-white px-4 py-3">
             <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
                     <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Ubah Aktif</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['unit_name']) ?></span>
+                        <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['activity_name']) ?></span>
+                        <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['account_name']) ?></span>
+                    </div>
                 </div>
-                <button type="button" class="absolute top-2 right-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm" data-context-close>
-                    <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
-                </button>
-            </div>
-
-            <div class="mt-3 flex flex-wrap gap-2">
-                <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['unit_name']) ?></span>
-                <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['activity_name']) ?></span>
-                <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['account_name']) ?></span>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm" data-context-close>
+                        <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
+                    </button>
+                </div>
             </div>
         </div>
 
