@@ -96,8 +96,8 @@
         </div>
     </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
+    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
             <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Bukan biaya</span>
         </div>
@@ -105,8 +105,49 @@
             <?php if ($transferItems === []): ?>
                 <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada pindah dana pada kegiatan ini.</div>
             <?php endif; ?>
-            <?php foreach ($transferItems as $transfer): ?>
-                <?= view('partials/transaction_item', ['transaction' => $transfer]) ?>
+            <?php foreach ($transferItems as $transfer): 
+                $detailUrl = site_url('transaksi/' . $transfer['id']) . '?from=' . rawurlencode(current_url() . (($_SERVER['QUERY_STRING'] ?? '') ? '?' . $_SERVER['QUERY_STRING'] : ''));
+            ?>
+                <a href="<?= esc($detailUrl) ?>" class="group block py-3.5 px-4 transition-colors hover:bg-zinc-50 active:bg-zinc-100">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="space-y-1 min-w-0">
+                            <!-- Aliran Rekening Asal -> Tujuan -->
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[10px] font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-lg truncate">
+                                    <?= esc($transfer['from_account']) ?>
+                                </span>
+                                <span class="material-symbols-rounded text-zinc-400 text-sm font-bold">arrow_forward</span>
+                                <span class="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-lg truncate">
+                                    <?= esc($transfer['to_account']) ?>
+                                </span>
+                            </div>
+                            
+                            <!-- Subline Unit/Kegiatan & Tanggal/Ket -->
+                            <p class="truncate text-[11px] font-medium text-zinc-500 pt-1">
+                                <?= esc($transfer['subline']) ?>
+                            </p>
+                            <p class="text-[10px] text-zinc-400 truncate">
+                                <?= esc($transfer['meta']) ?>
+                            </p>
+                        </div>
+                        
+                        <!-- Nominal & Biaya Admin -->
+                        <div class="text-right shrink-0">
+                            <p class="text-sm font-bold text-zinc-900 tabular-nums">
+                                <?= esc(rupiah($transfer['amount'])) ?>
+                            </p>
+                            <?php if ($transfer['admin_fee'] > 0): ?>
+                                <p class="text-[10px] font-medium text-rose-500 mt-0.5 tabular-nums">
+                                    +Biaya Adm: <?= esc(rupiah($transfer['admin_fee'])) ?>
+                                </p>
+                            <?php else: ?>
+                                <p class="text-[9px] font-medium text-zinc-400 mt-0.5">
+                                    Bebas Admin
+                                </p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </a>
             <?php endforeach; ?>
         </div>
     </section>

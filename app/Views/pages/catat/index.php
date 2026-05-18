@@ -21,12 +21,12 @@
         </a>
     </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
+    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="px-4 flex items-center justify-between gap-3">
             <h2 class="text-base font-semibold text-zinc-950">Riwayat Transaksi</h2>
             <a href="<?= site_url('rekap') ?>" class="text-xs font-medium text-zinc-500">Lihat rekap</a>
         </div>
-        <div class="mt-3 flex flex-wrap gap-2">
+        <div class="mt-3 px-4 flex flex-wrap gap-2">
             <?php foreach ($transactionFilters as $filter): ?>
                 <?php $isActive = $selectedTransactionFilter === $filter['key']; ?>
                 <a

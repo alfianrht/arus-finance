@@ -22,7 +22,7 @@ $allowDelete = $allow_delete ?? false;
         <div class="w-full shrink-0 snap-center bg-white">
 <?php endif; ?>
 
-<a href="<?= esc($detailUrl) ?>" class="group flex items-start gap-3 py-2 px-2 transition-colors hover:bg-zinc-50 active:bg-zinc-100">
+<a href="<?= esc($detailUrl) ?>" class="group flex items-start gap-3 py-2 px-4 transition-colors hover:bg-zinc-50 active:bg-zinc-100">
     <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl <?= esc($transaction['badge_class']) ?>">
         <span class="material-symbols-rounded text-xl" aria-hidden="true"><?= esc($transaction['icon']) ?></span>
     </div>

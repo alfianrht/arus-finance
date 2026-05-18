@@ -137,8 +137,8 @@
         </div>
     </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
+    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terkait</h2>
             <p class="text-xs text-zinc-500"><?= esc($receiver['name']) ?></p>
         </div>

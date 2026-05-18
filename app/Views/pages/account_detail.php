@@ -149,7 +149,7 @@
                     </div>
                 </div>
             <?php else: ?>
-                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory" style="scrollbar-width: none;">
+                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 pt-2 snap-x snap-mandatory scroll-pl-4" style="scrollbar-width: none;">
                     <style>
                         .overflow-x-auto::-webkit-scrollbar { display: none; }
                     </style>
@@ -162,8 +162,8 @@
         </div>
     </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
+    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terkait</h2>
             <p class="text-xs text-zinc-500"><?= esc($account['name']) ?></p>
         </div>
