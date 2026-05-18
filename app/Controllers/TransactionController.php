@@ -416,20 +416,6 @@ class TransactionController extends BaseController
         }
 
         try {
-            if (in_array($type, ['keluar', 'honor', 'pindah'], true) && ! empty($payload['from_account_id'])) {
-                $amount = (float) ($payload['amount'] ?? 0);
-                $adminFee = (float) ($payload['admin_fee'] ?? 0);
-                $balance = $this->transactionService->getAccountBalance((int) $payload['from_account_id']);
-
-                if ((int) $existing['from_account_id'] === (int) $payload['from_account_id']) {
-                    $balance += (float) $existing['amount'] + (float) $existing['admin_fee'];
-                }
-
-                if ($balance < ($amount + $adminFee)) {
-                    throw new RuntimeException('Saldo rekening tidak mencukupi untuk transaksi ini.');
-                }
-            }
-
             (new TransactionModel())->update((int) $existing['id'], $payload);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);

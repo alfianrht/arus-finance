@@ -24,7 +24,7 @@ class TransactionService
         $this->transactions = $transactions ?? new TransactionModel();
     }
 
-    public function getAccountBalance(int $accountId, ?string $untilDate = null): float
+    public function getAccountBalance(int $accountId, ?string $untilDate = null, ?int $bookPeriodId = null): float
     {
         $account = $this->db->table('accounts')
             ->select('report_position_id')
@@ -34,15 +34,33 @@ class TransactionService
 
         $openingBalance = 0.0;
         $reportPositionId = (int) ($account['report_position_id'] ?? 0);
+        $openingBuilder = $this->db->table('opening_balances')
+            ->where('deleted_at', null);
 
-        if ($reportPositionId > 0) {
-            $openingRow = $this->db->table('opening_balances')
+        if ($bookPeriodId !== null && $bookPeriodId > 0) {
+            $openingBuilder->where('book_period_id', $bookPeriodId);
+        }
+
+        $openingByAccount = (clone $openingBuilder)
+            ->selectSum('amount', 'balance')
+            ->where('account_id', $accountId)
+            ->get()
+            ->getRowArray();
+
+        $openingBalance = (float) ($openingByAccount['balance'] ?? 0);
+
+        if ($openingBalance <= 0 && $reportPositionId > 0) {
+            $openingByPosition = (clone $openingBuilder)
                 ->selectSum('amount', 'balance')
                 ->where('report_position_id', $reportPositionId)
+                ->groupStart()
+                    ->where('account_id', null)
+                    ->orWhere('account_id', 0)
+                ->groupEnd()
                 ->get()
                 ->getRowArray();
 
-            $openingBalance = (float) ($openingRow['balance'] ?? 0);
+            $openingBalance = (float) ($openingByPosition['balance'] ?? 0);
         }
 
         $builder = $this->db->table('transactions');
@@ -62,6 +80,10 @@ class TransactionService
             ->orWhere('to_account_id', $accountId)
             ->groupEnd();
 
+        if ($bookPeriodId !== null && $bookPeriodId > 0) {
+            $builder->where('book_period_id', $bookPeriodId);
+        }
+
         if ($untilDate !== null) {
             $builder->where('transaction_date <=', $untilDate);
         }
@@ -71,25 +93,8 @@ class TransactionService
         return $openingBalance + (float) ($row['balance'] ?? 0);
     }
 
-    public function assertSufficientBalance(int $accountId, float $amount, float $adminFee = 0): void
-    {
-        $balance = $this->getAccountBalance($accountId);
-
-        if ($balance < ($amount + $adminFee)) {
-            throw new RuntimeException('Saldo rekening tidak mencukupi untuk transaksi ini.');
-        }
-    }
-
     public function create(array $payload): int
     {
-        $type = (string) ($payload['type'] ?? '');
-        $amount = (float) ($payload['amount'] ?? 0);
-        $adminFee = (float) ($payload['admin_fee'] ?? 0);
-
-        if (in_array($type, ['keluar', 'pindah', 'honor'], true) && ! empty($payload['from_account_id'])) {
-            $this->assertSufficientBalance((int) $payload['from_account_id'], $amount, $adminFee);
-        }
-
         $this->db->transStart();
         $transactionId = $this->transactions->insert($payload, true);
         $this->db->transComplete();
