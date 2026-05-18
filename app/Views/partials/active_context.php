@@ -53,7 +53,7 @@ foreach ($selectorUnits as $selectorUnit) {
     <form
         method="post"
         action="<?= esc($activeContext['switch_url']) ?>"
-        class="hidden rounded-3xl border border-zinc-950 bg-white p-4 shadow-sm"
+        class="hidden overflow-hidden rounded-3xl border border-zinc-100 bg-white shadow-sm"
         data-context-form
         data-context-switcher
         data-units='<?= esc(json_encode($selectorUnits, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>'
@@ -64,24 +64,37 @@ foreach ($selectorUnits as $selectorUnit) {
             <input type="hidden" name="<?= esc($key) ?>" value="<?= esc((string) $value) ?>">
         <?php endforeach; ?>
 
-        <div class="flex items-start justify-between gap-3">
-            <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Ubah Konteks</p>
-                <p class="mt-1 text-sm font-semibold text-zinc-950">Pilih Unit, Kegiatan, dan Rekening yang ingin dipakai.</p>
+        <div class="border-b border-zinc-100 bg-zinc-50/80 px-4 py-4 sm:px-5">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="inline-flex items-center gap-2 rounded-full bg-lime-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-900">
+                        <span class="inline-block h-2 w-2 rounded-full bg-lime-400"></span>
+                        <span>Ubah Konteks</span>
+                    </div>
+                    <p class="mt-3 text-base font-semibold leading-tight text-zinc-950">Pastikan unit, kegiatan, dan rekening aktif sudah tepat sebelum mulai mencatat.</p>
+                    <p class="mt-1 text-sm text-zinc-500">Pilihan ini akan menjadi default pada form masuk, biaya, honor, dan pindah dana.</p>
+                </div>
+                <button type="button" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm" data-context-close>
+                    <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
+                </button>
             </div>
-            <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-700" data-context-close>
-                <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
-            </button>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+                <span class="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm"><?= esc($activeContext['unit_name']) ?></span>
+                <span class="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm"><?= esc($activeContext['activity_name']) ?></span>
+                <span class="inline-flex items-center rounded-full bg-lime-400 px-3 py-1.5 text-xs font-semibold text-zinc-950 shadow-sm"><?= esc($activeContext['account_name']) ?></span>
+            </div>
         </div>
 
-        <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div class="px-4 py-4 sm:px-5 sm:py-5">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div class="space-y-2">
                 <label for="context-unit" class="text-sm font-medium text-zinc-700">Unit / Program</label>
                 <select
                     id="context-unit"
                     name="unit"
                     data-context-unit
-                    class="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400"
+                    class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-lime-400"
                 >
                     <?php foreach ($selectorUnits as $selectorUnit): ?>
                         <option value="<?= esc($selectorUnit['slug']) ?>" <?= $selectorUnit['slug'] === $activeContext['unit_slug'] ? 'selected' : '' ?>>
@@ -97,7 +110,7 @@ foreach ($selectorUnits as $selectorUnit) {
                     id="context-activity"
                     name="kegiatan"
                     data-context-activity
-                    class="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400"
+                    class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-lime-400"
                 >
                     <?php foreach ($currentUnitActivities as $activity): ?>
                         <option value="<?= esc($activity['slug']) ?>" <?= $activity['slug'] === $activeContext['activity_slug'] ? 'selected' : '' ?>>
@@ -112,7 +125,7 @@ foreach ($selectorUnits as $selectorUnit) {
                 <select
                     id="context-account"
                     name="rekening"
-                    class="h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400"
+                    class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-lime-400"
                 >
                     <?php foreach ($selectorAccounts as $account): ?>
                         <option value="<?= esc($account['slug']) ?>" <?= $account['slug'] === $activeContext['account_slug'] ? 'selected' : '' ?>>
@@ -121,18 +134,19 @@ foreach ($selectorUnits as $selectorUnit) {
                     <?php endforeach; ?>
                 </select>
             </div>
-        </div>
+            </div>
 
-        <div class="mt-4 flex items-center justify-between gap-3">
-            <p class="text-xs text-zinc-500">Setelah disimpan, tombol aksi akan mengikuti konteks ini.</p>
-            <div class="flex items-center gap-2">
-                <button type="button" class="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm" data-context-close>
-                    Batal
-                </button>
-                <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm">
-                    <span class="material-symbols-rounded text-base" aria-hidden="true">check</span>
-                    <span>Pakai Konteks</span>
-                </button>
+            <div class="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-xs leading-relaxed text-zinc-500">Setelah disimpan, seluruh tombol aksi dan pilihan rekening default akan mengikuti konteks aktif ini.</p>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="inline-flex h-11 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm" data-context-close>
+                        Batal
+                    </button>
+                    <button type="submit" class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-lime-400 px-5 text-sm font-semibold text-zinc-950 shadow-sm">
+                        <span class="material-symbols-rounded text-base" aria-hidden="true">check</span>
+                        <span>Pakai Konteks</span>
+                    </button>
+                </div>
             </div>
         </div>
     </form>
