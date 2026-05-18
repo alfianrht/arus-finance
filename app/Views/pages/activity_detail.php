@@ -58,18 +58,18 @@
                 <span>Siap Dicatat</span>
             </span>
         </div>
-
-        <div class="relative mt-4 grid grid-cols-2 gap-3">
-            <a href="<?= esc($activity['masuk_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950">
-                <span class="material-symbols-rounded text-base" aria-hidden="true">add</span>
-                <span>Uang Masuk</span>
-            </a>
-            <a href="<?= esc($activity['keluar_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white">
-                <span class="material-symbols-rounded text-base" aria-hidden="true">remove</span>
-                <span>Uang Keluar</span>
-            </a>
-        </div>
     </section>
+
+    <div class="grid grid-cols-2 gap-3">
+        <a href="<?= esc($activity['masuk_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950 shadow-sm">
+            <span class="material-symbols-rounded text-base" aria-hidden="true">add</span>
+            <span>Uang Masuk</span>
+        </a>
+        <a href="<?= esc($activity['keluar_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm">
+            <span class="material-symbols-rounded text-base" aria-hidden="true">remove</span>
+            <span>Uang Keluar</span>
+        </a>
+    </div>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
