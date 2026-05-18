@@ -70,47 +70,27 @@
         </form>
     </section>
 
-    <div class="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
-        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">south_west</span>
-                </div>
-                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Masuk</p>
-            </div>
-            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['income'])) ?></p>
+    <section class="rounded-3xl bg-white p-5 shadow-sm">
+        <div class="flex items-center gap-2 text-zinc-500">
+            <span class="material-symbols-rounded text-base" aria-hidden="true">account_balance_wallet</span>
+            <p class="text-sm">Saldo Total</p>
         </div>
-        
-        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">north_east</span>
-                </div>
-                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Biaya</p>
+        <p class="mt-3 text-4xl font-semibold tracking-tight text-zinc-950 tabular-nums"><?= esc(rupiah($rekapSummary['balance'])) ?></p>
+        <div class="mt-4 grid grid-cols-3 gap-3">
+            <div>
+                <p class="text-xs text-zinc-500">Uang Masuk</p>
+                <p class="mt-2 text-sm font-semibold text-emerald-600 tabular-nums"><?= esc(rupiah($rekapSummary['income'])) ?></p>
             </div>
-            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['expense'])) ?></p>
-        </div>
-        
-        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">waterfall_chart</span>
-                </div>
-                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Surplus</p>
+            <div>
+                <p class="text-xs text-zinc-500">Uang Keluar</p>
+                <p class="mt-2 text-sm font-semibold text-rose-500 tabular-nums"><?= esc(rupiah($rekapSummary['expense'])) ?></p>
             </div>
-            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['surplus'])) ?></p>
-        </div>
-        
-        <div class="rounded-2xl bg-white p-3 sm:p-4 sm:rounded-3xl shadow-sm">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">account_balance_wallet</span>
-                </div>
-                <p class="truncate text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Saldo Total</p>
+            <div>
+                <p class="text-xs text-zinc-500">Laba Sementara</p>
+                <p class="mt-2 text-sm font-semibold text-zinc-950 tabular-nums"><?= esc(rupiah($rekapSummary['surplus'])) ?></p>
             </div>
-            <p class="mt-1.5 sm:mt-3 truncate text-sm sm:text-base font-black text-zinc-950"><?= esc(rupiah($rekapSummary['balance'])) ?></p>
         </div>
-    </div>
+    </section>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
@@ -155,7 +135,7 @@
         </div>
     </section>
 
-    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
+    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm">
         <div class="flex items-center justify-between px-4">
             <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
         </div>
@@ -168,23 +148,14 @@
                     </div>
                 </div>
             <?php else: ?>
-                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory" style="scrollbar-width: none;">
+                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 pt-2 snap-x snap-mandatory scroll-pl-4" style="scrollbar-width: none;">
                     <!-- Sembunyikan scrollbar untuk webkit (Chrome/Safari) -->
                     <style>
                         .overflow-x-auto::-webkit-scrollbar { display: none; }
                     </style>
                     
                     <?php foreach ($rekapReceivers as $receiver): ?>
-                        <div class="flex w-36 shrink-0 snap-start flex-col items-center justify-center rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-center">
-                            <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                                <span class="material-symbols-rounded text-2xl" aria-hidden="true">account_circle</span>
-                            </div>
-                            <p class="w-full truncate text-sm font-semibold text-zinc-950"><?= esc($receiver['name']) ?></p>
-                            <p class="mt-0.5 text-[10px] font-medium tracking-wider text-zinc-500 uppercase"><?= esc($receiver['type']) ?></p>
-                            <div class="mt-3 w-full rounded-lg bg-white py-1.5 shadow-sm border border-zinc-100">
-                                <p class="text-xs font-bold text-rose-500"><?= esc(rupiah($receiver['total_received'])) ?></p>
-                            </div>
-                        </div>
+                        <?= view('partials/receiver_card', ['receiver' => $receiver, 'widthClass' => 'w-48 sm:w-52']) ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -196,15 +167,12 @@
             <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
             <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Tidak dihitung biaya</span>
         </div>
-        <div class="mt-3 space-y-3">
+        <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($rekapTransferItems === []): ?>
                 <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada pindah dana pada filter ini.</div>
             <?php endif; ?>
             <?php foreach ($rekapTransferItems as $transfer): ?>
-                <div class="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                    <p class="text-sm font-semibold text-sky-900"><?= $transfer['headline'] ?></p>
-                    <p class="mt-1 text-sm text-sky-800"><?= esc(rupiah($transfer['amount'])) ?> · <?= esc($transfer['meta']) ?></p>
-                </div>
+                <?= view('partials/transaction_item', ['transaction' => $transfer]) ?>
             <?php endforeach; ?>
         </div>
     </section>

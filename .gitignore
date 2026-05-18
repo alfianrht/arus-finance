@@ -1,2 +1,6 @@
+.env
 writable/session/*
 writable/logs/*
+public/uploads/accounts/*
+public/uploads/institutions/*
+public/uploads/transaksi/*

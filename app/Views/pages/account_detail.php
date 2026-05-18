@@ -55,6 +55,15 @@
     <div class="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
         <div class="rounded-2xl bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
             <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 sm:h-8 sm:w-8">
+                    <span class="material-symbols-rounded text-[11px] sm:text-sm">account_balance_wallet</span>
+                </div>
+                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Saldo</p>
+            </div>
+            <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc(rupiah($account['balance'])) ?></p>
+        </div>
+        <div class="rounded-2xl bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
+            <div class="flex items-center gap-1.5 sm:gap-2">
                 <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 sm:h-8 sm:w-8">
                     <span class="material-symbols-rounded text-[11px] sm:text-sm">south_west</span>
                 </div>
@@ -67,34 +76,25 @@
                 <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 sm:h-8 sm:w-8">
                     <span class="material-symbols-rounded text-[11px] sm:text-sm">north_east</span>
                 </div>
-                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Biaya</p>
+                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Keluar</p>
             </div>
             <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc(rupiah($account['expense'])) ?></p>
         </div>
         <div class="rounded-2xl bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
             <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 sm:h-8 sm:w-8">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">login</span>
+                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 sm:h-8 sm:w-8">
+                    <span class="material-symbols-rounded text-[11px] sm:text-sm">receipt_long</span>
                 </div>
-                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Pindah Masuk</p>
+                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Transaksi</p>
             </div>
-            <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc(rupiah($account['transfer_in'])) ?></p>
-        </div>
-        <div class="rounded-2xl bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 sm:h-8 sm:w-8">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">logout</span>
-                </div>
-                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Pindah Keluar</p>
-            </div>
-            <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc(rupiah($account['transfer_out'])) ?></p>
+            <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc((string) $account['transaction_count']) ?></p>
         </div>
     </div>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
-            <h2 class="text-base font-semibold text-zinc-950">Dipakai oleh Kegiatan</h2>
-            <p class="text-xs text-zinc-500">Jejak mutasi per kegiatan</p>
+            <h2 class="text-base font-semibold text-zinc-950">Kegiatan Terkait</h2>
+            <p class="text-xs text-zinc-500">Memakai rekening ini</p>
         </div>
         <div class="mt-3 space-y-3">
             <?php if ($accountActivities === []): ?>
@@ -155,16 +155,7 @@
                     </style>
                     
                     <?php foreach ($involvedReceivers as $receiver): ?>
-                        <div class="flex w-36 shrink-0 snap-start flex-col items-center justify-center rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-center">
-                            <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                                <span class="material-symbols-rounded text-2xl" aria-hidden="true">account_circle</span>
-                            </div>
-                            <p class="w-full truncate text-sm font-semibold text-zinc-950"><?= esc($receiver['name']) ?></p>
-                            <p class="mt-0.5 text-[10px] font-medium tracking-wider text-zinc-500 uppercase"><?= esc($receiver['type']) ?></p>
-                            <div class="mt-3 w-full rounded-lg bg-white py-1.5 shadow-sm border border-zinc-100">
-                                <p class="text-xs font-bold text-rose-500"><?= esc(rupiah($receiver['total_received'])) ?></p>
-                            </div>
-                        </div>
+                        <?= view('partials/receiver_card', ['receiver' => $receiver, 'widthClass' => 'w-48 sm:w-52']) ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -173,7 +164,7 @@
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
-            <h2 class="text-base font-semibold text-zinc-950">Mutasi Rekening / Dompet</h2>
+            <h2 class="text-base font-semibold text-zinc-950">Transaksi Terkait</h2>
             <p class="text-xs text-zinc-500"><?= esc($account['name']) ?></p>
         </div>
         <div class="mt-3 divide-y divide-zinc-100">

@@ -15,7 +15,7 @@
         </section>
     <?php endif; ?>
 
-    <form action="<?= esc($formAction) ?>" method="post" enctype="multipart/form-data" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
+    <form action="<?= esc($formAction) ?>" method="post" enctype="multipart/form-data" class="">
         <?= csrf_field() ?>
         <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
             <div>
@@ -38,8 +38,8 @@
             <?php if (in_array($transaction['type_key'], ['keluar', 'honor', 'pindah'], true)): ?>
                 <div class="mt-6 flex items-center justify-center gap-2 w-full overflow-hidden">
                     <p class="shrink-0 text-sm font-medium text-zinc-700">Biaya Admin:</p>
-                    <input type="text" inputmode="numeric" name="<?= $transaction['type_key'] === 'pindah' || $transaction['type_key'] === 'honor' ? 'admin_fee_manual' : 'admin_fee_custom' ?>" value="<?= esc($transactionForm['admin_fee_value']) ?>" <?= $isEditMode ? '' : 'readonly' ?> class="h-10 w-28 shrink-0 rounded-xl border border-zinc-200 bg-white px-3 text-center text-sm font-medium text-zinc-950 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400">
-                    <input type="hidden" name="<?= $transaction['type_key'] === 'pindah' || $transaction['type_key'] === 'honor' ? 'admin_fee' : 'admin_fee_preset' ?>" value="manual">
+                    <input type="text" inputmode="numeric" name="admin_fee_custom" value="<?= esc($transactionForm['admin_fee_value']) ?>" <?= $isEditMode ? '' : 'readonly' ?> class="h-10 w-28 shrink-0 rounded-xl border border-zinc-200 bg-white px-3 text-center text-sm font-medium text-zinc-950 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400">
+                    <input type="hidden" name="admin_fee_preset" value="manual">
                 </div>
             <?php endif; ?>
         </div>

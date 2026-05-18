@@ -230,6 +230,7 @@ class ReportController extends BaseController
             $a['income'] = $aInc;
             $a['expense'] = $aExp;
             $a['surplus'] = $aInc - $aExp;
+            $a['related_balance'] = $aInc - $aExp;
             $a['detail_url'] = route_query('kegiatan/' . $a['slug'], ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug]);
             $activityUnitSlug = null;
             foreach ($units as $candidateUnit) {
@@ -254,9 +255,11 @@ class ReportController extends BaseController
             $rec = $db->table('receivers')->where('id', $rs['receiver_id'])->get()->getRowArray();
             if ($rec) {
                 $rekapReceivers[] = [
+                    'id' => (int) $rec['id'],
                     'name' => $rec['name'],
                     'type' => $rec['type'],
                     'total_received' => (float) $rs['total'],
+                    'detail_url' => site_url('penerima/' . $rec['id']),
                 ];
             }
         }
@@ -361,8 +364,6 @@ class ReportController extends BaseController
             'balance' => $accOb + $accInc - $accExp,
             'income' => $accInc,
             'expense' => $accExp,
-            'transfer_in' => $accIncPindah,
-            'transfer_out' => $accExpPindah,
             'icon' => 'account_balance_wallet',
             'color' => 'emerald',
             'surplus' => $accInc - $accExp,
@@ -373,6 +374,7 @@ class ReportController extends BaseController
             'logo_asset' => $acc['logo_asset'] ?? '',
             'note' => trim((string) ($acc['note'] ?? '')) !== '' ? (string) $acc['note'] : 'Rekening aktif',
             'movement_count' => count($recentRows),
+            'transaction_count' => count($recentRows),
         ];
 
         $accountActivities = [];
@@ -412,6 +414,7 @@ class ReportController extends BaseController
         }
 
         usort($accountActivities, fn($a, $b) => abs($b['amount']) <=> abs($a['amount']));
+        $involvedReceivers = $this->getInvolvedReceivers($db, clone $tBuilder);
 
         $data = [
             'pageTitle'           => $account['name'],
@@ -419,13 +422,8 @@ class ReportController extends BaseController
             'backUrl'             => route_query('rekap', ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug, 'kegiatan' => $selectedActivitySlug]),
             'account'             => $account,
             'accountTransactions' => $formattedTransactions,
-            'involvedReceivers'   => $this->getInvolvedReceivers($db, clone $tBuilder),
+            'involvedReceivers'   => $involvedReceivers,
             'accountActivities'   => $accountActivities,
-            'rekapFilterSummary'  => [
-                'period_label' => $selectedPeriodSlug === 'semua' ? 'Semua Periode' : 'Periode Terpilih',
-                'unit_label' => $selectedUnitSlug === 'semua' ? 'Semua Unit' : 'Unit Terpilih',
-                'activity_label' => $selectedActivitySlug === 'semua' ? 'Semua Kegiatan' : 'Kegiatan Terpilih',
-            ],
         ];
 
         return view('pages/account_detail', $data);
@@ -486,6 +484,7 @@ class ReportController extends BaseController
                 'income' => $actInc,
                 'expense' => $actExp,
                 'surplus' => $actInc - $actExp,
+                'related_balance' => $actInc - $actExp,
                 'detail_url' => route_query('kegiatan/' . ($act['slug'] ?? ('act-' . $act['id'])), ['periode' => $selectedPeriodSlug, 'unit' => $u['slug']]),
                 'masuk_url' => route_query('catat/masuk', ['unit' => $u['slug'], 'kegiatan' => $act['slug'] ?? null]),
                 'keluar_url' => route_query('catat/keluar', ['unit' => $u['slug'], 'kegiatan' => $act['slug'] ?? null]),
@@ -499,12 +498,15 @@ class ReportController extends BaseController
             'income' => $uInc,
             'expense' => $uExp,
             'surplus' => $uInc - $uExp,
+            'related_balance' => $uInc - $uExp,
             'activities' => $formattedActivities,
             'quick_activity_name' => $uActivities[0]['name'] ?? '-',
             'detail_url' => site_url('unit/' . $u['slug']),
         ];
 
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
+        $involvedReceivers = $this->getInvolvedReceivers($db, clone $tBuilder);
+        $involvedAccounts = $this->getInvolvedAccounts($db, $recentRows);
         
         $data = [
             'pageTitle' => $unit['name'],
@@ -512,7 +514,8 @@ class ReportController extends BaseController
             'backUrl' => site_url('rekap'),
             'unit' => $unit,
             'unitTransactions' => $this->transactionService->formatTransactions($recentRows),
-            'involvedReceivers' => $this->getInvolvedReceivers($db, $tBuilder),
+            'involvedReceivers' => $involvedReceivers,
+            'involvedAccounts' => $involvedAccounts,
         ];
 
         return view('pages/unit_detail', $data);
@@ -562,6 +565,7 @@ class ReportController extends BaseController
         $actExp = $actExpMain + $actExpPindah;
 
         $activity = [
+            'slug' => $act['slug'] ?? ('act-' . $activityId),
             'name' => $act['name'],
             'short_name' => substr($act['name'], 0, 4),
             'unit_name' => $unit['name'] ?? '',
@@ -569,11 +573,13 @@ class ReportController extends BaseController
             'expense' => $actExp,
             'surplus' => $actInc - $actExp,
             'related_accounts' => [],
-            'related_balance' => 0,
+            'related_balance' => $actInc - $actExp,
         ];
 
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
         $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
+        $involvedAccounts = $this->getInvolvedAccounts($db, $recentRows);
+        $activity['related_accounts'] = array_column($involvedAccounts, 'name');
         
         $activityTransactions = [];
         $transferItems = [];
@@ -614,9 +620,63 @@ class ReportController extends BaseController
             'transferItems' => $transferItems,
             'categoryBreakdown' => $categoryBreakdown,
             'involvedReceivers' => $this->getInvolvedReceivers($db, clone $tBuilder),
+            'involvedAccounts' => $involvedAccounts,
         ];
 
         return view('pages/activity_detail', $data);
+    }
+
+    public function penerima(string $slug): string
+    {
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+
+        $receiver = $db->table('receivers')
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->where('id', (int) $slug)
+            ->get()
+            ->getRowArray();
+
+        if (! is_array($receiver)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $receiverId = (int) $receiver['id'];
+        $tBuilder = $db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('receiver_id', $receiverId)
+            ->where('deleted_at', null);
+
+        $recentRows = (clone $tBuilder)
+            ->orderBy('transaction_date', 'DESC')
+            ->orderBy('transaction_time', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
+        $involvedAccounts = $this->getInvolvedAccounts($db, $recentRows);
+        $involvedActivities = $this->getInvolvedActivities($db, $recentRows);
+
+        $data = [
+            'pageTitle' => $receiver['name'],
+            'activeNav' => 'rekap',
+            'backUrl' => site_url('rekap'),
+            'receiver' => [
+                'id' => $receiverId,
+                'name' => $receiver['name'],
+                'type' => $receiver['type'] ?? 'Lainnya',
+                'notes' => trim((string) ($receiver['notes'] ?? '')),
+                'total_amount' => (float) ((clone $tBuilder)->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0),
+                'transaction_count' => count($recentRows),
+            ],
+            'receiverActivities' => $involvedActivities,
+            'receiverAccounts' => $involvedAccounts,
+            'receiverTransactions' => $formattedTransactions,
+        ];
+
+        return view('pages/receiver_detail', $data);
     }
 
     private function getInvolvedReceivers($db, $tBuilder): array
@@ -633,14 +693,141 @@ class ReportController extends BaseController
             $rec = $db->table('receivers')->where('id', $rs['receiver_id'])->get()->getRowArray();
             if ($rec) {
                 $receivers[] = [
+                    'id' => (int) $rec['id'],
                     'name' => $rec['name'],
                     'type' => $rec['type'] ?? 'Lainnya',
                     'total_received' => (float) $rs['total'],
+                    'detail_url' => site_url('penerima/' . $rec['id']),
                 ];
             }
         }
         usort($receivers, fn($a, $b) => $b['total_received'] <=> $a['total_received']);
         return $receivers;
+    }
+
+    private function getInvolvedAccounts($db, array $rows): array
+    {
+        $accountIds = [];
+        $movementMap = [];
+
+        foreach ($rows as $row) {
+            $fromId = (int) ($row['from_account_id'] ?? 0);
+            $toId = (int) ($row['to_account_id'] ?? 0);
+            $type = (string) ($row['type'] ?? '');
+            $amount = (float) ($row['amount'] ?? 0);
+            $adminFee = (float) ($row['admin_fee'] ?? 0);
+
+            if ($fromId > 0) {
+                $accountIds[$fromId] = $fromId;
+                $movementMap[$fromId] = ($movementMap[$fromId] ?? ['income' => 0.0, 'expense' => 0.0, 'count' => 0]);
+                $movementMap[$fromId]['expense'] += in_array($type, ['keluar', 'honor', 'pindah'], true) ? ($amount + $adminFee) : 0.0;
+                $movementMap[$fromId]['count']++;
+            }
+
+            if ($toId > 0) {
+                $accountIds[$toId] = $toId;
+                $movementMap[$toId] = ($movementMap[$toId] ?? ['income' => 0.0, 'expense' => 0.0, 'count' => 0]);
+                $movementMap[$toId]['income'] += in_array($type, ['masuk', 'pindah'], true) ? $amount : 0.0;
+                $movementMap[$toId]['count']++;
+            }
+        }
+
+        if ($accountIds === []) {
+            return [];
+        }
+
+        $accounts = $db->table('accounts')
+            ->whereIn('id', array_values($accountIds))
+            ->where('deleted_at', null)
+            ->get()
+            ->getResultArray();
+
+        $items = [];
+        foreach ($accounts as $account) {
+            $accountId = (int) $account['id'];
+            $meta = $movementMap[$accountId] ?? ['income' => 0.0, 'expense' => 0.0, 'count' => 0];
+            $items[] = [
+                'id' => $accountId,
+                'name' => $account['name'],
+                'mark' => $account['mark'] ?? '',
+                'kind' => $account['kind'] ?? 'Rekening',
+                'logo_asset' => $account['logo_asset'] ?? '',
+                'income' => (float) $meta['income'],
+                'expense' => (float) $meta['expense'],
+                'transaction_count' => (int) $meta['count'],
+                'detail_url' => site_url('rekening/' . ($account['slug'] ?? ('acc-' . $accountId))),
+            ];
+        }
+
+        usort($items, static fn(array $a, array $b): int => $b['transaction_count'] <=> $a['transaction_count']);
+        return $items;
+    }
+
+    private function getInvolvedActivities($db, array $rows): array
+    {
+        $activityIds = [];
+        foreach ($rows as $row) {
+            $activityId = (int) ($row['activity_id'] ?? 0);
+            if ($activityId > 0) {
+                $activityIds[$activityId] = $activityId;
+            }
+        }
+
+        if ($activityIds === []) {
+            return [];
+        }
+
+        $activities = $db->table('activities')
+            ->whereIn('id', array_values($activityIds))
+            ->where('deleted_at', null)
+            ->get()
+            ->getResultArray();
+
+        $unitIds = array_values(array_filter(array_map(static fn(array $activity): int => (int) ($activity['unit_id'] ?? 0), $activities)));
+        $unitMap = [];
+        if ($unitIds !== []) {
+            foreach ($db->table('units')->whereIn('id', $unitIds)->where('deleted_at', null)->get()->getResultArray() as $unit) {
+                $unitMap[(int) $unit['id']] = $unit;
+            }
+        }
+
+        $stats = [];
+        foreach ($rows as $row) {
+            $activityId = (int) ($row['activity_id'] ?? 0);
+            if ($activityId <= 0) {
+                continue;
+            }
+
+            $type = (string) ($row['type'] ?? '');
+            $amount = (float) ($row['amount'] ?? 0);
+            $adminFee = (float) ($row['admin_fee'] ?? 0);
+            $stats[$activityId] = $stats[$activityId] ?? ['income' => 0.0, 'expense' => 0.0, 'count' => 0];
+            if ($type === 'masuk') {
+                $stats[$activityId]['income'] += $amount;
+            } elseif (in_array($type, ['keluar', 'honor'], true)) {
+                $stats[$activityId]['expense'] += $amount + $adminFee;
+            }
+            $stats[$activityId]['count']++;
+        }
+
+        $items = [];
+        foreach ($activities as $activity) {
+            $activityId = (int) $activity['id'];
+            $unit = $unitMap[(int) ($activity['unit_id'] ?? 0)] ?? null;
+            $meta = $stats[$activityId] ?? ['income' => 0.0, 'expense' => 0.0, 'count' => 0];
+            $items[] = [
+                'id' => $activityId,
+                'name' => $activity['name'],
+                'unit_name' => is_array($unit) ? ($unit['name'] ?? '') : '',
+                'income' => (float) $meta['income'],
+                'expense' => (float) $meta['expense'],
+                'transaction_count' => (int) $meta['count'],
+                'detail_url' => site_url('kegiatan/' . ($activity['slug'] ?? ('act-' . $activityId))),
+            ];
+        }
+
+        usort($items, static fn(array $a, array $b): int => $b['transaction_count'] <=> $a['transaction_count']);
+        return $items;
     }
 
     /**

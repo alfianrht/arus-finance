@@ -233,7 +233,7 @@ class TransactionController extends BaseController
             'book_period_id' => $this->activeBookPeriodId(),
             'type' => 'honor',
             'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
-            'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee'), (string) $this->request->getPost('admin_fee_manual')),
+            'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
             'unit_id' => (int) $this->request->getPost('unit_id'),
             'activity_id' => (int) $this->request->getPost('activity_id'),
             'category_id' => (int) $honorCategory['id'],
@@ -290,7 +290,7 @@ class TransactionController extends BaseController
             'book_period_id' => $this->activeBookPeriodId(),
             'type' => 'pindah',
             'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
-            'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee'), (string) $this->request->getPost('admin_fee_manual')),
+            'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
             'unit_id' => (int) $this->request->getPost('unit_id'),
             'activity_id' => (int) $this->request->getPost('activity_id'),
             'category_id' => null,
@@ -389,7 +389,7 @@ class TransactionController extends BaseController
             $payload['from_account_id'] = (int) $this->request->getPost('from_account_id');
             $payload['to_account_id'] = (int) $this->request->getPost('to_account_id');
             $payload['receiver_id'] = null;
-            $payload['admin_fee'] = $this->resolveAdminFee((string) $this->request->getPost('admin_fee'), (string) $this->request->getPost('admin_fee_manual'));
+            $payload['admin_fee'] = $this->resolveAdminFee((string) ($this->request->getPost('admin_fee_preset') ?: $this->request->getPost('admin_fee')), (string) ($this->request->getPost('admin_fee_custom') ?: $this->request->getPost('admin_fee_manual')));
         } else {
             $payload['category_id'] = (int) $this->request->getPost('category_id');
             $payload['from_account_id'] = (int) $this->request->getPost('from_account_id');

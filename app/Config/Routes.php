@@ -27,6 +27,7 @@ $routes->post('catat/keluar/honor-gaji', 'TransactionController::simpanHonor', [
 $routes->get('catat/keluar/pindah-dana', 'TransactionController::pindahDana', ['filter' => 'auth']);
 $routes->post('catat/keluar/pindah-dana', 'TransactionController::simpanPindahDana', ['filter' => 'auth']);
 $routes->post('catat/hapus/(:num)', 'TransactionController::hapus/$1', ['filter' => 'auth']);
+$routes->post('ai/scan-bill', 'AiController::scanBill', ['filter' => 'auth']);
 $routes->get('rekap', 'ReportController::index', ['filter' => 'auth']);
 $routes->get('pengaturan', 'SettingsController::pengaturan', ['filter' => 'auth']);
 $routes->get('pengaturan/profil-lembaga', 'SettingsController::profilLembaga', ['filter' => 'auth']);
@@ -84,5 +85,6 @@ $routes->get('transaksi/(:segment)', 'TransactionController::detail/$1', ['filte
 $routes->get('transaksi/(:segment)/edit', 'TransactionController::edit/$1', ['filter' => 'auth']);
 $routes->post('transaksi/(:segment)', 'TransactionController::update/$1', ['filter' => 'auth']);
 $routes->get('rekening/(:segment)', 'ReportController::rekening/$1', ['filter' => 'auth']);
+$routes->get('penerima/(:segment)', 'ReportController::penerima/$1', ['filter' => 'auth']);
 $routes->get('unit/(:segment)', 'ReportController::unit/$1', ['filter' => 'auth']);
 $routes->get('kegiatan/(:segment)', 'ReportController::kegiatan/$1', ['filter' => 'auth']);

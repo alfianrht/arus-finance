@@ -7,7 +7,7 @@ $showSettingsButton = $showSettingsButton ?? true;
 $showLogoutButton = $showLogoutButton ?? false;
 $bookPeriodLabel = $bookPeriodLabel ?? 'Tahun Buku Aktif';
 ?>
-<header class="flex items-start justify-between gap-4 h-16">
+<header class="px-2 flex items-start justify-between gap-4 h-16">
     <div class="flex min-w-0 items-center gap-3">
         <?php if ($showBackButton): ?>
             <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm" aria-label="Kembali">

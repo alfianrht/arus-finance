@@ -32,7 +32,7 @@
 
         <p class="pointer-events-none absolute -bottom-3 left-4 text-7xl font-black uppercase tracking-tight text-white/10" aria-hidden="true"><?= esc($surfaceText) ?></p>
 
-        <div class="relative mt-4 grid grid-cols-4 gap-3 border-t border-white/10 pt-4">
+        <div class="relative mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 sm:grid-cols-4">
             <div>
                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Masuk</p>
                 <p class="mt-1 text-sm font-semibold text-white"><?= esc(rupiah($activity['income'])) ?></p>
@@ -46,8 +46,8 @@
                 <p class="mt-1 text-sm font-semibold text-white"><?= esc(rupiah($activity['surplus'])) ?></p>
             </div>
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Dompet</p>
-                <p class="mt-1 text-sm font-semibold text-white"><?= esc(count($activity['related_accounts'])) ?></p>
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Saldo Terkait</p>
+                <p class="mt-1 text-sm font-semibold text-white"><?= esc(rupiah($activity['related_balance'] ?? 0)) ?></p>
             </div>
         </div>
 
@@ -101,15 +101,12 @@
             <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
             <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Bukan biaya</span>
         </div>
-        <div class="mt-3 space-y-3">
+        <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($transferItems === []): ?>
                 <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada pindah dana pada kegiatan ini.</div>
             <?php endif; ?>
             <?php foreach ($transferItems as $transfer): ?>
-                <div class="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                    <p class="text-sm font-semibold text-sky-900"><?= $transfer['headline'] ?> <?= esc(rupiah($transfer['amount'])) ?></p>
-                    <p class="mt-1 text-sm text-sky-800">Catatan: Pindah Dana tidak dihitung sebagai biaya.</p>
-                </div>
+                <?= view('partials/transaction_item', ['transaction' => $transfer]) ?>
             <?php endforeach; ?>
         </div>
     </section>
@@ -133,19 +130,50 @@
                     </style>
                     
                     <?php foreach ($involvedReceivers as $receiver): ?>
-                        <div class="flex w-36 shrink-0 snap-start flex-col items-center justify-center rounded-2xl border border-zinc-100 bg-zinc-50 p-4 text-center">
-                            <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                                <span class="material-symbols-rounded text-2xl" aria-hidden="true">account_circle</span>
-                            </div>
-                            <p class="w-full truncate text-sm font-semibold text-zinc-950"><?= esc($receiver['name']) ?></p>
-                            <p class="mt-0.5 text-[10px] font-medium tracking-wider text-zinc-500 uppercase"><?= esc($receiver['type']) ?></p>
-                            <div class="mt-3 w-full rounded-lg bg-white py-1.5 shadow-sm border border-zinc-100">
-                                <p class="text-xs font-bold text-rose-500"><?= esc(rupiah($receiver['total_received'])) ?></p>
-                            </div>
-                        </div>
+                        <?= view('partials/receiver_card', ['receiver' => $receiver, 'widthClass' => 'w-48 sm:w-52']) ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+        </div>
+    </section>
+
+    <section class="rounded-3xl bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <h2 class="text-base font-semibold text-zinc-950">Rekening Terlibat</h2>
+            <p class="text-xs text-zinc-500">Dipakai kegiatan ini</p>
+        </div>
+        <div class="mt-3 space-y-3">
+            <?php if ($involvedAccounts === []): ?>
+                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada rekening yang terlibat pada kegiatan ini.</div>
+            <?php endif; ?>
+            <?php foreach ($involvedAccounts as $account): ?>
+                <a href="<?= esc($account['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-zinc-950"><?= esc($account['name']) ?></p>
+                            <p class="mt-1 text-xs text-zinc-500"><?= esc($account['kind']) ?><?= !empty($account['mark']) ? ' · ' . esc($account['mark']) : '' ?></p>
+                        </div>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700">
+                            <span class="material-symbols-rounded text-sm" aria-hidden="true">arrow_outward</span>
+                            <span>Detail</span>
+                        </span>
+                    </div>
+                    <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                            <p class="text-zinc-500">Masuk</p>
+                            <p class="mt-1 font-semibold text-emerald-600"><?= esc(rupiah($account['income'])) ?></p>
+                        </div>
+                        <div>
+                            <p class="text-zinc-500">Biaya</p>
+                            <p class="mt-1 font-semibold text-rose-500"><?= esc(rupiah($account['expense'])) ?></p>
+                        </div>
+                        <div>
+                            <p class="text-zinc-500">Transaksi</p>
+                            <p class="mt-1 font-semibold text-zinc-950"><?= esc((string) $account['transaction_count']) ?></p>
+                        </div>
+                    </div>
+                </a>
+            <?php endforeach; ?>
         </div>
     </section>
 

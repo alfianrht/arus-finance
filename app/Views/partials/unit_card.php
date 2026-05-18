@@ -15,8 +15,8 @@ $surfaceText = surface_label($unit['short_name'] ?? $unit['name']);
         </div>
 
         <div class="relative mt-4">
-            <p class="text-xs font-medium uppercase tracking-wide text-zinc-900/60">Laba Sementara</p>
-            <p class="mt-1.5 text-2xl font-black tracking-tight text-zinc-950"><?= esc(rupiah($unit['surplus'])) ?></p>
+            <p class="text-xs font-medium uppercase tracking-wide text-zinc-900/60">Saldo</p>
+            <p class="mt-1.5 text-2xl font-black tracking-tight text-zinc-950"><?= esc(rupiah($unit['related_balance'] ?? $unit['surplus'])) ?></p>
             <p class="mt-2 text-xs text-zinc-900/75">Kegiatan utama: <?= esc($unit['quick_activity_name']) ?></p>
         </div>
 
@@ -28,12 +28,12 @@ $surfaceText = surface_label($unit['short_name'] ?? $unit['name']);
                 <p class="mt-1 text-xs font-semibold text-zinc-950"><?= esc(rupiah($unit['income'])) ?></p>
             </div>
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-900/60">Biaya</p>
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-900/60">Keluar</p>
                 <p class="mt-1 text-xs font-semibold text-zinc-950"><?= esc(rupiah($unit['expense'])) ?></p>
             </div>
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-900/60">Jumlah</p>
-                <p class="mt-1 text-xs font-semibold text-zinc-950"><?= esc($activityCount) ?> Kegiatan</p>
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-900/60">Laba</p>
+                <p class="mt-1 text-xs font-semibold text-zinc-950"><?= esc(rupiah($unit['surplus'])) ?></p>
             </div>
         </div>
 

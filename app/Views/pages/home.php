@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
-    <header class="flex flex-col gap-4">
+    <header class="px-2 flex flex-col gap-4">
         <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
                 <img src="<?= base_url('images/logo-primary-1.webp') ?>" alt="<?= esc($appName) ?>" class="h-6 w-auto">
@@ -15,7 +15,7 @@
                 </a>
             </div>
         </div>
-        <div class="px-2">
+        <div class="">
             <p class="text-sm text-zinc-500">Selamat Datang,</p>
             <p class="text-xl font-semibold tracking-tight text-zinc-950"><?= esc($institutionName) ?></p>
         </div>

@@ -8,27 +8,24 @@
         'backUrl' => $backUrl,
     ]) ?>
 
-    <form action="<?= esc(site_url('catat/keluar/biaya')) ?>" method="post" enctype="multipart/form-data" class="space-y-4 rounded-3xl bg-white p-5 shadow-sm">
+    <form action="<?= esc(site_url('catat/keluar/biaya')) ?>" method="post" enctype="multipart/form-data" class="">
         <?= csrf_field() ?>
         <?= view('partials/capture_assist', [
             'captureKey' => 'biaya_belanja',
-            'title' => 'Foto struk atau nota dulu',
+            'title' => 'Bukti Transaksi',
             'description' => 'Nanti AI akan membaca bukti pengeluaran lalu membantu mengisi nominal, kategori, rekening, tanggal, dan keterangan.',
             'previewTitle' => 'Belum ada struk atau nota',
-            'previewDescription' => 'Gunakan kamera untuk foto struk fisik, atau upload PDF / gambar jika bukti sudah tersimpan.',
-            'autoFields' => ['Nominal', 'Kategori', 'Rekening', 'Tanggal', 'Keterangan'],
+            'previewDescription' => 'Gunakan kamera untuk foto struk fisik, atau upload gambar jika bukti sudah tersimpan.',
+            'noteLabel' => 'Auto-fill AI',
+            'autoFields' => ['Nominal', 'Biaya Admin', 'Kategori', 'Rekening', 'Tanggal', 'Keterangan'],
+            'scanEndpoint' => site_url('ai/scan-bill'),
+            'cameraAccept' => 'image/jpeg,image/png,image/webp',
+            'uploadAccept' => 'image/jpeg,image/png,image/webp',
         ]) ?>
-        <div class="relative flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-4 py-3">
-            <div>
-                <p class="text-sm font-semibold text-zinc-950">Form manual tetap tersedia</p>
-                <p class="mt-1 text-xs text-zinc-500">Isi manual tetap bisa dipakai jika bukti kurang jelas atau hasil deteksi perlu diperbaiki.</p>
-            </div>
-            <span class="absolute top-2 right-2 rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700">Auto-fill siap</span>
-        </div>
 
         <div class="rounded-3xl bg-zinc-50 p-5 text-center">
             <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Nominal</p>
-            <input type="text" inputmode="numeric" name="amount" value="<?= esc(old('amount', '')) ?>" placeholder="Rp 0" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none">
+            <input type="text" inputmode="numeric" name="amount" value="<?= esc(old('amount', '')) ?>" placeholder="Rp 0" class="mt-3 w-full border-0 bg-transparent text-center text-4xl font-semibold tracking-tight text-zinc-950 outline-none" required>
             
             <div class="mt-6 flex items-center justify-center gap-2 w-full overflow-hidden">
                 <p class="shrink-0 text-sm font-medium text-zinc-700">Biaya Admin:</p>
@@ -60,7 +57,7 @@
 
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Keluar dari rekening / dompet</label>
-            <select name="from_account_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
+            <select name="from_account_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400" required>
                 <?php foreach ($accounts as $account): ?>
                     <option value="<?= esc($account['id']) ?>" <?= (string) old('from_account_id', '') === (string) $account['id'] || (old('from_account_id') === null && $account['name'] === $activeContext['default_expense_account']) ? 'selected' : '' ?>><?= esc($account['name']) ?></option>
                 <?php endforeach; ?>
@@ -71,7 +68,7 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-700">Unit / Program</label>
-                <select name="unit_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
+                <select name="unit_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400" required>
                     <?php foreach ($units as $unit): ?>
                         <option value="<?= esc($unit['id']) ?>" <?= (string) old('unit_id', (string) $activeContext['unit_id']) === (string) $unit['id'] ? 'selected' : '' ?>><?= esc($unit['name']) ?></option>
                     <?php endforeach; ?>
@@ -79,7 +76,7 @@
             </div>
             <div class="space-y-2">
                 <label class="text-sm font-medium text-zinc-700">Kegiatan</label>
-                <select name="activity_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
+                <select name="activity_id" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400" required>
                     <?php foreach ($activitySummaries as $activity): ?>
                         <option value="<?= esc($activity['id']) ?>" <?= (string) old('activity_id', (string) $activeContext['activity_id']) === (string) $activity['id'] ? 'selected' : '' ?>>
                             <?= esc($activity['name']) ?> · <?= esc($activity['unit_name']) ?>
@@ -91,7 +88,7 @@
 
         <div class="space-y-2">
             <label class="text-sm font-medium text-zinc-700">Tanggal</label>
-            <input type="date" name="transaction_date" value="<?= esc(old('transaction_date', date('Y-m-d'))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400">
+            <input type="date" name="transaction_date" value="<?= esc(old('transaction_date', date('Y-m-d'))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 focus:ring-2 focus:ring-lime-400" required>
         </div>
 
         <div class="space-y-2">
@@ -110,4 +107,83 @@
         </div>
     </form>
 </div>
+
+<script>
+window.ArusApplyBillScan = window.ArusApplyBillScan || function (form, data) {
+    const formatRupiah = function (value) {
+        const number = Number(value || 0);
+        if (!Number.isFinite(number) || number <= 0) return '';
+        return String(Math.round(number)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    const selectRadioByLabel = function (name, label) {
+        if (!label) return false;
+        const radios = Array.from(form.querySelectorAll('input[name="' + name + '"]'));
+        const target = String(label).trim().toLowerCase();
+        for (const radio of radios) {
+            const text = (radio.parentElement ? radio.parentElement.textContent : '').trim().toLowerCase();
+            if (text === target) {
+                radio.checked = true;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    const selectOptionByMatch = function (selector, suggestion) {
+        if (!suggestion) return false;
+        const select = form.querySelector(selector);
+        if (!select) return false;
+        const target = String(suggestion).trim().toLowerCase();
+        for (const option of Array.from(select.options)) {
+            const text = option.textContent.trim().toLowerCase();
+            if (text === target || text.includes(target) || target.includes(text)) {
+                select.value = option.value;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    const amountInput = form.querySelector('input[name="amount"]');
+    if (amountInput && data.amount !== null && data.amount !== undefined) {
+        amountInput.value = formatRupiah(data.amount);
+    }
+
+    const preset = form.querySelector('select[name="admin_fee_preset"]');
+    const custom = form.querySelector('input[name="admin_fee_custom"]');
+    if (preset && custom) {
+        const fee = Number(data.admin_fee || 0);
+        if (fee > 0) {
+            const presetValues = Array.from(preset.options).map(function (option) { return option.value; });
+            if (presetValues.includes(String(fee))) {
+                preset.value = String(fee);
+                custom.style.display = 'none';
+                custom.value = '';
+            } else {
+                preset.value = 'manual';
+                custom.style.display = 'block';
+                custom.value = formatRupiah(fee);
+            }
+        } else {
+            preset.value = '0';
+            custom.style.display = 'none';
+            custom.value = '';
+        }
+    }
+
+    const dateInput = form.querySelector('input[name="transaction_date"]');
+    if (dateInput && data.transaction_date) {
+        dateInput.value = data.transaction_date;
+    }
+
+    selectRadioByLabel('category_id', data.category_suggestion);
+    selectOptionByMatch('select[name="from_account_id"]', data.from_account_suggestion || data.account_suggestion);
+
+    const notesInput = form.querySelector('textarea[name="notes"]');
+    if (notesInput && data.description) {
+        notesInput.value = data.description;
+    }
+};
+</script>
 <?= $this->endSection() ?>

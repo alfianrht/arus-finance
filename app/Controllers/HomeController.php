@@ -78,15 +78,25 @@ class HomeController extends BaseController
 
         // 3. Units mapping for cards
         foreach ($units as &$u) {
-            $uInc = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'masuk')->where('deleted_at', null)->selectSum('amount')->get()->getRow()->amount ?? 0);
-            
-            $uExpMain = (float) ($db->table('transactions')->where('unit_id', $u['id'])->whereIn('type', ['keluar', 'honor'])->where('deleted_at', null)->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0);
-            $uExpFee = (float) ($db->table('transactions')->where('unit_id', $u['id'])->where('type', 'pindah')->where('deleted_at', null)->selectSum('admin_fee')->get()->getRow()->admin_fee ?? 0);
+            $unitTransactionBuilder = $db->table('transactions')
+                ->where('institution_id', $institutionId)
+                ->where('unit_id', $u['id'])
+                ->where('deleted_at', null);
+
+            if ($bookPeriodId > 0) {
+                $unitTransactionBuilder->where('book_period_id', $bookPeriodId);
+            }
+
+            $uInc = (float) ((clone $unitTransactionBuilder)->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0);
+
+            $uExpMain = (float) ((clone $unitTransactionBuilder)->whereIn('type', ['keluar', 'honor'])->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0);
+            $uExpFee = (float) ((clone $unitTransactionBuilder)->where('type', 'pindah')->selectSum('admin_fee')->get()->getRow()->admin_fee ?? 0);
             $uExp = $uExpMain + $uExpFee;
             
             $u['income'] = $uInc;
             $u['expense'] = $uExp;
             $u['surplus'] = $uInc - $uExp;
+            $u['related_balance'] = $uInc - $uExp;
             
             $uFirstAct = $u['activities'][0] ?? null;
             $u['quick_activity_name'] = $uFirstAct['name'] ?? 'Belum ada kegiatan';

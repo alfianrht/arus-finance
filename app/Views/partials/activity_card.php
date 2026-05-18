@@ -9,13 +9,8 @@ if (count($accountNames) > 2) {
     $accountNote .= ' +' . (count($accountNames) - 2);
 }
 
-$mainAmount = ($activity['related_balance'] ?? 0) > 0
-    ? $activity['related_balance']
-    : $activity['surplus'];
-
-$mainLabel = ($activity['related_balance'] ?? 0) > 0
-    ? 'Saldo Terkait'
-    : 'Laba Sementara';
+$mainAmount = $activity['related_balance'] ?? $activity['surplus'];
+$mainLabel = 'Saldo';
 $surfaceText = surface_label($activity['short_name'] ?? $activity['name']);
 ?>
 
@@ -45,11 +40,11 @@ $surfaceText = surface_label($activity['short_name'] ?? $activity['name']);
                 <p class="mt-1 text-xs font-semibold text-white"><?= esc(rupiah($activity['income'])) ?></p>
             </div>
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Biaya</p>
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Keluar</p>
                 <p class="mt-1 text-xs font-semibold text-white"><?= esc(rupiah($activity['expense'])) ?></p>
             </div>
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Surplus</p>
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Laba</p>
                 <p class="mt-1 text-xs font-semibold text-white"><?= esc(rupiah($activity['surplus'])) ?></p>
             </div>
         </div>
