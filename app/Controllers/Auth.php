@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Filters\RateLimitFilter;
 use App\Services\AuthService;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\I18n\Time;
@@ -144,6 +145,7 @@ class Auth extends BaseController
                 'auth_institution_id' => $user['institution_id'],
                 'auth_role' => $user['role'],
             ]);
+            RateLimitFilter::clearForWhatsapp((string) ($pendingAuth['whatsapp'] ?? ''));
 
             $redirect = redirect()->to(site_url('beranda'))->with('success', 'Login berhasil.');
 
