@@ -65,10 +65,9 @@ foreach ($selectorUnits as $selectorUnit) {
         <?php endforeach; ?>
 
         <div class="border-b border-zinc-100 bg-zinc-50/80 px-4 py-4 sm:px-5">
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
                     <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Ubah Aktif</p>
-
                 </div>
                 <button type="button" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm" data-context-close>
                     <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
