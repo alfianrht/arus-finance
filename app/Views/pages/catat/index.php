@@ -53,7 +53,7 @@
             <?php endforeach; ?>
         </div>
         <?php if (($transactionPagination['totalPages'] ?? 1) > 1): ?>
-            <div class="mt-4 flex items-center justify-between gap-3 border-t border-zinc-100 pt-4">
+            <div class="mt-4 flex items-center justify-between gap-3 border-t border-zinc-100 pt-4 px-4">
                 <?php if ($transactionPagination['hasPrev']): ?>
                     <a
                         href="<?= esc(route_query('catat', ['jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'page' => $transactionPagination['prevPage']])) ?>"
