@@ -21,7 +21,8 @@ class ArusOperationalSeeder extends Seeder
         $this->seedAccounts($institutionId, $reportPositions);
         $this->seedReceivers($institutionId);
         $this->seedDefaultAdmin($institutionId);
-        $this->seedOpeningBalances($reportPositions);
+        $accountMap = $this->seedAccounts($institutionId, $reportPositions);
+        $this->seedOpeningBalances($institutionId, $reportPositions, $accountMap);
         $this->seedTransactions($institutionId);
     }
 
@@ -127,7 +128,7 @@ class ArusOperationalSeeder extends Seeder
         }
     }
 
-    private function seedAccounts(int $institutionId, array $reportPositions): void
+    private function seedAccounts(int $institutionId, array $reportPositions): array
     {
         $accounts = [
             ['name' => 'BRI PT', 'slug' => 'bri-pt', 'kind' => 'Rekening', 'mark' => 'BRI', 'report_position' => 'Kas di Bank BRI', 'sort_order' => 10, 'note' => 'Rekening utama lembaga.'],
@@ -135,6 +136,8 @@ class ArusOperationalSeeder extends Seeder
             ['name' => 'Dana Operasional Cago', 'slug' => 'dana-operasional-cago', 'kind' => 'Dompet Digital', 'mark' => 'DANA', 'report_position' => 'Kas Operasional', 'sort_order' => 30, 'note' => 'Dompet operasional cepat untuk lapangan.'],
             ['name' => 'Kas Tunai', 'slug' => 'kas-tunai', 'kind' => 'Kas Tunai', 'mark' => 'KAS', 'report_position' => 'Kas Tunai', 'sort_order' => 40, 'note' => 'Kas kecil tunai.'],
         ];
+
+        $accountIds = [];
 
         foreach ($accounts as $account) {
             $existing = $this->db->table('accounts')
@@ -144,6 +147,7 @@ class ArusOperationalSeeder extends Seeder
                 ->getFirstRow('array');
 
             if (is_array($existing)) {
+                $accountIds[$account['slug']] = (int) $existing['id'];
                 continue;
             }
 
@@ -161,7 +165,11 @@ class ArusOperationalSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);
+
+            $accountIds[$account['slug']] = (int) $this->db->insertID();
         }
+
+        return $accountIds;
     }
 
     private function seedReceivers(int $institutionId): void
@@ -171,6 +179,8 @@ class ArusOperationalSeeder extends Seeder
             ['name' => 'CV Maju Jaya', 'type' => 'Vendor', 'nik' => null, 'npwp' => '98.765.432.1-111.000', 'bank_account' => 'Mandiri 0987654321', 'notes' => 'Vendor IT dan maintenance'],
             ['name' => 'Toko Laris', 'type' => 'Vendor', 'nik' => null, 'npwp' => null, 'bank_account' => 'BRI 111122223333', 'notes' => 'Vendor ATK rutin'],
             ['name' => 'PT Harapan Bangsa', 'type' => 'Klien', 'nik' => null, 'npwp' => '11.222.333.4-555.000', 'bank_account' => null, 'notes' => 'Klien project website'],
+            ['name' => 'Alfian Rahmatullah', 'type' => 'Tim Internal', 'nik' => null, 'npwp' => null, 'bank_account' => null, 'notes' => 'Pendamping lapangan'],
+            ['name' => 'Harki Ramadhan', 'type' => 'Tim Internal', 'nik' => null, 'npwp' => null, 'bank_account' => null, 'notes' => 'Fasilitator pelatihan'],
         ];
 
         foreach ($receivers as $receiver) {
@@ -224,13 +234,13 @@ class ArusOperationalSeeder extends Seeder
         ]);
     }
 
-    private function seedOpeningBalances(array $reportPositions): void
+    private function seedOpeningBalances(int $institutionId, array $reportPositions, array $accountMap): void
     {
         $balances = [
-            ['report_position' => 'Kas di Bank BRI', 'label' => 'Saldo awal BRI PT', 'amount' => 15000000],
-            ['report_position' => 'Kas di Bank BCA', 'label' => 'Saldo awal BCA PT', 'amount' => 5000000],
-            ['report_position' => 'Kas Operasional', 'label' => 'Saldo awal Dana Operasional Cago', 'amount' => 3000000],
-            ['report_position' => 'Kas Tunai', 'label' => 'Saldo awal Kas Tunai', 'amount' => 1000000],
+            ['report_position' => 'Kas di Bank BRI', 'account_slug' => 'bri-pt', 'label' => 'Saldo awal BRI PT', 'amount' => 15000000],
+            ['report_position' => 'Kas di Bank BCA', 'account_slug' => 'bca-pt', 'label' => 'Saldo awal BCA PT', 'amount' => 5000000],
+            ['report_position' => 'Kas Operasional', 'account_slug' => 'dana-operasional-cago', 'label' => 'Saldo awal Dana Operasional Cago', 'amount' => 3000000],
+            ['report_position' => 'Kas Tunai', 'account_slug' => 'kas-tunai', 'label' => 'Saldo awal Kas Tunai', 'amount' => 1000000],
         ];
 
         $period = $this->db->table('book_periods')->where('is_active', 1)->get()->getFirstRow('array');
@@ -256,6 +266,8 @@ class ArusOperationalSeeder extends Seeder
             }
 
             $this->db->table('opening_balances')->insert([
+                'institution_id' => $institutionId,
+                'account_id' => $accountMap[$balance['account_slug']] ?? null,
                 'book_period_id' => (int) $period['id'],
                 'report_position_id' => (int) $reportPositionId,
                 'source_label' => $balance['label'],
@@ -279,6 +291,7 @@ class ArusOperationalSeeder extends Seeder
         $activities = $this->keyActivitiesBySlug($units);
         $accounts = $this->keyBySlug('accounts', $institutionId);
         $categories = $this->keyCategoriesByName($institutionId);
+        $receivers = $this->keyReceiversByName($institutionId);
 
         $transactions = [
             [
@@ -336,6 +349,30 @@ class ArusOperationalSeeder extends Seeder
                 'date' => date('Y-m-d', strtotime('-1 days')),
                 'notes' => 'Termin pertama project website client',
             ],
+            [
+                'type' => 'honor',
+                'amount' => 1500000,
+                'admin_fee' => 0,
+                'unit_slug' => 'konsultan-pendidikan',
+                'activity_slug' => 'perizinan-lkp-tax-session',
+                'category' => 'Honor',
+                'from_account' => 'dana-operasional-cago',
+                'receiver_name' => 'Alfian Rahmatullah',
+                'date' => date('Y-m-d', strtotime('-2 days')),
+                'notes' => 'Honor pendampingan lapangan Alfian Rahmatullah',
+            ],
+            [
+                'type' => 'honor',
+                'amount' => 750000,
+                'admin_fee' => 0,
+                'unit_slug' => 'simpaud',
+                'activity_slug' => 'pelatihan-simpaud',
+                'category' => 'Honor',
+                'from_account' => 'kas-tunai',
+                'receiver_name' => 'Harki Ramadhan',
+                'date' => date('Y-m-d', strtotime('-1 days')),
+                'notes' => 'Honor fasilitator pelatihan SIMPAUD',
+            ],
         ];
 
         foreach ($transactions as $transaction) {
@@ -358,6 +395,15 @@ class ArusOperationalSeeder extends Seeder
                 ->getFirstRow('array');
 
             if (is_array($exists)) {
+                $receiverId = isset($transaction['receiver_name']) ? ($receivers[$transaction['receiver_name']] ?? null) : null;
+                if ($receiverId !== null && empty($exists['receiver_id'])) {
+                    $this->db->table('transactions')
+                        ->where('id', (int) $exists['id'])
+                        ->update([
+                            'receiver_id' => $receiverId,
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]);
+                }
                 continue;
             }
 
@@ -372,7 +418,7 @@ class ArusOperationalSeeder extends Seeder
                 'category_id' => isset($transaction['category']) ? ($categories[$transaction['category']] ?? null) : null,
                 'from_account_id' => isset($transaction['from_account']) ? ($accounts[$transaction['from_account']] ?? null) : null,
                 'to_account_id' => isset($transaction['to_account']) ? ($accounts[$transaction['to_account']] ?? null) : null,
-                'receiver_id' => null,
+                'receiver_id' => isset($transaction['receiver_name']) ? ($receivers[$transaction['receiver_name']] ?? null) : null,
                 'transaction_date' => $transaction['date'],
                 'transaction_time' => '09:00:00',
                 'notes' => $transaction['notes'],
@@ -413,6 +459,17 @@ class ArusOperationalSeeder extends Seeder
     private function keyCategoriesByName(int $institutionId): array
     {
         $rows = $this->db->table('transaction_categories')->where('institution_id', $institutionId)->get()->getResultArray();
+        $map = [];
+        foreach ($rows as $row) {
+            $map[$row['name']] = (int) $row['id'];
+        }
+
+        return $map;
+    }
+
+    private function keyReceiversByName(int $institutionId): array
+    {
+        $rows = $this->db->table('receivers')->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getResultArray();
         $map = [];
         foreach ($rows as $row) {
             $map[$row['name']] = (int) $row['id'];

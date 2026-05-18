@@ -1,6 +1,8 @@
 .env
+.DS_Store
+._*
 writable/session/*
 writable/logs/*
-public/uploads/accounts/*
-public/uploads/institutions/*
-public/uploads/transaksi/*
+writable/cache/*
+writable/debugbar/*
+public/uploads/*

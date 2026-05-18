@@ -33,7 +33,7 @@
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-lg font-semibold text-zinc-950">Pindah Dana</p>
-                    <p class="mt-2 text-sm text-zinc-500">Untuk BRI PT ke Dana Operasional Cago, BRI PT ke BCA PT, dan perpindahan saldo internal lainnya.</p>
+                    <p class="mt-2 text-sm text-zinc-500">Untuk perpindahan antar rekening, dompet, atau saldo internal lainnya.</p>
                 </div>
                 <span class="absolute top-2 right-2 rounded-full bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">Pindah Dana</span>
             </div>

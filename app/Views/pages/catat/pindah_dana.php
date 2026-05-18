@@ -10,7 +10,7 @@
 
     <section class="rounded-2xl border border-sky-100 bg-sky-50 p-4">
         <p class="text-sm font-semibold text-sky-900">Pindah Dana tidak dihitung sebagai biaya.</p>
-        <p class="mt-1 text-sm text-sky-800">Gunakan layar ini untuk perpindahan BRI PT, BCA PT, Dana Operasional Cago, atau Kas Tunai.</p>
+        <p class="mt-1 text-sm text-sky-800">Gunakan layar ini untuk perpindahan antar rekening, dompet, atau kas yang Anda miliki.</p>
     </section>
 
     <form method="post" action="<?= site_url('catat/keluar/pindah-dana') ?>" enctype="multipart/form-data" class="space-y-4">

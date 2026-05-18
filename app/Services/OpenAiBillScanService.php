@@ -9,6 +9,8 @@ class OpenAiBillScanService
 {
     private const MODEL = 'gpt-4.1-mini';
     private const API_URL = 'https://api.openai.com/v1/responses';
+    private const MAX_SCAN_DIMENSION = 1800;
+    private const SCAN_JPEG_QUALITY = 82;
 
     /**
      * @param array<int, string> $allowedCategories
@@ -22,9 +24,8 @@ class OpenAiBillScanService
             throw new RuntimeException('OPENAI_API_KEY missing');
         }
 
-        $mimeType = (string) ($file->getMimeType() ?: 'image/jpeg');
-        $binary = file_get_contents($file->getTempName());
-        if ($binary === false) {
+        $preparedImage = $this->prepareImagePayload($file);
+        if ($preparedImage === null) {
             throw new RuntimeException('Unable to read uploaded bill image');
         }
 
@@ -45,7 +46,7 @@ class OpenAiBillScanService
                     ],
                     [
                         'type' => 'input_image',
-                        'image_url' => 'data:' . $mimeType . ';base64,' . base64_encode($binary),
+                        'image_url' => 'data:' . $preparedImage['mime_type'] . ';base64,' . base64_encode($preparedImage['binary']),
                     ],
                 ],
             ]],
@@ -121,6 +122,114 @@ class OpenAiBillScanService
             '- Jangan menyimpan transaksi otomatis.',
             '- Output harus JSON valid.',
         ]);
+    }
+
+    /**
+     * @return array{mime_type: string, binary: string}|null
+     */
+    private function prepareImagePayload(UploadedFile $file): ?array
+    {
+        $mimeType = (string) ($file->getMimeType() ?: 'image/jpeg');
+        $path = $file->getTempName();
+
+        $binary = @file_get_contents($path);
+        if ($binary === false) {
+            return null;
+        }
+
+        if (! extension_loaded('gd')) {
+            return [
+                'mime_type' => $mimeType,
+                'binary' => $binary,
+            ];
+        }
+
+        $imageInfo = @getimagesize($path);
+        if (! is_array($imageInfo)) {
+            return [
+                'mime_type' => $mimeType,
+                'binary' => $binary,
+            ];
+        }
+
+        [$width, $height, $imageType] = $imageInfo;
+        if (! in_array($imageType, [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
+            return [
+                'mime_type' => $mimeType,
+                'binary' => $binary,
+            ];
+        }
+
+        $source = match ($imageType) {
+            IMAGETYPE_JPEG => @imagecreatefromjpeg($path),
+            IMAGETYPE_PNG => @imagecreatefrompng($path),
+            IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : null,
+            default => null,
+        };
+
+        if ($source === null) {
+            return [
+                'mime_type' => $mimeType,
+                'binary' => $binary,
+            ];
+        }
+
+        $target = $this->resizeForScan($source, (int) $width, (int) $height);
+        if ($target === null) {
+            imagedestroy($source);
+            return [
+                'mime_type' => $mimeType,
+                'binary' => $binary,
+            ];
+        }
+
+        ob_start();
+        $saved = @imagejpeg($target, null, self::SCAN_JPEG_QUALITY);
+        $optimizedBinary = ob_get_clean();
+
+        if ($target !== $source) {
+            imagedestroy($target);
+        }
+        imagedestroy($source);
+
+        if (! $saved || ! is_string($optimizedBinary) || $optimizedBinary === '') {
+            return [
+                'mime_type' => $mimeType,
+                'binary' => $binary,
+            ];
+        }
+
+        return [
+            'mime_type' => 'image/jpeg',
+            'binary' => $optimizedBinary,
+        ];
+    }
+
+    private function resizeForScan($source, int $width, int $height)
+    {
+        $longestSide = max($width, $height);
+        if ($longestSide <= self::MAX_SCAN_DIMENSION) {
+            return $source;
+        }
+
+        $scale = self::MAX_SCAN_DIMENSION / $longestSide;
+        $targetWidth = max(1, (int) round($width * $scale));
+        $targetHeight = max(1, (int) round($height * $scale));
+
+        $target = imagecreatetruecolor($targetWidth, $targetHeight);
+        if ($target === false) {
+            return null;
+        }
+
+        $white = imagecolorallocate($target, 255, 255, 255);
+        imagefill($target, 0, 0, $white);
+
+        if (! imagecopyresampled($target, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height)) {
+            imagedestroy($target);
+            return null;
+        }
+
+        return $target;
     }
 
     /**

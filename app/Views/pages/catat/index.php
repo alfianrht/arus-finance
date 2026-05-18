@@ -39,7 +39,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($recentTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk filter ini di tahun buku aktif.</div>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'history',
+                        'title' => 'Belum ada riwayat transaksi.',
+                        'description' => 'Transaksi akan muncul di sini setelah Anda mulai mencatat pada tahun buku aktif.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($recentTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction, 'allow_delete' => true]) ?>

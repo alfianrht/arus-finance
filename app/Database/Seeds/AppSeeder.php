@@ -9,6 +9,5 @@ class AppSeeder extends Seeder
     public function run(): void
     {
         $this->call(ArusDefaultSeeder::class);
-        $this->call(ArusOperationalSeeder::class);
     }
 }

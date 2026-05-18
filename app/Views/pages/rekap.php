@@ -98,11 +98,22 @@
             <p class="text-xs text-zinc-500">Ketuk kartu untuk rincian</p>
         </div>
         <p class="mt-2 text-sm text-zinc-500">Daftar di sini dibuat ringkas. Detail penuh rekening atau dompet dibuka dari masing-masing kartu.</p>
-        <div class="mt-4 grid gap-3 md:grid-cols-2">
-            <?php foreach ($rekapAccounts as $account): ?>
-                <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
-            <?php endforeach; ?>
-        </div>
+        <?php if ($rekapAccounts === []): ?>
+            <div class="mt-4">
+                <?= view('partials/empty_state', [
+                    'icon' => 'account_balance_wallet',
+                    'title' => 'Belum ada rekening atau dompet.',
+                    'description' => 'Tambahkan rekening atau dompet dari Pengaturan agar saldo per penyimpanan dana bisa direkap.',
+                    'compact' => true,
+                ]) ?>
+            </div>
+        <?php else: ?>
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                <?php foreach ($rekapAccounts as $account): ?>
+                    <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 
     <section class="space-y-3">
@@ -110,14 +121,19 @@
             <h2 class="text-base font-semibold text-zinc-950">Ringkasan per Unit / Program</h2>
             <p class="text-xs text-zinc-500">Sesuai filter</p>
         </div>
-        <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
-            <?php if ($rekapUnits === []): ?>
-                <div class="rounded-3xl bg-white p-5 text-sm text-zinc-500 shadow-sm">Belum ada unit dengan transaksi pada filter ini.</div>
-            <?php endif; ?>
-            <?php foreach ($rekapUnits as $unit): ?>
-                <?= view('partials/unit_card', ['unit' => $unit]) ?>
-            <?php endforeach; ?>
-        </div>
+        <?php if ($rekapUnits === []): ?>
+            <?= view('partials/empty_state', [
+                'icon' => 'domain',
+                'title' => 'Belum ada ringkasan unit atau program.',
+                'description' => 'Ringkasan unit akan muncul setelah ada unit aktif dan transaksi yang masuk pada filter saat ini.',
+            ]) ?>
+        <?php else: ?>
+            <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+                <?php foreach ($rekapUnits as $unit): ?>
+                    <?= view('partials/unit_card', ['unit' => $unit]) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
@@ -125,14 +141,22 @@
             <h2 class="text-base font-semibold text-zinc-950">Ringkasan per Kegiatan</h2>
             <p class="text-xs text-zinc-500">Masuk, biaya, dan surplus</p>
         </div>
-        <div class="mt-3 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
-            <?php if ($rekapActivities === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada kegiatan dengan transaksi pada filter ini.</div>
-            <?php endif; ?>
-            <?php foreach ($rekapActivities as $activity): ?>
-                <?= view('partials/activity_card', ['activity' => $activity]) ?>
-            <?php endforeach; ?>
-        </div>
+        <?php if ($rekapActivities === []): ?>
+            <div class="mt-3">
+                <?= view('partials/empty_state', [
+                    'icon' => 'folder_supervised',
+                    'title' => 'Belum ada ringkasan kegiatan.',
+                    'description' => 'Kegiatan akan muncul di rekap setelah ada aktivitas dan transaksi yang sesuai filter.',
+                    'compact' => true,
+                ]) ?>
+            </div>
+        <?php else: ?>
+            <div class="mt-3 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+                <?php foreach ($rekapActivities as $activity): ?>
+                    <?= view('partials/activity_card', ['activity' => $activity]) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 
     <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm">
@@ -142,10 +166,12 @@
         <div class="mt-4">
             <?php if (empty($rekapReceivers)): ?>
                 <div class="px-4 pb-4">
-                    <div class="rounded-2xl bg-zinc-50 p-6 text-center">
-                        <p class="text-sm font-medium text-zinc-950">Belum ada data penerima.</p>
-                        <p class="mt-1 text-xs text-zinc-500">Penerima akan muncul dari transaksi Honor & Gaji.</p>
-                    </div>
+                    <?= view('partials/empty_state', [
+                        'icon' => 'groups',
+                        'title' => 'Belum ada penerima terlibat.',
+                        'description' => 'Penerima akan muncul dari transaksi honor atau pengeluaran yang terhubung ke penerima.',
+                        'compact' => true,
+                    ]) ?>
                 </div>
             <?php else: ?>
                 <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 pt-2 snap-x snap-mandatory scroll-pl-4" style="scrollbar-width: none;">
@@ -169,7 +195,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($rekapTransferItems === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada pindah dana pada filter ini.</div>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'swap_horiz',
+                        'title' => 'Belum ada pindah dana.',
+                        'description' => 'Pindah dana akan tampil di sini saat ada perpindahan antar rekening atau dompet pada filter ini.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($rekapTransferItems as $transfer): 
                 $detailUrl = site_url('transaksi/' . $transfer['id']) . '?from=' . rawurlencode(current_url() . (($_SERVER['QUERY_STRING'] ?? '') ? '?' . $_SERVER['QUERY_STRING'] : ''));
@@ -225,7 +258,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($rekapTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk kombinasi filter ini.</div>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'receipt_long',
+                        'title' => 'Belum ada transaksi pada rekap ini.',
+                        'description' => 'Coba ubah filter atau mulai catat transaksi agar daftar terbaru tampil di sini.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($rekapTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

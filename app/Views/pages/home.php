@@ -61,11 +61,19 @@
             <h2 class="text-base font-semibold text-zinc-950">Unit / Program</h2>
             <p class="text-xs text-zinc-500">Ringkasan bulan ini</p>
         </div>
-        <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
-            <?php foreach ($units as $unit): ?>
-                <?= view('partials/unit_card', ['unit' => $unit]) ?>
-            <?php endforeach; ?>
-        </div>
+        <?php if ($units === []): ?>
+            <?= view('partials/empty_state', [
+                'icon' => 'domain',
+                'title' => 'Belum ada unit atau program.',
+                'description' => 'Tambahkan Unit / Program dari Pengaturan agar ringkasan operasional mulai terisi.',
+            ]) ?>
+        <?php else: ?>
+            <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+                <?php foreach ($units as $unit): ?>
+                    <?= view('partials/unit_card', ['unit' => $unit]) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 
     <section class="rounded-3xl border border-zinc-950 bg-white p-4">
@@ -95,11 +103,22 @@
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terakhir</h2>
             <a href="<?= site_url('rekap') ?>" class="text-xs font-medium text-zinc-500">Lihat rekap</a>
         </div>
-        <div class="mt-3 divide-y divide-zinc-100">
-            <?php foreach ($homeTransactions as $transaction): ?>
-                <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
-            <?php endforeach; ?>
-        </div>
+        <?php if ($homeTransactions === []): ?>
+            <div class="mt-3 px-4">
+                <?= view('partials/empty_state', [
+                    'icon' => 'receipt_long',
+                    'title' => 'Belum ada transaksi terakhir.',
+                    'description' => 'Mulai catat uang masuk atau uang keluar agar transaksi terbaru tampil di beranda.',
+                    'compact' => true,
+                ]) ?>
+            </div>
+        <?php else: ?>
+            <div class="mt-3 divide-y divide-zinc-100">
+                <?php foreach ($homeTransactions as $transaction): ?>
+                    <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 </div>
 <?= $this->endSection() ?>
