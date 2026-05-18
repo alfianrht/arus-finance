@@ -401,13 +401,20 @@ class ReportController extends BaseController
                     $a = $activityMap[(int) $actId] ?? null;
                     $u = is_array($a) ? ($unitMap[(int) $a['unit_id']] ?? null) : null;
                     $accountActivities[$actId] = [
+                        'id' => (int) $actId,
                         'name' => $a['name'] ?? 'Tanpa Kegiatan',
+                        'slug' => $a['slug'] ?? ('act-' . $actId),
+                        'short_name' => $a['short_name'] ?? ($a['name'] ?? 'Kegiatan'),
                         'unit_name' => $u['name'] ?? 'Tanpa Unit',
                         'amount' => 0,
                         'income' => 0,
                         'expense' => 0,
                         'transfer_in' => 0,
                         'transfer_out' => 0,
+                        'surplus' => 0,
+                        'related_balance' => 0,
+                        'related_accounts' => [$acc['name']],
+                        'is_current' => false,
                         'detail_url' => is_array($a) ? route_query('kegiatan/' . ($a['slug'] ?? ('act-' . $actId))) : site_url('rekap'),
                     ];
                 }
@@ -423,6 +430,8 @@ class ReportController extends BaseController
                 } else {
                     $accountActivities[$actId]['expense'] += $amount;
                 }
+                $accountActivities[$actId]['surplus'] = $accountActivities[$actId]['income'] - $accountActivities[$actId]['expense'];
+                $accountActivities[$actId]['related_balance'] = $accountActivities[$actId]['amount'];
             }
         }
 
