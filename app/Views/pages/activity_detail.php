@@ -91,7 +91,12 @@
                 </div>
             <?php endforeach; ?>
             <?php if (! $hasCategoryCost): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada biaya untuk kegiatan ini.</div>
+                <?= view('partials/empty_state', [
+                    'icon' => 'sell',
+                    'title' => 'Belum ada rincian biaya.',
+                    'description' => 'Biaya per kategori akan muncul setelah ada transaksi pengeluaran pada kegiatan ini.',
+                    'compact' => true,
+                ]) ?>
             <?php endif; ?>
         </div>
     </section>
@@ -103,7 +108,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($transferItems === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada pindah dana pada kegiatan ini.</div>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'swap_horiz',
+                        'title' => 'Belum ada pindah dana.',
+                        'description' => 'Pindah dana akan muncul di sini saat ada perpindahan antar rekening pada kegiatan ini.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($transferItems as $transfer): 
                 $detailUrl = site_url('transaksi/' . $transfer['id']) . '?from=' . rawurlencode(current_url() . (($_SERVER['QUERY_STRING'] ?? '') ? '?' . $_SERVER['QUERY_STRING'] : ''));
@@ -159,10 +171,12 @@
         <div class="mt-4">
             <?php if (empty($involvedReceivers)): ?>
                 <div class="px-4 pb-4">
-                    <div class="rounded-2xl bg-zinc-50 p-6 text-center">
-                        <p class="text-sm font-medium text-zinc-950">Belum ada data penerima.</p>
-                        <p class="mt-1 text-xs text-zinc-500">Penerima akan muncul dari transaksi Honor & Gaji.</p>
-                    </div>
+                    <?= view('partials/empty_state', [
+                        'icon' => 'groups',
+                        'title' => 'Belum ada penerima terlibat.',
+                        'description' => 'Penerima akan muncul dari transaksi honor atau pengeluaran yang terkait ke kegiatan ini.',
+                        'compact' => true,
+                    ]) ?>
                 </div>
             <?php else: ?>
                 <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory" style="scrollbar-width: none;">
@@ -185,7 +199,12 @@
         </div>
         <div class="mt-3 space-y-3">
             <?php if ($involvedAccounts === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada rekening yang terlibat pada kegiatan ini.</div>
+                <?= view('partials/empty_state', [
+                    'icon' => 'account_balance_wallet',
+                    'title' => 'Belum ada rekening terlibat.',
+                    'description' => 'Rekening akan muncul saat ada transaksi yang memakai rekening atau dompet pada kegiatan ini.',
+                    'compact' => true,
+                ]) ?>
             <?php endif; ?>
             <?php foreach ($involvedAccounts as $account): ?>
                 <a href="<?= esc($account['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
@@ -225,7 +244,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($activityTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk kegiatan ini.</div>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'receipt_long',
+                        'title' => 'Belum ada transaksi untuk kegiatan ini.',
+                        'description' => 'Transaksi terbaru akan muncul di sini setelah ada pencatatan pada kegiatan ini.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($activityTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

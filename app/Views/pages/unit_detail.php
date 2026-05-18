@@ -72,11 +72,19 @@
             <h2 class="text-base font-semibold text-zinc-950">Daftar Kegiatan</h2>
             <p class="text-xs text-zinc-500">Turunan dari unit ini</p>
         </div>
-        <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
-            <?php foreach ($unit['activities'] as $activity): ?>
-                <?= view('partials/activity_card', ['activity' => $activity]) ?>
-            <?php endforeach; ?>
-        </div>
+        <?php if ($unit['activities'] === []): ?>
+            <?= view('partials/empty_state', [
+                'icon' => 'folder_supervised',
+                'title' => 'Belum ada kegiatan pada unit ini.',
+                'description' => 'Tambahkan kegiatan di bawah unit ini agar detail operasional dan pencatatan bisa dimulai.',
+            ]) ?>
+        <?php else: ?>
+            <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+                <?php foreach ($unit['activities'] as $activity): ?>
+                    <?= view('partials/activity_card', ['activity' => $activity]) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
 
     <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
@@ -86,10 +94,12 @@
         <div class="mt-4">
             <?php if (empty($involvedReceivers)): ?>
                 <div class="px-4 pb-4">
-                    <div class="rounded-2xl bg-zinc-50 p-6 text-center">
-                        <p class="text-sm font-medium text-zinc-950">Belum ada data penerima.</p>
-                        <p class="mt-1 text-xs text-zinc-500">Penerima akan muncul dari transaksi Honor & Gaji.</p>
-                    </div>
+                    <?= view('partials/empty_state', [
+                        'icon' => 'groups',
+                        'title' => 'Belum ada penerima terlibat.',
+                        'description' => 'Penerima akan muncul dari transaksi honor atau pengeluaran yang terkait ke unit ini.',
+                        'compact' => true,
+                    ]) ?>
                 </div>
             <?php else: ?>
                 <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory" style="scrollbar-width: none;">
@@ -112,7 +122,12 @@
         </div>
         <div class="mt-3 space-y-3">
             <?php if ($involvedAccounts === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada rekening yang terlibat pada unit ini.</div>
+                <?= view('partials/empty_state', [
+                    'icon' => 'account_balance_wallet',
+                    'title' => 'Belum ada rekening terlibat.',
+                    'description' => 'Rekening akan muncul setelah ada transaksi yang memakai penyimpanan dana pada unit ini.',
+                    'compact' => true,
+                ]) ?>
             <?php endif; ?>
             <?php foreach ($involvedAccounts as $account): ?>
                 <a href="<?= esc($account['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
@@ -152,7 +167,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($unitTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk unit ini.</div>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'receipt_long',
+                        'title' => 'Belum ada transaksi untuk unit ini.',
+                        'description' => 'Transaksi terbaru akan muncul di sini setelah ada pencatatan pada unit ini.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($unitTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

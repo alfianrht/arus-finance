@@ -14,6 +14,7 @@ use App\Services\FileUploadService;
 use App\Services\TransactionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
+use RuntimeException;
 
 class TransactionController extends BaseController
 {
@@ -122,7 +123,11 @@ class TransactionController extends BaseController
             'created_by' => $this->currentUserId(),
         ];
 
-        $this->transactionService->create($payload);
+        try {
+            $this->transactionService->create($payload);
+        } catch (RuntimeException $e) {
+            return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
+        }
 
         if ($this->request->getPost('action') === 'save_add') {
             return redirect()->back()->with('success', 'Uang masuk berhasil dicatat. Silakan tambah lagi.');
@@ -189,7 +194,11 @@ class TransactionController extends BaseController
             'created_by' => $this->currentUserId(),
         ];
 
-        $this->transactionService->create($payload);
+        try {
+            $this->transactionService->create($payload);
+        } catch (RuntimeException $e) {
+            return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
+        }
 
         if ($this->request->getPost('action') === 'save_add') {
             return redirect()->back()->with('success', 'Biaya berhasil dicatat. Silakan tambah lagi.');
@@ -247,7 +256,11 @@ class TransactionController extends BaseController
             'created_by' => $this->currentUserId(),
         ];
 
-        $this->transactionService->create($payload);
+        try {
+            $this->transactionService->create($payload);
+        } catch (RuntimeException $e) {
+            return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
+        }
 
         if ($this->request->getPost('action') === 'save_add') {
             return redirect()->back()->with('success', 'Honor & gaji berhasil dicatat. Silakan tambah lagi.');
@@ -304,7 +317,11 @@ class TransactionController extends BaseController
             'created_by' => $this->currentUserId(),
         ];
 
-        $this->transactionService->create($payload);
+        try {
+            $this->transactionService->create($payload);
+        } catch (RuntimeException $e) {
+            return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
+        }
 
         if ($this->request->getPost('action') === 'save_add') {
             return redirect()->back()->with('success', 'Pindah dana berhasil dicatat. Silakan tambah lagi.');
@@ -398,7 +415,25 @@ class TransactionController extends BaseController
             $payload['admin_fee'] = $this->resolveAdminFee((string) ($this->request->getPost('admin_fee_preset') ?: $this->request->getPost('admin_fee')), (string) ($this->request->getPost('admin_fee_custom') ?: $this->request->getPost('admin_fee_manual')));
         }
 
-        (new TransactionModel())->update((int) $existing['id'], $payload);
+        try {
+            if (in_array($type, ['keluar', 'honor', 'pindah'], true) && ! empty($payload['from_account_id'])) {
+                $amount = (float) ($payload['amount'] ?? 0);
+                $adminFee = (float) ($payload['admin_fee'] ?? 0);
+                $balance = $this->transactionService->getAccountBalance((int) $payload['from_account_id']);
+
+                if ((int) $existing['from_account_id'] === (int) $payload['from_account_id']) {
+                    $balance += (float) $existing['amount'] + (float) $existing['admin_fee'];
+                }
+
+                if ($balance < ($amount + $adminFee)) {
+                    throw new RuntimeException('Saldo rekening tidak mencukupi untuk transaksi ini.');
+                }
+            }
+
+            (new TransactionModel())->update((int) $existing['id'], $payload);
+        } catch (RuntimeException $e) {
+            return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
+        }
 
         return redirect()->to($this->resolveBackUrl(site_url('catat')))
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -696,6 +731,22 @@ class TransactionController extends BaseController
     {
         $from = (string) $this->request->getGet('from');
         return ($from !== '' && str_starts_with($from, site_url())) ? $from : $fallback;
+    }
+
+    private function redirectBackWithTransactionError(RuntimeException $e, ?string $proofImage = null): RedirectResponse
+    {
+        if ($proofImage !== null && $proofImage !== '') {
+            $this->fileUploadService->deleteProof($proofImage);
+        }
+
+        $message = trim($e->getMessage());
+        if (str_contains(strtolower($message), 'saldo rekening tidak mencukupi')) {
+            $message = 'Saldo rekening tidak cukup. Pilih rekening lain, kurangi nominal, atau isi saldo awal lebih dulu.';
+        } elseif ($message === '') {
+            $message = 'Transaksi belum bisa diproses. Silakan cek kembali form Anda.';
+        }
+
+        return redirect()->back()->withInput()->with('warning', $message);
     }
 
     private function findHonorCategory(): ?array

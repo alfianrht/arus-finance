@@ -64,7 +64,12 @@
         </div>
         <div class="mt-3 space-y-3">
             <?php if ($receiverActivities === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada kegiatan yang melibatkan penerima ini.</div>
+                <?= view('partials/empty_state', [
+                    'icon' => 'folder_supervised',
+                    'title' => 'Belum ada kegiatan terkait.',
+                    'description' => 'Kegiatan akan muncul setelah penerima ini dipakai di transaksi yang terkait ke kegiatan tertentu.',
+                    'compact' => true,
+                ]) ?>
             <?php endif; ?>
             <?php foreach ($receiverActivities as $activity): ?>
                 <a href="<?= esc($activity['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
@@ -104,7 +109,12 @@
         </div>
         <div class="mt-3 space-y-3">
             <?php if ($receiverAccounts === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada rekening terkait untuk penerima ini.</div>
+                <?= view('partials/empty_state', [
+                    'icon' => 'account_balance_wallet',
+                    'title' => 'Belum ada rekening terkait.',
+                    'description' => 'Rekening akan muncul saat transaksi yang melibatkan penerima ini sudah menggunakan rekening atau dompet tertentu.',
+                    'compact' => true,
+                ]) ?>
             <?php endif; ?>
             <?php foreach ($receiverAccounts as $account): ?>
                 <a href="<?= esc($account['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
@@ -144,7 +154,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($receiverTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada transaksi untuk penerima ini.</div>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'receipt_long',
+                        'title' => 'Belum ada transaksi terkait.',
+                        'description' => 'Transaksi akan muncul di sini setelah penerima ini dipakai dalam pencatatan.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($receiverTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

@@ -98,7 +98,14 @@
         </div>
         <div class="mt-3 space-y-3">
             <?php if ($accountActivities === []): ?>
-                <div class="rounded-2xl bg-zinc-50 px-4 py-4 text-sm text-zinc-500">Belum ada mutasi untuk rekening atau dompet ini pada filter saat ini.</div>
+                <div class="px-4 pb-4">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'folder_supervised',
+                        'title' => 'Belum ada kegiatan terkait.',
+                        'description' => 'Kegiatan akan muncul dari mutasi rekening atau dompet ini saat sudah ada transaksi yang terkait.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($accountActivities as $activity): ?>
                 <a href="<?= esc($activity['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
@@ -143,10 +150,12 @@
         <div class="mt-4">
             <?php if (empty($involvedReceivers)): ?>
                 <div class="px-4 pb-4">
-                    <div class="rounded-2xl bg-zinc-50 p-6 text-center">
-                        <p class="text-sm font-medium text-zinc-950">Belum ada data penerima.</p>
-                        <p class="mt-1 text-xs text-zinc-500">Penerima akan muncul dari transaksi Honor & Gaji.</p>
-                    </div>
+                    <?= view('partials/empty_state', [
+                        'icon' => 'groups',
+                        'title' => 'Belum ada penerima terlibat.',
+                        'description' => 'Penerima akan muncul dari transaksi yang memakai rekening atau dompet ini.',
+                        'compact' => true,
+                    ]) ?>
                 </div>
             <?php else: ?>
                 <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 pt-2 snap-x snap-mandatory scroll-pl-4" style="scrollbar-width: none;">
@@ -169,7 +178,14 @@
         </div>
         <div class="mt-3 divide-y divide-zinc-100">
             <?php if ($accountTransactions === []): ?>
-                <div class="py-6 text-sm text-zinc-500">Belum ada mutasi untuk rekening atau dompet ini pada filter saat ini.</div>
+                <div class="px-4">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'receipt_long',
+                        'title' => 'Belum ada transaksi terkait.',
+                        'description' => 'Transaksi akan muncul di sini setelah rekening atau dompet ini dipakai dalam pencatatan.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
             <?php endif; ?>
             <?php foreach ($accountTransactions as $transaction): ?>
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>

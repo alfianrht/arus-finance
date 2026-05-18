@@ -116,7 +116,7 @@
         <?php endif; ?>
     </section>
 
-    <section class="space-y-3">
+    <section class="space-y-3 rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Ringkasan per Unit / Program</h2>
             <p class="text-xs text-zinc-500">Sesuai filter</p>
@@ -126,6 +126,7 @@
                 'icon' => 'domain',
                 'title' => 'Belum ada ringkasan unit atau program.',
                 'description' => 'Ringkasan unit akan muncul setelah ada unit aktif dan transaksi yang masuk pada filter saat ini.',
+                'compact' => true,
             ]) ?>
         <?php else: ?>
             <div class="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
