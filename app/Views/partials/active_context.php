@@ -71,15 +71,13 @@ foreach ($selectorUnits as $selectorUnit) {
                         <span class="inline-block h-2 w-2 rounded-full bg-lime-400"></span>
                         <span>Ubah Konteks</span>
                     </div>
-                    <p class="mt-3 text-base font-semibold leading-tight text-zinc-950">Pastikan unit, kegiatan, dan rekening aktif sudah tepat sebelum mulai mencatat.</p>
-                    <p class="mt-1 text-sm text-zinc-500">Pilihan ini akan menjadi default pada form masuk, biaya, honor, dan pindah dana.</p>
                 </div>
                 <button type="button" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm" data-context-close>
                     <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
                 </button>
             </div>
 
-            <div class="mt-4 flex flex-wrap gap-2">
+            <div class="mt-3 flex flex-wrap gap-2">
                 <span class="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm"><?= esc($activeContext['unit_name']) ?></span>
                 <span class="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm"><?= esc($activeContext['activity_name']) ?></span>
                 <span class="inline-flex items-center rounded-full bg-lime-400 px-3 py-1.5 text-xs font-semibold text-zinc-950 shadow-sm"><?= esc($activeContext['account_name']) ?></span>
@@ -136,9 +134,7 @@ foreach ($selectorUnits as $selectorUnit) {
             </div>
             </div>
 
-            <div class="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p class="text-xs leading-relaxed text-zinc-500">Setelah disimpan, seluruh tombol aksi dan pilihan rekening default akan mengikuti konteks aktif ini.</p>
-                <div class="flex items-center gap-2">
+            <div class="mt-4 flex items-center justify-end gap-2 border-t border-zinc-100 pt-4">
                     <button type="button" class="inline-flex h-11 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm" data-context-close>
                         Batal
                     </button>
@@ -146,7 +142,6 @@ foreach ($selectorUnits as $selectorUnit) {
                         <span class="material-symbols-rounded text-base" aria-hidden="true">check</span>
                         <span>Pakai Konteks</span>
                     </button>
-                </div>
             </div>
         </div>
     </form>
