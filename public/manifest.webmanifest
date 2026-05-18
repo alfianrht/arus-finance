@@ -15,24 +15,6 @@
       "sizes": "186x186",
       "type": "image/webp",
       "purpose": "any"
-    },
-    {
-      "src": "/images/logo-app2x.webp",
-      "sizes": "372x372",
-      "type": "image/webp",
-      "purpose": "any"
-    },
-    {
-      "src": "/images/logo-app3x.webp",
-      "sizes": "558x558",
-      "type": "image/webp",
-      "purpose": "any"
-    },
-    {
-      "src": "/images/logo-app4x.webp",
-      "sizes": "744x744",
-      "type": "image/webp",
-      "purpose": "any maskable"
     }
   ]
 }
