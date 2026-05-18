@@ -179,7 +179,7 @@
                     ]) ?>
                 </div>
             <?php else: ?>
-                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory" style="scrollbar-width: none;">
+                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory scroll-p-4" style="scrollbar-width: none;">
                     <style>
                         .overflow-x-auto::-webkit-scrollbar { display: none; }
                     </style>
