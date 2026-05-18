@@ -6,8 +6,8 @@
     <title><?= esc($pageTitle ?? 'Arus') ?> | <?= esc($appName ?? 'Arus') ?></title>
     <meta name="description" content="Prototype mobile-first Arus untuk pencatatan keuangan harian.">
     <link rel="shortcut icon" type="image/webp" href="<?= base_url('images/logo-primary-1.webp') ?>">
-    <link rel="apple-touch-icon" href="<?= base_url('images/logo-primary-1.webp') ?>">
     <meta property="og:image" content="<?= base_url('images/logo-primary-1.webp') ?>">
+    <?= $this->include('partials/pwa_bootstrap') ?>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
     <script>
         const arusUiScale = 0.875;
@@ -80,6 +80,24 @@
 
         setTimeout(hideToast, 3500);
     });
+
+    (function() {
+        if (!('serviceWorker' in navigator)) {
+            return;
+        }
+
+        var hostname = window.location.hostname;
+        var isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+        if (window.location.protocol !== 'https:' && !isLocal) {
+            return;
+        }
+
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('<?= base_url('service-worker.js') ?>').catch(function() {
+                // Silently ignore registration issues to avoid blocking the app.
+            });
+        });
+    })();
     </script>
 </body>
 </html>
