@@ -46,7 +46,9 @@
                                 id="preview_<?= esc($field['name'] ?? 'file') ?>"
                                 src="<?= esc($previewSrc) ?>"
                                 alt="Preview"
-                                class="h-16 w-16 rounded-xl object-contain <?= $previewSrc ? '' : 'hidden' ?>"
+                                data-image-preview
+                                data-image-preview-alt="Preview gambar"
+                                class="h-16 w-16 rounded-xl object-contain <?= $previewSrc ? 'cursor-zoom-in' : 'hidden' ?>"
                             >
                             <span class="text-sm text-zinc-500">
                                 <?= $previewSrc ? 'Klik untuk ganti gambar' : 'Klik untuk pilih gambar logo' ?>
@@ -94,6 +96,9 @@ function previewImage(input, previewId) {
         reader.onload = function(e) {
             preview.src = e.target.result;
             preview.classList.remove('hidden');
+            preview.classList.add('cursor-zoom-in');
+            preview.setAttribute('data-image-preview', '');
+            preview.setAttribute('data-image-preview-src', e.target.result);
             input.closest('label').querySelector('span').textContent = input.files[0].name;
         };
         reader.readAsDataURL(input.files[0]);

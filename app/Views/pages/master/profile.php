@@ -19,7 +19,7 @@
         <div class="flex items-start gap-4">
             <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
                 <?php if (! empty($institutionLogo)): ?>
-                    <img src="<?= esc(base_url($institutionLogo)) ?>" alt="<?= esc($institutionName) ?>" class="h-full w-full object-contain">
+                    <img src="<?= esc(base_url($institutionLogo)) ?>" alt="<?= esc($institutionName) ?>" data-image-preview data-image-preview-alt="<?= esc($institutionName) ?>" class="h-full w-full cursor-zoom-in object-contain">
                 <?php else: ?>
                     <span class="material-symbols-rounded text-3xl text-zinc-400" aria-hidden="true">domain</span>
                 <?php endif; ?>

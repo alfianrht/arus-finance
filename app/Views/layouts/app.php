@@ -118,6 +118,7 @@
     </div>
 
     <?= $this->include('partials/bottom_nav') ?>
+    <?= $this->include('partials/image_preview_modal') ?>
 
     <script>
     function copyToClipboard(text, btn) {
@@ -149,6 +150,61 @@
 
         setTimeout(hideToast, 3500);
     });
+
+    (function () {
+        var modal = document.getElementById('imagePreviewModal');
+        var modalImage = document.getElementById('imagePreviewModalImage');
+        if (!modal || !modalImage) {
+            return;
+        }
+
+        var closeModal = function () {
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            modal.setAttribute('aria-hidden', 'true');
+            modalImage.src = '';
+        };
+
+        window.ArusOpenImagePreview = function (src, alt) {
+            if (!src) {
+                return;
+            }
+
+            modalImage.src = src;
+            modalImage.alt = alt || 'Preview gambar';
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.setAttribute('aria-hidden', 'false');
+        };
+
+        document.addEventListener('click', function (event) {
+            var closeTrigger = event.target.closest('[data-image-preview-close]');
+            if (closeTrigger) {
+                closeModal();
+                return;
+            }
+
+            if (event.target === modal) {
+                closeModal();
+                return;
+            }
+
+            var imageTrigger = event.target.closest('[data-image-preview]');
+            if (!imageTrigger) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            var src = imageTrigger.getAttribute('data-image-preview-src') || imageTrigger.getAttribute('src') || '';
+            var alt = imageTrigger.getAttribute('data-image-preview-alt') || imageTrigger.getAttribute('alt') || 'Preview gambar';
+            window.ArusOpenImagePreview(src, alt);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+    })();
 
     (function() {
         if (!('serviceWorker' in navigator)) {

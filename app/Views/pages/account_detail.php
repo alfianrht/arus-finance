@@ -16,7 +16,7 @@
                     <p class="mt-3 text-4xl font-black tracking-tight text-zinc-950"><?= esc(rupiah($account['balance'])) ?></p>
                 </div>
                 <?php if (!empty($account['logo_asset'])): ?>
-                    <img src="<?= esc(base_url($account['logo_asset'])) ?>" alt="<?= esc($account['mark']) ?>" class="mt-1 h-8 w-auto object-contain">
+                    <img src="<?= esc(base_url($account['logo_asset'])) ?>" alt="<?= esc($account['mark']) ?>" data-image-preview data-image-preview-alt="<?= esc($account['name']) ?>" class="mt-1 h-8 w-auto cursor-zoom-in object-contain">
                 <?php else: ?>
                     <p class="text-2xl font-black uppercase tracking-tight text-zinc-950"><?= esc($account['mark']) ?></p>
                 <?php endif; ?>

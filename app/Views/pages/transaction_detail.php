@@ -187,7 +187,7 @@
                 <?php $isImageProof = in_array($proofExt, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true); ?>
                 <?php if ($proofPath !== '' && $isImageProof): ?>
                     <div class="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-                        <img src="<?= esc($proofUrl) ?>" alt="Bukti transaksi" class="h-64 w-full object-cover">
+                        <img src="<?= esc($proofUrl) ?>" alt="Bukti transaksi" data-image-preview data-image-preview-alt="Bukti transaksi" class="h-64 w-full cursor-zoom-in object-cover">
                     </div>
                 <?php elseif ($proofPath !== ''): ?>
                     <div class="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-white px-4 py-6 text-center">
@@ -210,7 +210,7 @@
                         <label class="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-zinc-950 bg-white px-5 text-sm font-semibold text-zinc-950 transition-all active:scale-[0.98] duration-150 shadow-sm">
                             <span class="material-symbols-rounded text-base" aria-hidden="true">upload</span>
                             <span>Upload Bukti</span>
-                            <input type="file" name="proof_file" accept="image/*,.pdf" class="hidden">
+                            <input id="transactionProofFileInput" type="file" name="proof_file" accept="image/*,.pdf" class="hidden">
                         </label>
                     </div>
                 <?php endif; ?>
@@ -238,4 +238,37 @@
         </div>
     </form>
 </div>
+<?php if ($isEditMode): ?>
+<script>
+    (function () {
+        var input = document.getElementById('transactionProofFileInput');
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener('change', function () {
+            var file = input.files && input.files[0] ? input.files[0] : null;
+            if (!file || !file.type.startsWith('image/')) {
+                return;
+            }
+
+            var preview = document.querySelector('img[data-image-preview][alt="Bukti transaksi"]');
+            if (!preview) {
+                var emptyState = input.closest('.space-y-2').querySelector('.mt-4.flex.min-h-40');
+                if (emptyState) {
+                    emptyState.outerHTML = '<div class="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white"><img alt="Bukti transaksi" data-image-preview data-image-preview-alt="Bukti transaksi" class="h-64 w-full cursor-zoom-in object-cover"></div>';
+                    preview = document.querySelector('img[data-image-preview][alt="Bukti transaksi"]');
+                }
+            }
+
+            if (!preview) {
+                return;
+            }
+
+            preview.src = URL.createObjectURL(file);
+            preview.setAttribute('data-image-preview-src', preview.src);
+        });
+    })();
+</script>
+<?php endif; ?>
 <?= $this->endSection() ?>

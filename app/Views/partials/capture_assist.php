@@ -67,7 +67,7 @@ $scanOptionsJson = $scanEnabled
         <p id="<?= esc($descId) ?>" class="hidden px-1 pt-0.5 text-[11px] text-zinc-500"><?= esc($previewDescription) ?></p>
 
         <div class="relative mt-2 hidden overflow-hidden rounded-xl border border-zinc-200 bg-white" data-proof-image-wrap>
-            <img id="<?= esc($imageId) ?>" src="" alt="Preview bukti transaksi" class="h-40 w-full object-cover">
+            <img id="<?= esc($imageId) ?>" src="" alt="Preview bukti transaksi" data-image-preview data-image-preview-alt="Preview bukti transaksi" class="h-40 w-full cursor-zoom-in object-cover">
             <div id="<?= esc($loadingId) ?>" class="absolute inset-0 hidden items-center justify-center bg-black/45">
                 <div class="inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-zinc-800">
                     <span class="material-symbols-rounded animate-spin text-base" aria-hidden="true">progress_activity</span>

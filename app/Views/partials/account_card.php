@@ -11,7 +11,7 @@ $notchClass = $notchClass ?? 'bg-white';
                 <p class="mt-2 mb09 text-2xl font-black tracking-tight text-zinc-950"><?= esc(rupiah($account['balance'])) ?></p>
             </div>
             <?php if (isset($account['logo_asset'])): ?>
-                <img src="<?= esc(base_url($account['logo_asset'])) ?>" alt="<?= esc($account['mark']) ?>" class="mt-0 h-5 w-auto object-contain">
+                <img src="<?= esc(base_url($account['logo_asset'])) ?>" alt="<?= esc($account['mark']) ?>" data-image-preview data-image-preview-alt="<?= esc($account['name']) ?>" class="mt-0 h-5 w-auto cursor-zoom-in object-contain">
             <?php else: ?>
                 <p class="text-lg font-black uppercase tracking-tight text-zinc-950"><?= esc($account['mark']) ?></p>
             <?php endif; ?>
