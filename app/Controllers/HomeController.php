@@ -24,6 +24,7 @@ class HomeController extends BaseController
     {
         $institution = $this->currentInstitution();
         $institutionId = (int) ($institution['id'] ?? 1);
+        $transactionPage = max(1, (int) ($this->request->getGet('transaksi_page') ?? 1));
         
         $period = $this->activeBookPeriod();
         $bookPeriodId = is_array($period) ? (int) $period['id'] : 0;
@@ -74,7 +75,15 @@ class HomeController extends BaseController
         $balance = $obSum + $surplus;
 
         // 2. Format Recent Transactions using the robust TransactionController formatter pattern.
-        $homeTransactions = $this->transactionService->loadRecentTransactions($institutionId);
+        $homeTransactionsPage = $this->transactionService->loadTransactionHistoryPage(
+            $institutionId,
+            0,
+            0,
+            $bookPeriodId,
+            'semua',
+            $transactionPage,
+            10
+        );
 
         // 3. Units mapping for cards
         foreach ($units as &$u) {
@@ -152,7 +161,8 @@ class HomeController extends BaseController
                 'expense' => $expSum,
                 'surplus' => $surplus,
             ],
-            'homeTransactions'  => $homeTransactions,
+            'homeTransactions'  => $homeTransactionsPage['items'],
+            'homeTransactionPagination' => $homeTransactionsPage,
             'units'             => $units,
             'settingsShortcuts' => $settingsShortcuts,
         ];

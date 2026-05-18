@@ -22,6 +22,8 @@ class ReportController extends BaseController
         $institutionId = $this->currentInstitutionId();
         $db = \Config\Database::connect();
         $request = service('request');
+        $transactionPage = max(1, (int) ($request->getGet('transaksi_page') ?? 1));
+        $transferPage = max(1, (int) ($request->getGet('mutasi_page') ?? 1));
 
         // Filters
         $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
@@ -143,6 +145,8 @@ class ReportController extends BaseController
                 $rekapTransactions[] = $item;
             }
         }
+        $rekapTransactionsPagination = paginate_items($rekapTransactions, $transactionPage, 10);
+        $rekapTransfersPagination = paginate_items($rekapTransferItems, $transferPage, 10);
 
         // 4. Accounts
         $accounts = $db->table('accounts')
@@ -179,7 +183,12 @@ class ReportController extends BaseController
                 'transfer_in' => $accIncPindah,
                 'transfer_out' => $accExpPindah,
                 'preview_activity' => 'Rekapitulasi Saldo',
-                'movement_count' => 0,
+                'movement_count' => (clone $tBuilder)
+                    ->groupStart()
+                        ->where('from_account_id', $acc['id'])
+                        ->orWhere('to_account_id', $acc['id'])
+                    ->groupEnd()
+                    ->countAllResults(),
                 'icon' => 'account_balance_wallet',
                 'color' => 'emerald',
                 'detail_url' => route_query('rekening/' . ($acc['slug'] ?? ('acc-' . $acc['id']))),
@@ -277,8 +286,10 @@ class ReportController extends BaseController
             'dropdownActivities' => $dropdownActivities,
             'selectedActivitySlug' => $selectedActivitySlug,
             'rekapSummary' => $rekapSummary,
-            'rekapTransactions' => $rekapTransactions,
-            'rekapTransferItems' => $rekapTransferItems,
+            'rekapTransactions' => $rekapTransactionsPagination['items'],
+            'rekapTransactionPagination' => $rekapTransactionsPagination,
+            'rekapTransferItems' => $rekapTransfersPagination['items'],
+            'rekapTransferPagination' => $rekapTransfersPagination,
             'rekapAccounts' => $rekapAccounts,
             'rekapUnits' => $rekapUnits,
             'rekapActivities' => $rekapActivities,
@@ -323,6 +334,7 @@ class ReportController extends BaseController
         $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
         $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
         $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
+        $transactionPage = max(1, (int) ($request->getGet('transaksi_page') ?? 1));
 
         $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
         $units = $this->loadUnitProgramRows($institutionId);
@@ -358,6 +370,7 @@ class ReportController extends BaseController
 
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
         $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
+        $accountTransactionPagination = paginate_items($formattedTransactions, $transactionPage, 10);
         
         $account = [
             'name' => $acc['name'],
@@ -421,7 +434,8 @@ class ReportController extends BaseController
             'activeNav'           => 'rekap',
             'backUrl'             => route_query('rekap', ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug, 'kegiatan' => $selectedActivitySlug]),
             'account'             => $account,
-            'accountTransactions' => $formattedTransactions,
+            'accountTransactions' => $accountTransactionPagination['items'],
+            'accountTransactionPagination' => $accountTransactionPagination,
             'involvedReceivers'   => $involvedReceivers,
             'accountActivities'   => $accountActivities,
         ];
@@ -446,6 +460,7 @@ class ReportController extends BaseController
         $request = service('request');
         $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
         $selectedActivitySlug = $request->getGet('kegiatan') ?: 'semua';
+        $transactionPage = max(1, (int) ($request->getGet('transaksi_page') ?? 1));
 
         $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
         $allActivities = $db->table('activities')->where('unit_id', $unitId)->where('deleted_at', null)->orderBy('id', 'ASC')->get()->getResultArray();
@@ -507,13 +522,15 @@ class ReportController extends BaseController
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
         $involvedReceivers = $this->getInvolvedReceivers($db, clone $tBuilder);
         $involvedAccounts = $this->getInvolvedAccounts($db, $recentRows);
+        $unitTransactionPagination = paginate_items($this->transactionService->formatTransactions($recentRows), $transactionPage, 10);
         
         $data = [
             'pageTitle' => $unit['name'],
             'activeNav' => 'rekap',
             'backUrl' => site_url('rekap'),
             'unit' => $unit,
-            'unitTransactions' => $this->transactionService->formatTransactions($recentRows),
+            'unitTransactions' => $unitTransactionPagination['items'],
+            'unitTransactionPagination' => $unitTransactionPagination,
             'involvedReceivers' => $involvedReceivers,
             'involvedAccounts' => $involvedAccounts,
         ];
@@ -547,6 +564,8 @@ class ReportController extends BaseController
         $request = service('request');
         $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
         $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
+        $transactionPage = max(1, (int) ($request->getGet('transaksi_page') ?? 1));
+        $transferPage = max(1, (int) ($request->getGet('mutasi_page') ?? 1));
 
         $filterPeriodId = $selectedPeriodSlug !== 'semua' ? (int) str_replace('period-', '', $selectedPeriodSlug) : null;
         $filterUnitId = $this->resolveUnitId($selectedUnitSlug, $units);
@@ -610,14 +629,18 @@ class ReportController extends BaseController
         }
 
         usort($categoryBreakdown, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
+        $activityTransactionPagination = paginate_items($activityTransactions, $transactionPage, 10);
+        $activityTransferPagination = paginate_items($transferItems, $transferPage, 10);
 
         $data = [
             'pageTitle' => $activity['name'],
             'activeNav' => 'rekap',
             'backUrl' => site_url('rekap'),
             'activity' => $activity,
-            'activityTransactions' => $activityTransactions,
-            'transferItems' => $transferItems,
+            'activityTransactions' => $activityTransactionPagination['items'],
+            'activityTransactionPagination' => $activityTransactionPagination,
+            'transferItems' => $activityTransferPagination['items'],
+            'activityTransferPagination' => $activityTransferPagination,
             'categoryBreakdown' => $categoryBreakdown,
             'involvedReceivers' => $this->getInvolvedReceivers($db, clone $tBuilder),
             'involvedAccounts' => $involvedAccounts,
@@ -643,6 +666,7 @@ class ReportController extends BaseController
         }
 
         $receiverId = (int) $receiver['id'];
+        $transactionPage = max(1, (int) ($this->request->getGet('transaksi_page') ?? 1));
         $tBuilder = $db->table('transactions')
             ->where('institution_id', $institutionId)
             ->where('receiver_id', $receiverId)
@@ -656,6 +680,7 @@ class ReportController extends BaseController
             ->getResultArray();
 
         $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
+        $receiverTransactionPagination = paginate_items($formattedTransactions, $transactionPage, 10);
         $involvedAccounts = $this->getInvolvedAccounts($db, $recentRows);
         $involvedActivities = $this->getInvolvedActivities($db, $recentRows);
 
@@ -673,7 +698,8 @@ class ReportController extends BaseController
             ],
             'receiverActivities' => $involvedActivities,
             'receiverAccounts' => $involvedAccounts,
-            'receiverTransactions' => $formattedTransactions,
+            'receiverTransactions' => $receiverTransactionPagination['items'],
+            'receiverTransactionPagination' => $receiverTransactionPagination,
         ];
 
         return view('pages/receiver_detail', $data);

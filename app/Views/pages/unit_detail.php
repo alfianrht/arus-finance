@@ -180,6 +180,11 @@
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
             <?php endforeach; ?>
         </div>
+        <?= view('partials/pagination_controls', [
+            'pagination' => $unitTransactionPagination,
+            'prevUrl' => route_query('unit/' . $unit['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $unitTransactionPagination['prevPage']]),
+            'nextUrl' => route_query('unit/' . $unit['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $unitTransactionPagination['nextPage']]),
+        ]) ?>
     </section>
 </div>
 <?= $this->endSection() ?>

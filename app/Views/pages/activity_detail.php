@@ -117,51 +117,15 @@
                     ]) ?>
                 </div>
             <?php endif; ?>
-            <?php foreach ($transferItems as $transfer): 
-                $detailUrl = site_url('transaksi/' . $transfer['id']) . '?from=' . rawurlencode(current_url() . (($_SERVER['QUERY_STRING'] ?? '') ? '?' . $_SERVER['QUERY_STRING'] : ''));
-            ?>
-                <a href="<?= esc($detailUrl) ?>" class="group block py-3.5 px-4 transition-colors hover:bg-zinc-50 active:bg-zinc-100">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="space-y-1 min-w-0">
-                            <!-- Aliran Rekening Asal -> Tujuan -->
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="text-[10px] font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-lg truncate">
-                                    <?= esc($transfer['from_account']) ?>
-                                </span>
-                                <span class="material-symbols-rounded text-zinc-400 text-sm font-bold">arrow_forward</span>
-                                <span class="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-lg truncate">
-                                    <?= esc($transfer['to_account']) ?>
-                                </span>
-                            </div>
-                            
-                            <!-- Subline Unit/Kegiatan & Tanggal/Ket -->
-                            <p class="truncate text-[11px] font-medium text-zinc-500 pt-1">
-                                <?= esc($transfer['subline']) ?>
-                            </p>
-                            <p class="text-[10px] text-zinc-400 truncate">
-                                <?= esc($transfer['meta']) ?>
-                            </p>
-                        </div>
-                        
-                        <!-- Nominal & Biaya Admin -->
-                        <div class="text-right shrink-0">
-                            <p class="text-sm font-bold text-zinc-900 tabular-nums">
-                                <?= esc(rupiah($transfer['amount'])) ?>
-                            </p>
-                            <?php if ($transfer['admin_fee'] > 0): ?>
-                                <p class="text-[10px] font-medium text-rose-500 mt-0.5 tabular-nums">
-                                    +Biaya Adm: <?= esc(rupiah($transfer['admin_fee'])) ?>
-                                </p>
-                            <?php else: ?>
-                                <p class="text-[9px] font-medium text-zinc-400 mt-0.5">
-                                    Bebas Admin
-                                </p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </a>
+            <?php foreach ($transferItems as $transaction): ?>
+                <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
             <?php endforeach; ?>
         </div>
+        <?= view('partials/pagination_controls', [
+            'pagination' => $activityTransferPagination,
+            'prevUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'mutasi_page' => $activityTransferPagination['prevPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
+            'nextUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'mutasi_page' => $activityTransferPagination['nextPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
+        ]) ?>
     </section>
 
     <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
@@ -257,6 +221,11 @@
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
             <?php endforeach; ?>
         </div>
+        <?= view('partials/pagination_controls', [
+            'pagination' => $activityTransactionPagination,
+            'prevUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'transaksi_page' => $activityTransactionPagination['prevPage'], 'mutasi_page' => $activityTransferPagination['page']]),
+            'nextUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'transaksi_page' => $activityTransactionPagination['nextPage'], 'mutasi_page' => $activityTransferPagination['page']]),
+        ]) ?>
     </section>
 </div>
 <?= $this->endSection() ?>

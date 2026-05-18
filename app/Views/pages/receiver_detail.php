@@ -167,6 +167,11 @@
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
             <?php endforeach; ?>
         </div>
+        <?= view('partials/pagination_controls', [
+            'pagination' => $receiverTransactionPagination,
+            'prevUrl' => route_query('penerima/' . $receiver['id'], ['transaksi_page' => $receiverTransactionPagination['prevPage']]),
+            'nextUrl' => route_query('penerima/' . $receiver['id'], ['transaksi_page' => $receiverTransactionPagination['nextPage']]),
+        ]) ?>
     </section>
 </div>
 <?= $this->endSection() ?>

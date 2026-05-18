@@ -191,6 +191,11 @@
                 <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
             <?php endforeach; ?>
         </div>
+        <?= view('partials/pagination_controls', [
+            'pagination' => $accountTransactionPagination,
+            'prevUrl' => route_query('rekening/' . $account['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $accountTransactionPagination['prevPage']]),
+            'nextUrl' => route_query('rekening/' . $account['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $accountTransactionPagination['nextPage']]),
+        ]) ?>
     </section>
 </div>
 <?= $this->endSection() ?>

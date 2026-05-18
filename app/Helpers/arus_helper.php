@@ -68,3 +68,27 @@ if (! function_exists('surface_label')) {
         return $label !== '' ? $label : $fallback;
     }
 }
+
+if (! function_exists('paginate_items')) {
+    function paginate_items(array $items, int $page = 1, int $perPage = 10): array
+    {
+        $page = max(1, $page);
+        $perPage = max(1, $perPage);
+        $total = count($items);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $perPage;
+
+        return [
+            'items' => array_slice($items, $offset, $perPage),
+            'total' => $total,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalPages' => $totalPages,
+            'hasPrev' => $page > 1,
+            'hasNext' => $page < $totalPages,
+            'prevPage' => max(1, $page - 1),
+            'nextPage' => min($totalPages, $page + 1),
+        ];
+    }
+}

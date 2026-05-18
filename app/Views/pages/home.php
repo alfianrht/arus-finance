@@ -118,6 +118,11 @@
                     <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
                 <?php endforeach; ?>
             </div>
+            <?= view('partials/pagination_controls', [
+                'pagination' => $homeTransactionPagination,
+                'prevUrl' => route_query('beranda', ['transaksi_page' => $homeTransactionPagination['prevPage']]),
+                'nextUrl' => route_query('beranda', ['transaksi_page' => $homeTransactionPagination['nextPage']]),
+            ]) ?>
         <?php endif; ?>
     </section>
 </div>
