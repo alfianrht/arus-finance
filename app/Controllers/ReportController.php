@@ -593,6 +593,8 @@ class ReportController extends BaseController
             'surplus' => $actInc - $actExp,
             'related_accounts' => [],
             'related_balance' => $actInc - $actExp,
+            'masuk_url' => route_query('catat/masuk', ['unit' => $unit['slug'] ?? null, 'kegiatan' => $act['slug'] ?? null]),
+            'keluar_url' => route_query('catat/keluar', ['unit' => $unit['slug'] ?? null, 'kegiatan' => $act['slug'] ?? null]),
         ];
 
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
@@ -775,12 +777,17 @@ class ReportController extends BaseController
             $items[] = [
                 'id' => $accountId,
                 'name' => $account['name'],
+                'slug' => $account['slug'] ?? ('acc-' . $accountId),
                 'mark' => $account['mark'] ?? '',
                 'kind' => $account['kind'] ?? 'Rekening',
                 'logo_asset' => $account['logo_asset'] ?? '',
+                'account_number' => $account['account_number'] ?? '',
+                'balance' => (float) $meta['income'] - (float) $meta['expense'],
                 'income' => (float) $meta['income'],
                 'expense' => (float) $meta['expense'],
                 'transaction_count' => (int) $meta['count'],
+                'movement_count' => (int) $meta['count'],
+                'preview_activity' => 'Dipakai pada transaksi terkait',
                 'detail_url' => site_url('rekening/' . ($account['slug'] ?? ('acc-' . $accountId))),
             ];
         }
@@ -843,12 +850,18 @@ class ReportController extends BaseController
             $meta = $stats[$activityId] ?? ['income' => 0.0, 'expense' => 0.0, 'count' => 0];
             $items[] = [
                 'id' => $activityId,
+                'slug' => $activity['slug'] ?? ('act-' . $activityId),
                 'name' => $activity['name'],
+                'short_name' => substr((string) $activity['name'], 0, 4),
                 'unit_name' => is_array($unit) ? ($unit['name'] ?? '') : '',
                 'income' => (float) $meta['income'],
                 'expense' => (float) $meta['expense'],
+                'surplus' => (float) $meta['income'] - (float) $meta['expense'],
+                'related_balance' => (float) $meta['income'] - (float) $meta['expense'],
                 'transaction_count' => (int) $meta['count'],
                 'detail_url' => site_url('kegiatan/' . ($activity['slug'] ?? ('act-' . $activityId))),
+                'masuk_url' => route_query('catat/masuk', ['unit' => is_array($unit) ? ($unit['slug'] ?? null) : null, 'kegiatan' => $activity['slug'] ?? null]),
+                'keluar_url' => route_query('catat/keluar', ['unit' => is_array($unit) ? ($unit['slug'] ?? null) : null, 'kegiatan' => $activity['slug'] ?? null]),
             ];
         }
 

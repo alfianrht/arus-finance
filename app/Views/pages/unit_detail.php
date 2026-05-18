@@ -120,7 +120,7 @@
             <h2 class="text-base font-semibold text-zinc-950">Rekening Terlibat</h2>
             <p class="text-xs text-zinc-500">Terkait transaksi unit ini</p>
         </div>
-        <div class="mt-3 space-y-3">
+        <div class="mt-3 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
             <?php if ($involvedAccounts === []): ?>
                 <?= view('partials/empty_state', [
                     'icon' => 'account_balance_wallet',
@@ -130,32 +130,7 @@
                 ]) ?>
             <?php endif; ?>
             <?php foreach ($involvedAccounts as $account): ?>
-                <a href="<?= esc($account['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="text-sm font-semibold text-zinc-950"><?= esc($account['name']) ?></p>
-                            <p class="mt-1 text-xs text-zinc-500"><?= esc($account['kind']) ?><?= !empty($account['mark']) ? ' · ' . esc($account['mark']) : '' ?></p>
-                        </div>
-                        <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700">
-                            <span class="material-symbols-rounded text-sm" aria-hidden="true">arrow_outward</span>
-                            <span>Detail</span>
-                        </span>
-                    </div>
-                    <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                            <p class="text-zinc-500">Masuk</p>
-                            <p class="mt-1 font-semibold text-emerald-600"><?= esc(rupiah($account['income'])) ?></p>
-                        </div>
-                        <div>
-                            <p class="text-zinc-500">Biaya</p>
-                            <p class="mt-1 font-semibold text-rose-500"><?= esc(rupiah($account['expense'])) ?></p>
-                        </div>
-                        <div>
-                            <p class="text-zinc-500">Transaksi</p>
-                            <p class="mt-1 font-semibold text-zinc-950"><?= esc((string) $account['transaction_count']) ?></p>
-                        </div>
-                    </div>
-                </a>
+                <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
             <?php endforeach; ?>
         </div>
     </section>

@@ -51,26 +51,24 @@
             </div>
         </div>
 
-        <?php if (isset($activeContext)): ?>
         <div class="relative mt-4 flex items-center justify-between gap-3">
             <p class="text-sm font-semibold tracking-wide text-zinc-300">•••• <?= esc(surface_tail($activity['slug'] ?? $activity['name'])) ?></p>
             <span class="inline-flex items-center gap-1 rounded-full bg-lime-400 px-3 py-2 text-xs font-semibold text-zinc-950">
                 <span class="material-symbols-rounded text-sm" aria-hidden="true">radio_button_checked</span>
-                <span>Konteks Aktif</span>
+                <span>Siap Dicatat</span>
             </span>
         </div>
 
         <div class="relative mt-4 grid grid-cols-2 gap-3">
-            <a href="<?= esc($activeContext['masuk_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-lime-400 px-4 text-sm font-semibold text-zinc-950">
+            <a href="<?= esc($activity['masuk_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950">
                 <span class="material-symbols-rounded text-base" aria-hidden="true">add</span>
                 <span>Uang Masuk</span>
             </a>
-            <a href="<?= esc($activeContext['keluar_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-zinc-950">
+            <a href="<?= esc($activity['keluar_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white">
                 <span class="material-symbols-rounded text-base" aria-hidden="true">remove</span>
                 <span>Uang Keluar</span>
             </a>
         </div>
-        <?php endif; ?>
     </section>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
@@ -161,7 +159,7 @@
             <h2 class="text-base font-semibold text-zinc-950">Rekening Terlibat</h2>
             <p class="text-xs text-zinc-500">Dipakai kegiatan ini</p>
         </div>
-        <div class="mt-3 space-y-3">
+        <div class="mt-3 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
             <?php if ($involvedAccounts === []): ?>
                 <?= view('partials/empty_state', [
                     'icon' => 'account_balance_wallet',
@@ -171,32 +169,7 @@
                 ]) ?>
             <?php endif; ?>
             <?php foreach ($involvedAccounts as $account): ?>
-                <a href="<?= esc($account['detail_url']) ?>" class="block rounded-2xl bg-zinc-50 p-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="text-sm font-semibold text-zinc-950"><?= esc($account['name']) ?></p>
-                            <p class="mt-1 text-xs text-zinc-500"><?= esc($account['kind']) ?><?= !empty($account['mark']) ? ' · ' . esc($account['mark']) : '' ?></p>
-                        </div>
-                        <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-medium text-zinc-700">
-                            <span class="material-symbols-rounded text-sm" aria-hidden="true">arrow_outward</span>
-                            <span>Detail</span>
-                        </span>
-                    </div>
-                    <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                            <p class="text-zinc-500">Masuk</p>
-                            <p class="mt-1 font-semibold text-emerald-600"><?= esc(rupiah($account['income'])) ?></p>
-                        </div>
-                        <div>
-                            <p class="text-zinc-500">Biaya</p>
-                            <p class="mt-1 font-semibold text-rose-500"><?= esc(rupiah($account['expense'])) ?></p>
-                        </div>
-                        <div>
-                            <p class="text-zinc-500">Transaksi</p>
-                            <p class="mt-1 font-semibold text-zinc-950"><?= esc((string) $account['transaction_count']) ?></p>
-                        </div>
-                    </div>
-                </a>
+                <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
             <?php endforeach; ?>
         </div>
     </section>
