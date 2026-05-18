@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use App\Models\UserModel;
 use App\Services\AuthService;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
@@ -13,8 +14,14 @@ class AuthFilter implements FilterInterface
     {
         $session = service('session');
 
-        if ($session->get('auth_user_id') !== null) {
-            return null;
+        $sessionUserId = (int) ($session->get('auth_user_id') ?? 0);
+        if ($sessionUserId > 0) {
+            $user = (new UserModel())->findActiveById($sessionUserId);
+            if ($user !== null) {
+                return null;
+            }
+
+            $session->remove(['auth_user_id', 'auth_user_name', 'auth_institution_id', 'auth_role']);
         }
 
         $cookieValue = $request->getCookie(AuthService::REMEMBER_COOKIE);

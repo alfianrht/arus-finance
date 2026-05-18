@@ -104,26 +104,25 @@ class TransactionController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Semua kolom wajib diisi dengan benar.');
         }
 
-        $payload = [
-            'institution_id' => $this->currentInstitutionId(),
-            'book_period_id' => $this->activeBookPeriodId(),
-            'type' => 'masuk',
-            'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
-            'admin_fee' => 0,
-            'unit_id' => (int) $this->request->getPost('unit_id'),
-            'activity_id' => (int) $this->request->getPost('activity_id'),
-            'category_id' => (int) $this->request->getPost('category_id'),
-            'from_account_id' => null,
-            'to_account_id' => (int) $this->request->getPost('to_account_id'),
-            'receiver_id' => null,
-            'transaction_date' => (string) $this->request->getPost('transaction_date'),
-            'transaction_time' => date('H:i:s'),
-            'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => $this->storeProofUpload('masuk'),
-            'created_by' => $this->currentUserId(),
-        ];
-
         try {
+            $payload = [
+                'institution_id' => $this->currentInstitutionId(),
+                'book_period_id' => $this->activeBookPeriodId(),
+                'type' => 'masuk',
+                'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
+                'admin_fee' => 0,
+                'unit_id' => (int) $this->request->getPost('unit_id'),
+                'activity_id' => (int) $this->request->getPost('activity_id'),
+                'category_id' => (int) $this->request->getPost('category_id'),
+                'from_account_id' => null,
+                'to_account_id' => (int) $this->request->getPost('to_account_id'),
+                'receiver_id' => null,
+                'transaction_date' => (string) $this->request->getPost('transaction_date'),
+                'transaction_time' => date('H:i:s'),
+                'notes' => trim((string) $this->request->getPost('notes')),
+                'proof_image' => $this->storeProofUpload('masuk'),
+                'created_by' => $this->currentUserId(),
+            ];
             $this->transactionService->create($payload);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
@@ -175,26 +174,25 @@ class TransactionController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Semua kolom wajib diisi dengan benar.');
         }
 
-        $payload = [
-            'institution_id' => $this->currentInstitutionId(),
-            'book_period_id' => $this->activeBookPeriodId(),
-            'type' => 'keluar',
-            'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
-            'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
-            'unit_id' => (int) $this->request->getPost('unit_id'),
-            'activity_id' => (int) $this->request->getPost('activity_id'),
-            'category_id' => (int) $this->request->getPost('category_id'),
-            'from_account_id' => (int) $this->request->getPost('from_account_id'),
-            'to_account_id' => null,
-            'receiver_id' => null,
-            'transaction_date' => (string) $this->request->getPost('transaction_date'),
-            'transaction_time' => date('H:i:s'),
-            'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => $this->storeProofUpload('keluar'),
-            'created_by' => $this->currentUserId(),
-        ];
-
         try {
+            $payload = [
+                'institution_id' => $this->currentInstitutionId(),
+                'book_period_id' => $this->activeBookPeriodId(),
+                'type' => 'keluar',
+                'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
+                'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
+                'unit_id' => (int) $this->request->getPost('unit_id'),
+                'activity_id' => (int) $this->request->getPost('activity_id'),
+                'category_id' => (int) $this->request->getPost('category_id'),
+                'from_account_id' => (int) $this->request->getPost('from_account_id'),
+                'to_account_id' => null,
+                'receiver_id' => null,
+                'transaction_date' => (string) $this->request->getPost('transaction_date'),
+                'transaction_time' => date('H:i:s'),
+                'notes' => trim((string) $this->request->getPost('notes')),
+                'proof_image' => $this->storeProofUpload('keluar'),
+                'created_by' => $this->currentUserId(),
+            ];
             $this->transactionService->create($payload);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
@@ -237,26 +235,25 @@ class TransactionController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Kategori Honor belum tersedia di master data.');
         }
 
-        $payload = [
-            'institution_id' => $this->currentInstitutionId(),
-            'book_period_id' => $this->activeBookPeriodId(),
-            'type' => 'honor',
-            'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
-            'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
-            'unit_id' => (int) $this->request->getPost('unit_id'),
-            'activity_id' => (int) $this->request->getPost('activity_id'),
-            'category_id' => (int) $honorCategory['id'],
-            'from_account_id' => (int) $this->request->getPost('from_account_id'),
-            'to_account_id' => null,
-            'receiver_id' => (int) $this->request->getPost('receiver_id'),
-            'transaction_date' => (string) $this->request->getPost('transaction_date'),
-            'transaction_time' => date('H:i:s'),
-            'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => $this->storeProofUpload('honor'),
-            'created_by' => $this->currentUserId(),
-        ];
-
         try {
+            $payload = [
+                'institution_id' => $this->currentInstitutionId(),
+                'book_period_id' => $this->activeBookPeriodId(),
+                'type' => 'honor',
+                'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
+                'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
+                'unit_id' => (int) $this->request->getPost('unit_id'),
+                'activity_id' => (int) $this->request->getPost('activity_id'),
+                'category_id' => (int) $honorCategory['id'],
+                'from_account_id' => (int) $this->request->getPost('from_account_id'),
+                'to_account_id' => null,
+                'receiver_id' => (int) $this->request->getPost('receiver_id'),
+                'transaction_date' => (string) $this->request->getPost('transaction_date'),
+                'transaction_time' => date('H:i:s'),
+                'notes' => trim((string) $this->request->getPost('notes')),
+                'proof_image' => $this->storeProofUpload('honor'),
+                'created_by' => $this->currentUserId(),
+            ];
             $this->transactionService->create($payload);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
@@ -298,26 +295,25 @@ class TransactionController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Rekening asal dan tujuan tidak boleh sama.');
         }
 
-        $payload = [
-            'institution_id' => $this->currentInstitutionId(),
-            'book_period_id' => $this->activeBookPeriodId(),
-            'type' => 'pindah',
-            'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
-            'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
-            'unit_id' => (int) $this->request->getPost('unit_id'),
-            'activity_id' => (int) $this->request->getPost('activity_id'),
-            'category_id' => null,
-            'from_account_id' => $fromAccountId,
-            'to_account_id' => $toAccountId,
-            'receiver_id' => null,
-            'transaction_date' => (string) $this->request->getPost('transaction_date'),
-            'transaction_time' => date('H:i:s'),
-            'notes' => trim((string) $this->request->getPost('notes')),
-            'proof_image' => $this->storeProofUpload('pindah'),
-            'created_by' => $this->currentUserId(),
-        ];
-
         try {
+            $payload = [
+                'institution_id' => $this->currentInstitutionId(),
+                'book_period_id' => $this->activeBookPeriodId(),
+                'type' => 'pindah',
+                'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
+                'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
+                'unit_id' => (int) $this->request->getPost('unit_id'),
+                'activity_id' => (int) $this->request->getPost('activity_id'),
+                'category_id' => null,
+                'from_account_id' => $fromAccountId,
+                'to_account_id' => $toAccountId,
+                'receiver_id' => null,
+                'transaction_date' => (string) $this->request->getPost('transaction_date'),
+                'transaction_time' => date('H:i:s'),
+                'notes' => trim((string) $this->request->getPost('notes')),
+                'proof_image' => $this->storeProofUpload('pindah'),
+                'created_by' => $this->currentUserId(),
+            ];
             $this->transactionService->create($payload);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
@@ -427,7 +423,17 @@ class TransactionController extends BaseController
 
     private function currentUserId(): int
     {
-        return (int) ($this->session->get('auth_user_id') ?? 1);
+        $userId = (int) ($this->session->get('auth_user_id') ?? 0);
+        if ($userId < 1) {
+            throw new RuntimeException('Sesi login tidak valid. Silakan masuk ulang.');
+        }
+
+        $user = (new UserModel())->findActiveById($userId);
+        if ($user === null) {
+            throw new RuntimeException('Akun login tidak ditemukan lagi. Silakan masuk ulang.');
+        }
+
+        return $userId;
     }
 
     private function activeBookPeriodId(): ?int
@@ -728,6 +734,8 @@ class TransactionController extends BaseController
         $message = trim($e->getMessage());
         if (str_contains(strtolower($message), 'saldo rekening tidak mencukupi')) {
             $message = 'Saldo rekening tidak cukup. Pilih rekening lain, kurangi nominal, atau isi saldo awal lebih dulu.';
+        } elseif (str_contains(strtolower($message), 'sesi login tidak valid') || str_contains(strtolower($message), 'akun login tidak ditemukan')) {
+            $message = 'Sesi login Anda sudah tidak valid. Silakan masuk ulang lalu coba simpan transaksi lagi.';
         } elseif ($message === '') {
             $message = 'Transaksi belum bisa diproses. Silakan cek kembali form Anda.';
         }
