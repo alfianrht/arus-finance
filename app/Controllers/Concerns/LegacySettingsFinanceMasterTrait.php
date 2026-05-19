@@ -170,6 +170,17 @@ trait LegacySettingsFinanceMasterTrait
         if (! is_array($item)) {
             throw PageNotFoundException::forPageNotFound();
         }
+
+        $transactionCount = (int) Database::connect()
+            ->table('transactions')
+            ->where('receiver_id', (int) $item['id'])
+            ->where('deleted_at', null)
+            ->countAllResults();
+
+        if ($transactionCount > 0) {
+            return redirect()->to(site_url('pengaturan/penerima'))
+                ->with('error', 'Penerima <strong>' . esc($item['name']) . '</strong> tidak bisa dihapus karena sudah memiliki ' . $transactionCount . ' transaksi terkait.');
+        }
         $model->delete((int) $item['id']);
         return redirect()->to(site_url('pengaturan/penerima'))
             ->with('success', 'Penerima <strong>' . esc($item['name']) . '</strong> berhasil dihapus.');
@@ -430,6 +441,7 @@ trait LegacySettingsFinanceMasterTrait
 
     private function loadReceiverRows(): array
     {
+        $db = Database::connect();
         $rows = (new ReceiverModel())
             ->where('institution_id', $this->currentInstitutionId())
             ->where('deleted_at', null)
@@ -439,6 +451,21 @@ trait LegacySettingsFinanceMasterTrait
         foreach ($rows as &$row) {
             $row['slug'] = (string) $row['id'];
             $row['note'] = $row['notes'] ?? '';
+            $row['detail_url'] = site_url('pengaturan/penerima/' . $row['id'] . '/edit');
+            $row['meta_label'] = 'Total terkait';
+            $row['total_received'] = (float) ($db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('receiver_id', (int) $row['id'])
+                ->where('deleted_at', null)
+                ->select('SUM(amount + admin_fee) as total')
+                ->get()
+                ->getRow()
+                ->total ?? 0);
+            $row['transaction_count'] = (int) ($db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('receiver_id', (int) $row['id'])
+                ->where('deleted_at', null)
+                ->countAllResults());
         }
         unset($row);
 

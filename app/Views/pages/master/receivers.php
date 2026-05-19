@@ -2,6 +2,10 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
+    <?php
+    $totalReceived = array_sum(array_map(static fn(array $receiver): float => (float) ($receiver['total_received'] ?? 0), $receivers));
+    $totalTransactions = array_sum(array_map(static fn(array $receiver): int => (int) ($receiver['transaction_count'] ?? 0), $receivers));
+    ?>
     <?= view('partials/top_nav_back', [
         'title' => 'Penerima',
         'subtitle' => 'Master Data',
@@ -15,14 +19,28 @@
         </a>
     </div>
 
-    <section class="relative rounded-3xl border border-zinc-950 bg-white p-5">
+    <section class="rounded-3xl border border-zinc-100 bg-white p-5 shadow-sm">
         <div class="flex items-start justify-between gap-4">
             <div>
                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Kontak, Vendor & Tim</p>
                 <p class="mt-3 text-lg font-semibold text-zinc-950"><?= esc(count($receivers)) ?> kontak terdaftar</p>
-                <p class="mt-1 text-sm text-zinc-500">Master kontak digunakan untuk mempercepat pencatatan pengeluaran dan pembayaran rutin untuk semua pihak.</p>
+                <p class="mt-1 text-sm text-zinc-500">Master kontak dipakai untuk honor, vendor, dan pembayaran pihak terkait yang sudah tercatat di transaksi.</p>
             </div>
-            <span class="absolute top-2 right-2 rounded-full bg-lime-100 px-3 py-2 text-xs font-medium text-lime-950">Master Kontak</span>
+            <span class="rounded-full bg-lime-100 px-3 py-2 text-xs font-medium text-zinc-950">Master Kontak</span>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Penerima</p>
+                <p class="mt-1 text-base font-black text-zinc-950"><?= esc((string) count($receivers)) ?></p>
+            </div>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Transaksi</p>
+                <p class="mt-1 text-base font-black text-zinc-950"><?= esc((string) $totalTransactions) ?></p>
+            </div>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 sm:col-span-2">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Total Terkait</p>
+                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalReceived)) ?></p>
+            </div>
         </div>
     </section>
 
@@ -34,34 +52,28 @@
                 'actionUrl' => site_url('pengaturan/penerima/tambah'), 'actionLabel' => 'Tambah Penerima',
             ]) ?>
         <?php else: ?>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="space-y-3">
                 <?php foreach ($receivers as $receiver): ?>
-                    <div class="rounded-3xl bg-white p-4 shadow-sm">
-                        <div class="flex items-start justify-between gap-3">
+                    <article class="relative pb-2">
+                        <div class="relative z-10">
+                            <?= view('partials/receiver_card', ['receiver' => $receiver, 'widthClass' => 'w-full']) ?>
+                        </div>
+                        <div class="relative -mt-5 pt-[26px] flex items-center justify-between gap-3 rounded-b-[1.4rem] border border-zinc-100 bg-white px-4 py-3 shadow-sm">
                             <div class="min-w-0">
-                                <p class="text-xs font-medium text-blue-600 mb-1"><?= esc($receiver['type'] ?? 'Lainnya') ?></p>
-                                <p class="truncate text-base font-semibold text-zinc-950"><?= esc($receiver['name']) ?></p>
-                                <?php if (!empty($receiver['bank_account'])): ?>
-                                    <p class="mt-1 truncate text-sm text-zinc-500"><?= esc($receiver['bank_account']) ?></p>
+                                <p class="text-sm font-semibold text-zinc-950"><?= esc($receiver['type'] ?? 'Lainnya') ?></p>
+                                <p class="mt-1 text-xs text-zinc-500"><?= esc((string) ($receiver['transaction_count'] ?? 0)) ?> transaksi terkait</p>
+                            </div>
+                            <div class="flex shrink-0 items-center gap-2">
+                                <a href="<?= site_url('penerima/' . $receiver['slug']) ?>" class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-950">Lihat Penerima</a>
+                                <?php if ((int) ($receiver['transaction_count'] ?? 0) === 0): ?>
+                                    <button type="button" onclick="openDeleteModal('<?= site_url('pengaturan/penerima/' . $receiver['slug'] . '/hapus') ?>', '<?= esc($receiver['name'], 'js') ?>', '<?= csrf_hash() ?>')" class="rounded-full bg-rose-500 px-3 py-2 text-xs font-semibold text-white">Hapus</button>
+                                <?php else: ?>
+                                    <span class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-400 cursor-not-allowed" title="Penerima memiliki <?= esc((string) ($receiver['transaction_count'] ?? 0)) ?> transaksi. Hapus transaksi terlebih dahulu.">Hapus</span>
                                 <?php endif; ?>
-                                <?php if (!empty($receiver['note'])): ?>
-                                    <p class="mt-2 text-xs text-zinc-500 line-clamp-2"><?= esc($receiver['note']) ?></p>
-                                <?php endif; ?>
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    <?php if (!empty($receiver['nik'])): ?>
-                                        <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-[10px] font-medium text-zinc-700">NIK: <?= esc($receiver['nik']) ?></p>
-                                    <?php endif; ?>
-                                    <?php if (!empty($receiver['npwp'])): ?>
-                                        <p class="inline-flex rounded-full bg-zinc-100 px-3 py-2 text-[10px] font-medium text-zinc-700">NPWP: <?= esc($receiver['npwp']) ?></p>
-                                    <?php endif; ?>
-                                </div>
+                                <a href="<?= site_url('pengaturan/penerima/' . $receiver['slug'] . '/edit') ?>" class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-950">Edit</a>
                             </div>
                         </div>
-                        <div class="mt-3 flex items-center justify-end gap-3 border-t border-zinc-100 pt-3">
-                            <button type="button" onclick="openDeleteModal('<?= site_url('pengaturan/penerima/' . $receiver['slug'] . '/hapus') ?>', '<?= esc($receiver['name'], 'js') ?>', '<?= csrf_hash() ?>')" class="text-sm font-medium text-rose-600">Hapus</button>
-                            <a href="<?= site_url('pengaturan/penerima/' . $receiver['slug'] . '/edit') ?>" class="text-sm font-medium text-zinc-700">Edit</a>
-                        </div>
-                    </div>
+                    </article>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
