@@ -2,30 +2,6 @@
 
 <?= $this->section('content') ?>
 <?php $surfaceText = surface_label($unit['short_name'] ?? $unit['name']); ?>
-<?php
-$scopeHeaderIsActivity = ($scopeMode ?? 'unit') === 'kegiatan';
-$scopeHeaderCardClass = $scopeHeaderIsActivity ? 'bg-zinc-950 text-white' : 'bg-lime-400 text-zinc-950';
-$scopeHeaderOverlayClass = $scopeHeaderIsActivity ? 'bg-white/5' : 'bg-white/10';
-$scopeHeaderMutedTextClass = $scopeHeaderIsActivity ? 'text-zinc-400' : 'text-zinc-700';
-$scopeHeaderMetaTextClass = $scopeHeaderIsActivity ? 'text-zinc-300' : 'text-zinc-700';
-$scopeHeaderBadgeClass = $scopeHeaderIsActivity
-    ? 'border border-white/15 bg-white/10 text-white'
-    : 'bg-zinc-950 text-white';
-$scopeHeaderActionClass = $scopeHeaderIsActivity
-    ? 'border border-white/15 bg-white/10 text-white'
-    : 'border border-zinc-950/10 bg-white/40 text-zinc-950';
-$scopeHeaderDividerClass = $scopeHeaderIsActivity ? 'border-white/10' : 'border-white/50';
-$scopeHeaderHighlightClass = $scopeHeaderIsActivity
-    ? 'bg-white/10 text-white border border-white/10'
-    : 'bg-white/40 text-zinc-950 border border-zinc-950/10';
-$scopeStatLabelClass = $scopeHeaderIsActivity ? 'text-zinc-400' : 'text-zinc-700';
-$scopeStatCardClass = $scopeHeaderIsActivity
-    ? 'rounded-2xl border border-white/10 bg-white/5 p-2.5'
-    : 'rounded-2xl border border-zinc-950/10 bg-white/35 p-2.5';
-$scopeIncomeValueClass = $scopeHeaderIsActivity ? 'text-emerald-400' : 'text-emerald-700';
-$scopeExpenseValueClass = $scopeHeaderIsActivity ? 'text-rose-400' : 'text-rose-700';
-$scopeSurplusValueClass = $scopeHeaderIsActivity ? 'text-white' : 'text-zinc-950';
-?>
 <div class="">
     <section class="rounded-3xl bg-white px-3 py-2.5 shadow-sm">
         <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">

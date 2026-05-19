@@ -920,9 +920,7 @@ class ReportController extends BaseController
             'balance' => 45600000,
         ];
         $scopeTitle = $unit['name'];
-        $scopeLabel = 'Ringkasan unit';
         $scopeMode = 'unit';
-        $scopeMeta = 'Semua kegiatan dalam unit ini';
         $scopeHighlights = [
             ['label' => 'Penerima Honor', 'value' => (string) $countHonorReceivers($reportTransactions) . ' penerima'],
             ['label' => 'Rekening Terlibat', 'value' => '3 rekening'],
@@ -938,9 +936,7 @@ class ReportController extends BaseController
                 'balance' => (float) $scopeActivity['related_balance'],
             ];
             $scopeTitle = $scopeActivity['name'];
-            $scopeLabel = 'Ringkasan kegiatan';
             $scopeMode = 'kegiatan';
-            $scopeMeta = 'Sedang meninjau kegiatan yang dipilih';
             $scopeHighlights = [
                 ['label' => 'Transaksi Tercatat', 'value' => (string) ($scopeActivity['transaction_count'] ?? 0) . ' transaksi'],
                 ['label' => 'Penerima Honor', 'value' => (string) ($scopeActivity['receiver_count'] ?? 0) . ' penerima'],
@@ -981,7 +977,6 @@ class ReportController extends BaseController
                 'expense' => 89250000,
                 'surplus' => 38250000,
                 'related_balance' => 45600000,
-                'quick_activity_name' => 'Operasional SIMPAUD 2026',
                 'detail_url' => route_query('laporan/unit/' . $unit['slug'], [
                     'preview' => 1,
                     'kegiatan' => null,
@@ -1001,9 +996,7 @@ class ReportController extends BaseController
             'selectedTransactionFilter' => $selectedTransactionFilter,
             'selectedActivitySlug' => $selectedActivitySlug,
             'scopeMode' => $scopeMode,
-            'scopeLabel' => $scopeLabel,
             'scopeTitle' => $scopeTitle,
-            'scopeMeta' => $scopeMeta,
             'scopeResetUrl' => route_query('laporan/unit/' . $unit['slug'], [
                 'preview' => 1,
                 'kegiatan' => null,
