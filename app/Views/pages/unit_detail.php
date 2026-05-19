@@ -17,6 +17,13 @@
     </section>
     <?php endif; ?>
 
+    <div class="flex justify-end">
+        <a href="<?= esc(site_url('unit/' . $unit['slug'] . '/bagikan')) ?>" class="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-950 shadow-sm">
+            <span class="material-symbols-rounded text-base" aria-hidden="true">share</span>
+            <span>Bagikan dengan PIN</span>
+        </a>
+    </div>
+
     <section class="relative overflow-hidden rounded-3xl bg-lime-400 p-5 text-zinc-950 shadow-sm">
         <div class="absolute inset-0 bg-white/10" aria-hidden="true"></div>
         <div class="relative flex items-start justify-between gap-4">

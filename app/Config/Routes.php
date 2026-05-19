@@ -87,4 +87,6 @@ $routes->post('transaksi/(:segment)', 'TransactionController::update/$1', ['filt
 $routes->get('rekening/(:segment)', 'ReportController::rekening/$1', ['filter' => 'auth']);
 $routes->get('penerima/(:segment)', 'ReportController::penerima/$1', ['filter' => 'auth']);
 $routes->get('unit/(:segment)', 'ReportController::unit/$1', ['filter' => 'auth']);
+$routes->get('unit/(:segment)/bagikan', 'ReportController::bagikanUnit/$1', ['filter' => 'auth']);
 $routes->get('kegiatan/(:segment)', 'ReportController::kegiatan/$1', ['filter' => 'auth']);
+$routes->get('laporan/unit/(:segment)', 'ReportController::laporanUnitPublik/$1');

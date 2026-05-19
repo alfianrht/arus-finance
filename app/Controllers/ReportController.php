@@ -562,6 +562,326 @@ class ReportController extends BaseController
         return view('pages/unit_detail', $data);
     }
 
+    public function bagikanUnit(string $slug): string
+    {
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        $allUnits = $this->loadAllUnitProgramRows($institutionId);
+        $unitId = $this->resolveUnitId($slug, $allUnits);
+        $unit = $unitId === null
+            ? null
+            : $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+
+        if (! $unit) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        return view('pages/share/unit_share_setup', [
+            'pageTitle' => 'Bagikan Laporan Unit',
+            'activeNav' => 'rekap',
+            'backUrl' => site_url('unit/' . $unit['slug']),
+            'unit' => [
+                'slug' => $unit['slug'],
+                'name' => $unit['name'],
+                'short_name' => substr($unit['name'], 0, 4),
+            ],
+            'shareUrl' => site_url('laporan/unit/' . $unit['slug']),
+            'demoPin' => '240519',
+        ]);
+    }
+
+    public function laporanUnitPublik(string $slug): string
+    {
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+
+        if ($institutionId) {
+            $allUnits = $this->loadAllUnitProgramRows($institutionId);
+            $unitId = $this->resolveUnitId($slug, $allUnits);
+            $unit = $unitId === null
+                ? null
+                : $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+        } else {
+            $unit = $db->table('units')->where('slug', $slug)->where('deleted_at', null)->get()->getRowArray();
+        }
+
+        if (! $unit) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $unlocked = $this->request->getGet('preview') === '1';
+        $selectedTransactionFilter = strtolower((string) ($this->request->getGet('jenis') ?? 'semua'));
+        if (! in_array($selectedTransactionFilter, ['semua', 'masuk', 'keluar', 'honor', 'pindah'], true)) {
+            $selectedTransactionFilter = 'semua';
+        }
+        $transactionPage = max(1, (int) ($this->request->getGet('transaksi_page') ?? 1));
+
+        $reportTransactions = [
+            [
+                'id' => '9001',
+                'badge_label' => 'Biaya',
+                'badge_class' => 'bg-rose-50 text-rose-600',
+                'icon' => 'north_east',
+                'headline' => 'Operasional dari BCA Operasional',
+                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
+                'meta' => '17 Mei 2026 · Pembayaran vendor operasional',
+                'amount' => 500000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'keluar',
+            ],
+            [
+                'id' => '9002',
+                'badge_label' => 'Masuk',
+                'badge_class' => 'bg-emerald-50 text-emerald-700',
+                'icon' => 'south',
+                'headline' => 'Pelatihan ke BCA Operasional',
+                'subline' => $unit['name'] . ' / SIMPAUD Web App Mobile First Transformation',
+                'meta' => '16 Mei 2026 · Pemasukan program pelatihan',
+                'amount' => 8000000,
+                'amount_prefix' => '+',
+                'amount_class' => 'text-emerald-600',
+                'admin_fee' => 0,
+                'type_key' => 'masuk',
+            ],
+            [
+                'id' => '9003',
+                'badge_label' => 'Honor',
+                'badge_class' => 'bg-orange-50 text-orange-700',
+                'icon' => 'payments',
+                'headline' => 'Honor untuk Tim Internal',
+                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
+                'meta' => '15 Mei 2026 · Honor tim internal',
+                'amount' => 1500000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'honor',
+            ],
+            [
+                'id' => '9004',
+                'badge_label' => 'Pindah Dana',
+                'badge_class' => 'bg-sky-50 text-sky-700',
+                'icon' => 'sync_alt',
+                'headline' => 'BCA Operasional ke Kas Tunai',
+                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
+                'meta' => '14 Mei 2026 · Pindah dana operasional',
+                'amount' => 2500000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'pindah',
+            ],
+            [
+                'id' => '9005',
+                'badge_label' => 'Biaya',
+                'badge_class' => 'bg-rose-50 text-rose-600',
+                'icon' => 'north_east',
+                'headline' => 'Iklan dari BCA Operasional',
+                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
+                'meta' => '13 Mei 2026 · Iklan promosi',
+                'amount' => 750000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'keluar',
+            ],
+            [
+                'id' => '9006',
+                'badge_label' => 'Masuk',
+                'badge_class' => 'bg-emerald-50 text-emerald-700',
+                'icon' => 'south',
+                'headline' => 'Kemitraan ke Kas Tunai',
+                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
+                'meta' => '12 Mei 2026 · Dana kemitraan',
+                'amount' => 4200000,
+                'amount_prefix' => '+',
+                'amount_class' => 'text-emerald-600',
+                'admin_fee' => 0,
+                'type_key' => 'masuk',
+            ],
+            [
+                'id' => '9007',
+                'badge_label' => 'Honor',
+                'badge_class' => 'bg-orange-50 text-orange-700',
+                'icon' => 'payments',
+                'headline' => 'Honor untuk Narasumber',
+                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
+                'meta' => '11 Mei 2026 · Honor narasumber',
+                'amount' => 900000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'honor',
+            ],
+            [
+                'id' => '9008',
+                'badge_label' => 'Biaya',
+                'badge_class' => 'bg-rose-50 text-rose-600',
+                'icon' => 'north_east',
+                'headline' => 'Internet dari BCA Operasional',
+                'subline' => $unit['name'] . ' / SIMPAUD Web App Mobile First Transformation',
+                'meta' => '10 Mei 2026 · Langganan internet',
+                'amount' => 350000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'keluar',
+            ],
+            [
+                'id' => '9009',
+                'badge_label' => 'Masuk',
+                'badge_class' => 'bg-emerald-50 text-emerald-700',
+                'icon' => 'south',
+                'headline' => 'Program ke BCA Operasional',
+                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
+                'meta' => '09 Mei 2026 · Dana program',
+                'amount' => 6700000,
+                'amount_prefix' => '+',
+                'amount_class' => 'text-emerald-600',
+                'admin_fee' => 0,
+                'type_key' => 'masuk',
+            ],
+            [
+                'id' => '9010',
+                'badge_label' => 'Pindah Dana',
+                'badge_class' => 'bg-sky-50 text-sky-700',
+                'icon' => 'sync_alt',
+                'headline' => 'Kas Tunai ke BCA Operasional',
+                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
+                'meta' => '08 Mei 2026 · Penyesuaian kas',
+                'amount' => 1200000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'pindah',
+            ],
+            [
+                'id' => '9011',
+                'badge_label' => 'Biaya',
+                'badge_class' => 'bg-rose-50 text-rose-600',
+                'icon' => 'north_east',
+                'headline' => 'ATK dari Kas Tunai',
+                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
+                'meta' => '07 Mei 2026 · ATK operasional',
+                'amount' => 210000,
+                'amount_prefix' => '-',
+                'amount_class' => 'text-rose-600',
+                'admin_fee' => 0,
+                'type_key' => 'keluar',
+            ],
+            [
+                'id' => '9012',
+                'badge_label' => 'Masuk',
+                'badge_class' => 'bg-emerald-50 text-emerald-700',
+                'icon' => 'south',
+                'headline' => 'Pelatihan ke Kas Tunai',
+                'subline' => $unit['name'] . ' / SIMPAUD Web App Mobile First Transformation',
+                'meta' => '06 Mei 2026 · Pemasukan pelatihan',
+                'amount' => 5300000,
+                'amount_prefix' => '+',
+                'amount_class' => 'text-emerald-600',
+                'admin_fee' => 0,
+                'type_key' => 'masuk',
+            ],
+        ];
+
+        $filteredPublicTransactions = $selectedTransactionFilter === 'semua'
+            ? $reportTransactions
+            : array_values(array_filter(
+                $reportTransactions,
+                static fn(array $transaction): bool => ($transaction['type_key'] ?? '') === $selectedTransactionFilter
+            ));
+
+        $publicTransactionPagination = paginate_items($filteredPublicTransactions, $transactionPage, 10);
+
+        return view('pages/share/unit_public_report', [
+            'pageTitle' => 'Laporan Unit',
+            'unit' => [
+                'slug' => $unit['slug'],
+                'name' => $unit['name'],
+                'short_name' => substr($unit['name'], 0, 4),
+            ],
+            'shareUrl' => current_url(),
+            'demoPin' => '240519',
+            'unlocked' => $unlocked,
+            'reportSummary' => [
+                'period' => 'Januari - Desember 2026',
+                'income' => 127500000,
+                'expense' => 89250000,
+                'surplus' => 38250000,
+                'balance' => 45600000,
+            ],
+            'reportHighlights' => [
+                ['label' => 'Kegiatan Aktif', 'value' => '6 kegiatan'],
+                ['label' => 'Penerima Terlibat', 'value' => '14 penerima'],
+                ['label' => 'Rekening Terlibat', 'value' => '3 rekening'],
+                ['label' => 'Transaksi Tercatat', 'value' => '84 transaksi'],
+            ],
+            'reportUnitCard' => [
+                'slug' => $unit['slug'],
+                'name' => $unit['name'],
+                'short_name' => substr($unit['name'], 0, 4),
+                'income' => 127500000,
+                'expense' => 89250000,
+                'surplus' => 38250000,
+                'related_balance' => 45600000,
+                'quick_activity_name' => 'Operasional SIMPAUD 2026',
+                'detail_url' => current_url(),
+                'activities' => [1, 2, 3, 4, 5, 6],
+            ],
+            'reportActivities' => [
+                [
+                    'slug' => 'operasional-simpaud-2026',
+                    'name' => 'Operasional SIMPAUD 2026',
+                    'short_name' => 'OPER',
+                    'unit_name' => $unit['name'],
+                    'income' => 52000000,
+                    'expense' => 34150000,
+                    'surplus' => 17850000,
+                    'related_balance' => 17850000,
+                    'related_accounts' => ['BCA Operasional', 'Kas Tunai'],
+                    'detail_url' => current_url(),
+                ],
+                [
+                    'slug' => 'simpaud-web-app-mobile-first-transformation',
+                    'name' => 'SIMPAUD Web App Mobile First Transformation',
+                    'short_name' => 'SIMP',
+                    'unit_name' => $unit['name'],
+                    'income' => 38500000,
+                    'expense' => 27400000,
+                    'surplus' => 11100000,
+                    'related_balance' => 11100000,
+                    'related_accounts' => ['BCA Operasional'],
+                    'detail_url' => current_url(),
+                ],
+                [
+                    'slug' => 'kemitraan-publikasi',
+                    'name' => 'Kemitraan & Publikasi',
+                    'short_name' => 'KEMP',
+                    'unit_name' => $unit['name'],
+                    'income' => 37000000,
+                    'expense' => 27700000,
+                    'surplus' => 9300000,
+                    'related_balance' => 9300000,
+                    'related_accounts' => ['Kas Tunai'],
+                    'detail_url' => current_url(),
+                ],
+            ],
+            'transactionFilters' => [
+                ['key' => 'semua', 'label' => 'Semua'],
+                ['key' => 'masuk', 'label' => 'Masuk'],
+                ['key' => 'keluar', 'label' => 'Biaya'],
+                ['key' => 'honor', 'label' => 'Honor'],
+                ['key' => 'pindah', 'label' => 'Pindah Dana'],
+            ],
+            'selectedTransactionFilter' => $selectedTransactionFilter,
+            'reportTransactions' => $publicTransactionPagination['items'],
+            'reportTransactionPagination' => $publicTransactionPagination,
+        ]);
+    }
+
     public function kegiatan(string $slug): string
     {
         $institutionId = $this->currentInstitutionId();

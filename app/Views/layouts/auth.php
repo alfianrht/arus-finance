@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle ?? 'Arus') ?> | <?= esc($appName ?? 'Arus') ?></title>
     <meta name="description" content="Prototype mobile-first Arus untuk pencatatan keuangan harian.">
-    <link rel="shortcut icon" type="image/webp" href="<?= base_url('images/logo-primary-1.webp') ?>">
-    <meta property="og:image" content="<?= base_url('images/logo-primary-1.webp') ?>">
+    <link rel="shortcut icon" type="image/webp" href="<?= base_url('images/logo-primary-2.webp') ?>">
+    <meta property="og:image" content="<?= base_url('images/logo-primary-2.webp') ?>">
     <?= $this->include('partials/pwa_bootstrap') ?>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
     <script>
