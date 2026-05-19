@@ -26,7 +26,7 @@ $scopeIncomeValueClass = $scopeHeaderIsActivity ? 'text-emerald-400' : 'text-eme
 $scopeExpenseValueClass = $scopeHeaderIsActivity ? 'text-rose-400' : 'text-rose-700';
 $scopeSurplusValueClass = $scopeHeaderIsActivity ? 'text-white' : 'text-zinc-950';
 ?>
-<div class="space-y-2">
+<div class="">
     <section class="rounded-3xl bg-white px-3 py-2.5 shadow-sm">
         <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0">
@@ -40,7 +40,7 @@ $scopeSurplusValueClass = $scopeHeaderIsActivity ? 'text-white' : 'text-zinc-950
                     </span>
                 </div>
             </div>
-            <div class="flex items-center justify-between gap-2 rounded-2xl bg-zinc-950 px-3 py-2 text-white sm:min-w-56">
+            <div class="hidden items-center justify-between gap-2 rounded-2xl bg-zinc-950 px-3 py-2 text-white sm:flex sm:min-w-56">
                 <div class="min-w-0">
                     <p class="text-[9px] text-white/55">Status akses</p>
                     <div class="mt-1 flex items-center gap-1.5">
@@ -92,9 +92,9 @@ $scopeSurplusValueClass = $scopeHeaderIsActivity ? 'text-white' : 'text-zinc-950
             </div>
         </section>
     <?php else: ?>
-        <section class="grid gap-3 overflow-x-hidden lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_minmax(0,1.05fr)]">
+        <section class="grid gap-2 overflow-x-hidden lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_minmax(0,1.05fr)] lg:gap-3">
             <div class="min-w-0 space-y-2.5 lg:col-span-1">
-                <section class="space-y-2 rounded-3xl bg-white p-3 shadow-sm">
+                <section class="hidden space-y-2 rounded-3xl mt-2 bg-white p-3 shadow-sm lg:block">
                     <div class="flex items-center justify-between">
                         <h2 class="text-sm font-semibold text-zinc-950">Ringkasan Unit / Program</h2>
                         <p class="text-[11px] text-zinc-500">Unit aktif</p>
@@ -190,28 +190,41 @@ $scopeSurplusValueClass = $scopeHeaderIsActivity ? 'text-white' : 'text-zinc-950
 
             </div>
 
-            <div class="min-w-0 lg:col-span-2">
+            <div class="min-w-0 space-y-2 lg:col-span-2">
                 <section class="rounded-3xl bg-white p-3 shadow-sm lg:hidden">
                     <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-sm font-semibold text-zinc-950">Pilih Kegiatan</h2>
-                        <a href="<?= esc($scopeResetUrl) ?>" class="<?= $scopeMode === 'unit' ? 'bg-zinc-950 text-white' : 'border border-zinc-200 bg-white text-zinc-700' ?> inline-flex rounded-full px-3 py-2 text-[11px] font-semibold">
-                            Unit
-                        </a>
+                        <h2 class="text-sm font-semibold text-zinc-950">Pilih Konteks</h2>
+                        <p class="text-[11px] text-zinc-500">Swipe</p>
                     </div>
-                    <div class="-mx-3 mt-2.5 overflow-x-auto px-3 pb-1" style="scrollbar-width: none;">
-                        <div class="flex w-max min-w-full gap-2">
+                    <div class="-mx-3 mt-2 overflow-x-auto px-3 pb-1" style="scrollbar-width: none;">
+                        <div class="flex w-max min-w-full gap-2 pt-1">
+                            <a
+                                href="<?= esc($scopeResetUrl) ?>"
+                                class="<?= $scopeMode === 'unit' ? 'border-lime-400 bg-lime-400 text-zinc-950 ring-2 ring-lime-400' : 'border-zinc-200 bg-white text-zinc-700' ?> relative flex h-32 w-52 shrink-0 flex-col rounded-2xl border px-3 py-3 shadow-sm"
+                            >
+                                <?php if ($scopeMode === 'unit'): ?>
+                                    <span class="absolute right-2 top-2 inline-flex rounded-full bg-lime-400 px-2 py-1 text-[9px] font-semibold text-zinc-950">Aktif</span>
+                                <?php endif; ?>
+                                <span class="block text-[10px] font-medium uppercase tracking-wide <?= $scopeMode === 'unit' ? 'text-zinc-800' : 'text-zinc-400' ?>">Unit</span>
+                                <span class="mt-1 line-clamp-2 block min-h-[0.5rem] text-sm font-semibold leading-tight"><?= esc($reportUnitCard['name']) ?></span>
+                                <span class="mt-auto block text-[10px] font-medium uppercase tracking-wide <?= $scopeMode === 'unit' ? 'text-zinc-800/70' : 'text-zinc-400' ?>">Saldo</span>
+                                <span class="mt-1 block whitespace-nowrap text-[12px] font-semibold tabular-nums <?= $scopeMode === 'unit' ? 'text-zinc-950' : 'text-zinc-700' ?>">
+                                    <?= esc(rupiah($reportSummary['balance'])) ?>
+                                </span>
+                            </a>
                         <?php foreach ($reportActivities as $activity): ?>
                             <a
                                 href="<?= esc($activity['detail_url']) ?>"
-                                class="<?= !empty($activity['is_selected']) ? 'border-zinc-950 bg-zinc-950 text-white ring-2 ring-lime-400' : 'border-zinc-200 bg-white text-zinc-700' ?> relative block w-52 shrink-0 rounded-2xl border px-3 py-3 shadow-sm"
+                                class="<?= !empty($activity['is_selected']) ? 'border-zinc-950 bg-zinc-950 text-white ring-2 ring-lime-400' : 'border-zinc-200 bg-white text-zinc-700' ?> relative flex h-32 w-52 shrink-0 flex-col rounded-2xl border px-3 py-3 shadow-sm"
                             >
                                 <?php if (!empty($activity['is_selected'])): ?>
                                     <span class="absolute right-2 top-2 inline-flex rounded-full bg-lime-400 px-2 py-1 text-[9px] font-semibold text-zinc-950">Aktif</span>
                                 <?php endif; ?>
                                 <span class="block text-[10px] font-medium uppercase tracking-wide <?= !empty($activity['is_selected']) ? 'text-zinc-300' : 'text-zinc-400' ?>">Kegiatan</span>
-                                <span class="mt-1 block text-sm font-semibold leading-tight"><?= esc($activity['name']) ?></span>
-                                <span class="mt-2 block text-[11px] <?= !empty($activity['is_selected']) ? 'text-zinc-300' : 'text-zinc-500' ?>">
-                                    Saldo <?= esc(rupiah($activity['related_balance'] ?? $activity['surplus'])) ?>
+                                <span class="mt-1 line-clamp-2 block min-h-[0.5rem] text-sm font-semibold leading-tight"><?= esc($activity['name']) ?></span>
+                                <span class="mt-auto block text-[10px] font-medium uppercase tracking-wide <?= !empty($activity['is_selected']) ? 'text-zinc-400' : 'text-zinc-400' ?>">Saldo</span>
+                                <span class="mt-1 block whitespace-nowrap text-[12px] font-semibold tabular-nums <?= !empty($activity['is_selected']) ? 'text-white' : 'text-zinc-700' ?>">
+                                    <?= esc(rupiah($activity['related_balance'] ?? $activity['surplus'])) ?>
                                 </span>
                             </a>
                         <?php endforeach; ?>
@@ -237,19 +250,19 @@ $scopeSurplusValueClass = $scopeHeaderIsActivity ? 'text-white' : 'text-zinc-950
                             <p class="text-[11px] text-zinc-500">View only</p>
                         </div>
                     </div>
-                    <div class="mt-2.5 px-3 sm:px-4">
+                    <div class="<?= $scopeMode === 'unit' ? 'hidden sm:block' : '' ?> mt-2.5 px-3 sm:px-4">
                         <div class="grid grid-cols-3 gap-2 rounded-2xl bg-zinc-50 p-2.5">
                             <div class="rounded-xl bg-white px-2.5 py-2">
                                 <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Saldo</p>
-                                <p class="mt-1 text-sm font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($reportSummary['balance'])) ?></p>
+                                <p class="mt-1 whitespace-nowrap text-[13px] font-semibold tabular-nums text-zinc-950 sm:text-sm"><?= esc(rupiah($reportSummary['balance'])) ?></p>
                             </div>
                             <div class="rounded-xl bg-white px-2.5 py-2">
                                 <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Masuk</p>
-                                <p class="mt-1 text-sm font-semibold tabular-nums text-emerald-700"><?= esc(rupiah($reportSummary['income'])) ?></p>
+                                <p class="mt-1 whitespace-nowrap text-[13px] font-semibold tabular-nums text-emerald-700 sm:text-sm"><?= esc(rupiah($reportSummary['income'])) ?></p>
                             </div>
                             <div class="rounded-xl bg-white px-2.5 py-2">
                                 <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Keluar</p>
-                                <p class="mt-1 text-sm font-semibold tabular-nums text-rose-700"><?= esc(rupiah($reportSummary['expense'])) ?></p>
+                                <p class="mt-1 whitespace-nowrap text-[13px] font-semibold tabular-nums text-rose-700 sm:text-sm"><?= esc(rupiah($reportSummary['expense'])) ?></p>
                             </div>
                         </div>
                     </div>
