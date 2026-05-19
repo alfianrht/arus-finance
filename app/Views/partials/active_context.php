@@ -67,7 +67,7 @@ foreach ($selectorUnits as $selectorUnit) {
         <div class="border-b border-zinc-100 bg-white px-4 py-3">
             <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
-                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Ubah Aktif</p>
+                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks Aktif</p>
                     <div class="mt-2 flex flex-wrap gap-2">
                         <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['unit_name']) ?></span>
                         <span class="inline-flex items-center rounded-full border border-zinc-950 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900"><?= esc($activeContext['activity_name']) ?></span>
@@ -138,7 +138,7 @@ foreach ($selectorUnits as $selectorUnit) {
                     </button>
                     <button type="submit" class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-lime-400 px-5 text-sm font-semibold text-zinc-950 shadow-sm">
                         <span class="material-symbols-rounded text-base" aria-hidden="true">check</span>
-                        <span>Pakai Konteks</span>
+                        <span>Ubah Aktif</span>
                     </button>
             </div>
         </div>
