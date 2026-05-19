@@ -50,7 +50,7 @@ class AuthService
     public function requestLoginOtp(string $whatsapp): array
     {
         $normalized = $this->normalizeWhatsapp($whatsapp);
-        $user = $this->users->where('whatsapp', $normalized)->where('is_active', 1)->first();
+        $user = $this->findUserByWhatsapp($normalized, true);
 
         if ($user === null) {
             throw new RuntimeException('Nomor WhatsApp belum terdaftar.');
@@ -62,7 +62,7 @@ class AuthService
     public function registerAndRequestOtp(string $name, string $whatsapp): array
     {
         $normalized = $this->normalizeWhatsapp($whatsapp);
-        $existing = $this->users->where('whatsapp', $normalized)->first();
+        $existing = $this->findUserByWhatsapp($normalized, false);
 
         if ($existing !== null) {
             throw new RuntimeException('Nomor WhatsApp sudah terdaftar. Silakan masuk.');
@@ -90,7 +90,7 @@ class AuthService
     public function requestRecoveryOtp(string $whatsapp): array
     {
         $normalized = $this->normalizeWhatsapp($whatsapp);
-        $user = $this->users->where('whatsapp', $normalized)->where('is_active', 1)->first();
+        $user = $this->findUserByWhatsapp($normalized, true);
 
         if ($user === null) {
             throw new RuntimeException('Nomor WhatsApp tidak ditemukan.');
@@ -274,5 +274,28 @@ class AuthService
         ], true);
 
         return (int) $institutionId;
+    }
+
+    private function findUserByWhatsapp(string $normalized, bool $activeOnly = true): ?array
+    {
+        $variants = array_values(array_unique(array_filter([
+            $normalized,
+            '0' . substr($normalized, 2),
+            substr($normalized, 2),
+        ])));
+
+        $builder = $this->users->groupStart();
+        foreach ($variants as $variant) {
+            $builder->orWhere('whatsapp', $variant);
+        }
+        $builder->groupEnd();
+
+        if ($activeOnly) {
+            $builder->where('is_active', 1);
+        }
+
+        $user = $builder->first();
+
+        return is_array($user) ? $user : null;
     }
 }

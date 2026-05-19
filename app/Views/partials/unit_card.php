@@ -3,7 +3,7 @@ $activityCount = count($unit['activities']);
 $surfaceText = surface_label($unit['short_name'] ?? $unit['name']);
 ?>
 
-<article class="space-y-3">
+<article class="space-y-3 z-10">
     <a href="<?= esc($unit['detail_url']) ?>" class="relative block overflow-hidden rounded-3xl bg-lime-400 p-4 text-zinc-950 shadow-sm">
         <div class="absolute inset-0 bg-white/10" aria-hidden="true"></div>
         <div class="relative flex items-start justify-between gap-4">

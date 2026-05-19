@@ -61,14 +61,18 @@
             ]) ?>
         <?php else: ?>
             <?php foreach ($units as $unit): ?>
-                <article class="space-y-3">
-                    <?= view('partials/unit_card', ['unit' => $unit]) ?>
-                    <div class="flex items-center justify-between gap-3 rounded-3xl bg-white px-4 py-3 shadow-sm">
+                <?php $isInactive = (($unit['status_label'] ?? '') === 'Nonaktif'); ?>
+                <article class="relative pb-2 <?= $isInactive ? 'opacity-75' : '' ?>">
+                    <div class="relative z-10">
+                        <?= view('partials/unit_card', ['unit' => array_merge($unit, ['name' => $isInactive ? $unit['name'] . ' · Nonaktif' : $unit['name']])]) ?>
+                    </div>
+                    <div class="relative -mt-5 pt-[26px] flex items-center justify-between gap-3 rounded-b-[1.4rem] border <?= $isInactive ? 'border-zinc-200 bg-zinc-100/90' : 'border-zinc-100 bg-white' ?> px-4 py-3 shadow-sm">
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-zinc-950"><?= esc($unit['status_label']) ?></p>
+                            <p class="text-sm font-semibold <?= $isInactive ? 'text-rose-600' : 'text-zinc-950' ?>"><?= esc($unit['status_label']) ?></p>
                             <p class="mt-1 text-xs text-zinc-500"><?= esc(count($unit['activities'])) ?> kegiatan · klik kartu untuk buka form unit</p>
                         </div>
                         <div class="flex shrink-0 items-center gap-2">
+                            <a href="<?= site_url('unit/' . $unit['slug']) ?>" class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-950">Lihat Unit</a>
                             <?php if (count($unit['activities']) === 0): ?>
                                 <button
                                     type="button"

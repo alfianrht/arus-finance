@@ -53,6 +53,7 @@ class ReportController extends BaseController
             : $db->table('activities')
                 ->whereIn('unit_id', $allUnitIds)
                 ->where('deleted_at', null)
+                ->where('is_active', 1)
                 ->get()->getResultArray();
         $activityMap = $this->indexById($allActivities);
         $filterUnitId = $this->resolveUnitId($selectedUnitSlug, $units);
@@ -64,6 +65,7 @@ class ReportController extends BaseController
             $filterActivities = $db->table('activities')
                 ->where('unit_id', $unitId)
                 ->where('deleted_at', null)
+                ->where('is_active', 1)
                 ->get()->getResultArray();
         } else {
             if (empty($allUnitIds)) {
@@ -72,6 +74,7 @@ class ReportController extends BaseController
                 $filterActivities = $db->table('activities')
                     ->whereIn('unit_id', $allUnitIds)
                     ->where('deleted_at', null)
+                    ->where('is_active', 1)
                     ->get()->getResultArray();
             }
         }
@@ -152,6 +155,7 @@ class ReportController extends BaseController
         $accounts = $db->table('accounts')
             ->where('institution_id', $institutionId)
             ->where('deleted_at', null)
+            ->where('is_active', 1)
             ->get()->getResultArray();
             
         $rekapAccounts = [];
@@ -310,6 +314,16 @@ class ReportController extends BaseController
             ->findAll();
     }
 
+    private function loadAllUnitProgramRows(int $institutionId): array
+    {
+        return (new UnitModel())
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+    }
+
 
     public function rekening(string $slug): string
     {
@@ -341,7 +355,7 @@ class ReportController extends BaseController
         $allUnitIds = array_column($units, 'id');
         $allActivities = $allUnitIds === []
             ? []
-            : $db->table('activities')->whereIn('unit_id', $allUnitIds)->where('deleted_at', null)->get()->getResultArray();
+            : $db->table('activities')->whereIn('unit_id', $allUnitIds)->where('deleted_at', null)->where('is_active', 1)->get()->getResultArray();
         $unitMap = $this->indexById($units);
         $activityMap = $this->indexById($allActivities);
         $filterUnitId = $this->resolveUnitId($selectedUnitSlug, $units);
@@ -457,7 +471,8 @@ class ReportController extends BaseController
         $institutionId = $this->currentInstitutionId();
         $db = \Config\Database::connect();
         $units = $this->loadUnitProgramRows($institutionId);
-        $unitId = $this->resolveUnitId($slug, $units);
+        $allUnits = $this->loadAllUnitProgramRows($institutionId);
+        $unitId = $this->resolveUnitId($slug, $allUnits);
         $u = $unitId === null
             ? null
             : $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
@@ -552,7 +567,8 @@ class ReportController extends BaseController
         $institutionId = $this->currentInstitutionId();
         $db = \Config\Database::connect();
         $units = $this->loadUnitProgramRows($institutionId);
-        $allUnitIds = array_column($units, 'id');
+        $allUnits = $this->loadAllUnitProgramRows($institutionId);
+        $allUnitIds = array_column($allUnits, 'id');
         $allActivities = $allUnitIds === []
             ? []
             : $db->table('activities')->whereIn('unit_id', $allUnitIds)->where('deleted_at', null)->get()->getResultArray();
@@ -565,7 +581,7 @@ class ReportController extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $unit = $db->table('units')->where('id', $act['unit_id'])->where('institution_id', $institutionId)->get()->getRowArray();
+        $unit = $db->table('units')->where('id', $act['unit_id'])->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
         if (!$unit) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
@@ -776,6 +792,7 @@ class ReportController extends BaseController
         $accounts = $db->table('accounts')
             ->whereIn('id', array_values($accountIds))
             ->where('deleted_at', null)
+            ->where('is_active', 1)
             ->get()
             ->getResultArray();
 
@@ -822,13 +839,14 @@ class ReportController extends BaseController
         $activities = $db->table('activities')
             ->whereIn('id', array_values($activityIds))
             ->where('deleted_at', null)
+            ->where('is_active', 1)
             ->get()
             ->getResultArray();
 
         $unitIds = array_values(array_filter(array_map(static fn(array $activity): int => (int) ($activity['unit_id'] ?? 0), $activities)));
         $unitMap = [];
         if ($unitIds !== []) {
-            foreach ($db->table('units')->whereIn('id', $unitIds)->where('deleted_at', null)->get()->getResultArray() as $unit) {
+            foreach ($db->table('units')->whereIn('id', $unitIds)->where('deleted_at', null)->where('is_active', 1)->get()->getResultArray() as $unit) {
                 $unitMap[(int) $unit['id']] = $unit;
             }
         }
