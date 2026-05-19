@@ -6,6 +6,7 @@ use App\Models\ActivityModel;
 use App\Models\UnitModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
+use Config\Database;
 
 trait LegacySettingsUnitActivityTrait
 {
@@ -127,6 +128,7 @@ trait LegacySettingsUnitActivityTrait
     {
         $unitModel = new UnitModel();
         $activityModel = new ActivityModel();
+        $db = Database::connect();
         $units = $unitModel
             ->where('institution_id', $this->currentInstitutionId())
             ->where('deleted_at', null)
@@ -142,12 +144,45 @@ trait LegacySettingsUnitActivityTrait
                 ->orderBy('name', 'ASC')
                 ->findAll();
 
+            $income = (float) $db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('unit_id', (int) $unit['id'])
+                ->where('deleted_at', null)
+                ->where('type', 'masuk')
+                ->selectSum('amount')
+                ->get()
+                ->getRow()
+                ->amount ?? 0;
+
+            $expenseMain = (float) $db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('unit_id', (int) $unit['id'])
+                ->where('deleted_at', null)
+                ->whereIn('type', ['keluar', 'honor'])
+                ->select('SUM(amount + admin_fee) as total')
+                ->get()
+                ->getRow()
+                ->total ?? 0;
+
+            $transferOut = (float) $db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('unit_id', (int) $unit['id'])
+                ->where('deleted_at', null)
+                ->where('type', 'pindah')
+                ->select('SUM(amount + admin_fee) as total')
+                ->get()
+                ->getRow()
+                ->total ?? 0;
+
             $unit['activities'] = $unitActivities;
-            $unit['income'] = 0;
-            $unit['expense'] = 0;
-            $unit['surplus'] = 0;
+            $unit['income'] = $income;
+            $unit['expense'] = $expenseMain + $transferOut;
+            $unit['surplus'] = $unit['income'] - $unit['expense'];
+            $unit['related_balance'] = $unit['surplus'];
             $unit['status_label'] = (int) ($unit['is_active'] ?? 0) === 1 ? 'Aktif' : 'Nonaktif';
-            $unit['note'] = 'Unit tersimpan di database. Ringkasan transaksi nyata akan mengikuti setelah modul transaksi disambungkan.';
+            $unit['note'] = trim((string) ($unit['note'] ?? '')) !== '' ? (string) $unit['note'] : 'Unit aktif siap dipakai untuk pencatatan.';
+            $unit['quick_activity_name'] = $unitActivities[0]['name'] ?? 'Belum ada kegiatan';
+            $unit['detail_url'] = site_url('pengaturan/unit-program/' . $unit['slug'] . '/edit');
         }
         unset($unit);
 
