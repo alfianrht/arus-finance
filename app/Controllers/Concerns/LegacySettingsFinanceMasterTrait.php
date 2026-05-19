@@ -7,6 +7,7 @@ use App\Models\ReceiverModel;
 use App\Models\TransactionCategoryModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
+use Config\Database;
 
 trait LegacySettingsFinanceMasterTrait
 {
@@ -54,6 +55,20 @@ trait LegacySettingsFinanceMasterTrait
 
         if (! is_array($account)) {
             throw PageNotFoundException::forPageNotFound();
+        }
+
+        $transactionCount = (int) Database::connect()
+            ->table('transactions')
+            ->groupStart()
+                ->where('from_account_id', (int) $account['id'])
+                ->orWhere('to_account_id', (int) $account['id'])
+            ->groupEnd()
+            ->where('deleted_at', null)
+            ->countAllResults();
+
+        if ($transactionCount > 0) {
+            return redirect()->to(site_url('pengaturan/rekening-dompet'))
+                ->with('error', 'Rekening <strong>' . esc($account['name']) . '</strong> tidak bisa dihapus karena sudah memiliki ' . $transactionCount . ' transaksi terkait.');
         }
 
         $model->delete((int) $account['id']);
@@ -163,8 +178,8 @@ trait LegacySettingsFinanceMasterTrait
     private function loadAccountRows(): array
     {
         $accountModel = new AccountModel();
+        $db = Database::connect();
         $positionMap = $this->reportPositionNameMap();
-        $openingByPosition = $this->openingBalanceTotalByPosition();
 
         $accounts = $accountModel
             ->where('institution_id', $this->currentInstitutionId())
@@ -175,11 +190,67 @@ trait LegacySettingsFinanceMasterTrait
 
         foreach ($accounts as &$account) {
             $positionId = (int) ($account['report_position_id'] ?? 0);
-            $account['balance'] = (float) ($openingByPosition[$positionId] ?? 0);
+            $accountId = (int) ($account['id'] ?? 0);
+            $opening = (float) ($db->table('opening_balances')
+                ->where('account_id', $accountId)
+                ->where('deleted_at', null)
+                ->selectSum('amount')
+                ->get()
+                ->getRow()
+                ->amount ?? 0);
+            $incomeMain = (float) ($db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('to_account_id', $accountId)
+                ->where('deleted_at', null)
+                ->where('type', 'masuk')
+                ->selectSum('amount')
+                ->get()
+                ->getRow()
+                ->amount ?? 0);
+            $incomeTransfer = (float) ($db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('to_account_id', $accountId)
+                ->where('deleted_at', null)
+                ->where('type', 'pindah')
+                ->selectSum('amount')
+                ->get()
+                ->getRow()
+                ->amount ?? 0);
+            $expenseMain = (float) ($db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('from_account_id', $accountId)
+                ->where('deleted_at', null)
+                ->whereIn('type', ['keluar', 'honor'])
+                ->select('SUM(amount + admin_fee) as total')
+                ->get()
+                ->getRow()
+                ->total ?? 0);
+            $expenseTransfer = (float) ($db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('from_account_id', $accountId)
+                ->where('deleted_at', null)
+                ->where('type', 'pindah')
+                ->select('SUM(amount + admin_fee) as total')
+                ->get()
+                ->getRow()
+                ->total ?? 0);
+            $movementCount = (int) ($db->table('transactions')
+                ->groupStart()
+                    ->where('from_account_id', $accountId)
+                    ->orWhere('to_account_id', $accountId)
+                ->groupEnd()
+                ->where('deleted_at', null)
+                ->countAllResults());
+
+            $account['income'] = $incomeMain + $incomeTransfer;
+            $account['expense'] = $expenseMain + $expenseTransfer;
+            $account['balance'] = $opening + $account['income'] - $account['expense'];
             $account['report_position_name'] = $positionMap[$positionId] ?? 'Belum dipilih';
             $account['preview_activity'] = $account['report_position_name'];
-            $account['movement_count'] = 0;
+            $account['movement_count'] = $movementCount;
+            $account['transaction_count'] = $movementCount;
             $account['detail_url'] = site_url('pengaturan/rekening-dompet/' . $account['slug'] . '/edit');
+            $account['status_label'] = (int) ($account['is_active'] ?? 0) === 1 ? 'Aktif' : 'Nonaktif';
         }
         unset($account);
 

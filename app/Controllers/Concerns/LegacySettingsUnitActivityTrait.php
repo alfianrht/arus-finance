@@ -118,6 +118,17 @@ trait LegacySettingsUnitActivityTrait
             throw PageNotFoundException::forPageNotFound();
         }
 
+        $transactionCount = (int) Database::connect()
+            ->table('transactions')
+            ->where('activity_id', (int) $activity['id'])
+            ->where('deleted_at', null)
+            ->countAllResults();
+
+        if ($transactionCount > 0) {
+            return redirect()->to(site_url('pengaturan/kegiatan'))
+                ->with('error', 'Kegiatan <strong>' . esc($activity['name']) . '</strong> tidak bisa dihapus karena sudah memiliki ' . $transactionCount . ' transaksi terkait.');
+        }
+
         $model->delete((int) $activity['id']);
 
         return redirect()->to(site_url('pengaturan/kegiatan'))
@@ -287,6 +298,7 @@ trait LegacySettingsUnitActivityTrait
     private function loadActivityRows(): array
     {
         $activityModel = new ActivityModel();
+        $db = Database::connect();
         $unitMap = [];
         foreach ($this->loadUnitProgramRows() as $unit) {
             $unitMap[(int) $unit['id']] = $unit;
@@ -304,10 +316,84 @@ trait LegacySettingsUnitActivityTrait
             $unit = $unitMap[(int) $activity['unit_id']] ?? null;
             $activity['slug'] = $activity['slug'] ?? (string) $activity['id'];
             $activity['unit_name'] = $unit['name'] ?? 'Tanpa Unit';
-            $activity['income'] = 0;
-            $activity['expense'] = 0;
-            $activity['related_balance'] = 0;
-            $activity['related_accounts'] = [];
+            $income = (float) $db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('activity_id', (int) $activity['id'])
+                ->where('deleted_at', null)
+                ->where('type', 'masuk')
+                ->selectSum('amount')
+                ->get()
+                ->getRow()
+                ->amount ?? 0;
+
+            $expenseMain = (float) $db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('activity_id', (int) $activity['id'])
+                ->where('deleted_at', null)
+                ->whereIn('type', ['keluar', 'honor'])
+                ->select('SUM(amount + admin_fee) as total')
+                ->get()
+                ->getRow()
+                ->total ?? 0;
+
+            $transferOut = (float) $db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('activity_id', (int) $activity['id'])
+                ->where('deleted_at', null)
+                ->where('type', 'pindah')
+                ->select('SUM(amount + admin_fee) as total')
+                ->get()
+                ->getRow()
+                ->total ?? 0;
+
+            $accountIds = [];
+            $transactionRows = $db->table('transactions')
+                ->select('from_account_id, to_account_id')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('activity_id', (int) $activity['id'])
+                ->where('deleted_at', null)
+                ->get()
+                ->getResultArray();
+
+            foreach ($transactionRows as $row) {
+                $fromId = (int) ($row['from_account_id'] ?? 0);
+                $toId = (int) ($row['to_account_id'] ?? 0);
+                if ($fromId > 0) {
+                    $accountIds[$fromId] = $fromId;
+                }
+                if ($toId > 0) {
+                    $accountIds[$toId] = $toId;
+                }
+            }
+
+            $relatedAccounts = [];
+            if ($accountIds !== []) {
+                $relatedAccounts = array_map(
+                    static fn(array $account): string => (string) ($account['name'] ?? ''),
+                    $db->table('accounts')
+                        ->select('name')
+                        ->whereIn('id', array_values($accountIds))
+                        ->where('deleted_at', null)
+                        ->where('is_active', 1)
+                        ->orderBy('name', 'ASC')
+                        ->get()
+                        ->getResultArray()
+                );
+            }
+
+            $activity['income'] = $income;
+            $activity['expense'] = $expenseMain + $transferOut;
+            $activity['surplus'] = $activity['income'] - $activity['expense'];
+            $activity['related_balance'] = $activity['surplus'];
+            $activity['related_accounts'] = $relatedAccounts;
+            $activity['detail_url'] = site_url('pengaturan/kegiatan/' . $activity['slug'] . '/edit');
+            $activity['is_current'] = false;
+            $activity['status_label'] = (int) ($activity['is_active'] ?? 0) === 1 ? 'Aktif' : 'Nonaktif';
+            $activity['transaction_count'] = (int) $db->table('transactions')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('activity_id', (int) $activity['id'])
+                ->where('deleted_at', null)
+                ->countAllResults();
         }
         unset($activity);
 

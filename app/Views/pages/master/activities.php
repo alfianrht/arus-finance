@@ -2,6 +2,11 @@
 
 <?= $this->section('content') ?>
 <div class="space-y-3">
+    <?php
+    $totalIncome = array_sum(array_map(static fn(array $activity): float => (float) ($activity['income'] ?? 0), $activitySummaries));
+    $totalExpense = array_sum(array_map(static fn(array $activity): float => (float) ($activity['expense'] ?? 0), $activitySummaries));
+    $totalBalance = array_sum(array_map(static fn(array $activity): float => (float) ($activity['related_balance'] ?? 0), $activitySummaries));
+    ?>
     <?= view('partials/top_nav_back', [
         'title' => 'Kegiatan',
         'subtitle' => 'Master Data',
@@ -15,14 +20,32 @@
         </a>
     </div>
 
-    <section class="relative rounded-3xl border border-zinc-950 bg-white p-5">
-        <div class="flex items-start justify-between gap-4">
+    <section class="rounded-3xl border border-zinc-100 bg-white p-5 shadow-sm">
+        <div class="relative flex items-start justify-between gap-4">
             <div>
                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks Aktif</p>
                 <p class="mt-3 text-lg font-semibold text-zinc-950"><?= esc(count($activitySummaries)) ?> kegiatan siap dipilih saat mencatat</p>
-                <p class="mt-1 text-sm text-zinc-500">Setiap kegiatan selalu terhubung ke satu unit dan bisa memiliki rekening terkait yang berbeda.</p>
+                <p class="mt-1 text-sm text-zinc-500">Setiap kegiatan terhubung ke satu unit dan sekarang langsung membaca ringkasan transaksi yang sudah tercatat.</p>
             </div>
-            <span class="absolute top-2 right-2 rounded-full bg-zinc-950 px-3 py-2 text-xs font-medium text-white">Konteks level 2</span>
+            <span class="absolute top-0 right-0 rounded-full bg-zinc-950 px-3 py-2 text-xs font-medium text-white">Konteks level 2</span>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Kegiatan</p>
+                <p class="mt-1 text-base font-black text-zinc-950"><?= esc((string) count($activitySummaries)) ?></p>
+            </div>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Masuk</p>
+                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalIncome)) ?></p>
+            </div>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Keluar</p>
+                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalExpense)) ?></p>
+            </div>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Saldo</p>
+                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalBalance)) ?></p>
+            </div>
         </div>
     </section>
 
@@ -37,38 +60,31 @@
             ]) ?>
         <?php else: ?>
             <?php foreach ($activitySummaries as $activity): ?>
-                <div class="rounded-3xl bg-zinc-950 p-4 text-white">
-                    <div class="flex items-start justify-between gap-4">
+                <?php $isInactive = (($activity['status_label'] ?? '') === 'Nonaktif'); ?>
+                <article class="relative pb-2 <?= $isInactive ? 'opacity-75' : '' ?>">
+                    <div class="relative z-10">
+                        <?= view('partials/activity_card', ['activity' => array_merge($activity, ['name' => $isInactive ? $activity['name'] . ' · Nonaktif' : $activity['name']])]) ?>
+                    </div>
+                    <div class="relative -mt-5 pt-[26px] flex items-center justify-between gap-3 rounded-[1.4rem] border <?= $isInactive ? 'border-zinc-200 bg-zinc-100/90' : 'border-zinc-100 bg-white' ?> px-4 py-3 shadow-sm">
                         <div class="min-w-0">
-                            <p class="text-xs font-medium uppercase tracking-wide text-white/50"><?= esc($activity['short_name'] ?? 'KGT') ?></p>
-                            <p class="mt-2 text-lg font-black tracking-tight"><?= esc($activity['name']) ?></p>
-                            <p class="mt-1 text-xs text-white/60"><?= esc($activity['unit_name']) ?></p>
+                            <p class="text-sm font-semibold <?= $isInactive ? 'text-rose-600' : 'text-zinc-950' ?>"><?= esc($activity['status_label']) ?></p>
+                            <p class="mt-1 text-xs text-zinc-500"><?= esc($activity['unit_name']) ?> · klik kartu untuk buka form kegiatan</p>
                         </div>
                         <div class="flex shrink-0 items-center gap-2">
-                            <button
-                                type="button"
-                                onclick="openDeleteModal('<?= site_url('pengaturan/kegiatan/' . $activity['slug'] . '/hapus') ?>', '<?= esc($activity['name'], 'js') ?>', '<?= csrf_hash() ?>')"
-                                class="rounded-full bg-rose-500/80 px-3 py-2 text-xs font-semibold text-white"
-                            >Hapus</button>
-                            <a href="<?= site_url('pengaturan/kegiatan/' . $activity['slug'] . '/edit') ?>" class="rounded-full bg-white/10 px-3 py-2 text-xs font-medium text-white/80">Edit</a>
+                            <a href="<?= site_url('kegiatan/' . $activity['slug']) ?>" class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-950">Lihat Kegiatan</a>
+                            <?php if ((int) ($activity['transaction_count'] ?? 0) === 0): ?>
+                                <button
+                                    type="button"
+                                    onclick="openDeleteModal('<?= site_url('pengaturan/kegiatan/' . $activity['slug'] . '/hapus') ?>', '<?= esc($activity['name'], 'js') ?>', '<?= csrf_hash() ?>')"
+                                    class="rounded-full bg-rose-500 px-3 py-2 text-xs font-semibold text-white"
+                                >Hapus</button>
+                            <?php else: ?>
+                                <span class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-400 cursor-not-allowed" title="Kegiatan memiliki <?= esc((string) ($activity['transaction_count'] ?? 0)) ?> transaksi. Hapus transaksi terlebih dahulu.">Hapus</span>
+                            <?php endif; ?>
+                            <a href="<?= site_url('pengaturan/kegiatan/' . $activity['slug'] . '/edit') ?>" class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-950">Edit</a>
                         </div>
                     </div>
-                    <div class="mt-4 grid grid-cols-3 gap-2 text-xs">
-                        <div class="rounded-2xl bg-white/10 p-3">
-                            <p class="text-white/55">Masuk</p>
-                            <p class="mt-1 font-semibold text-white"><?= esc(rupiah($activity['income'])) ?></p>
-                        </div>
-                        <div class="rounded-2xl bg-white/10 p-3">
-                            <p class="text-white/55">Biaya</p>
-                            <p class="mt-1 font-semibold text-white"><?= esc(rupiah($activity['expense'])) ?></p>
-                        </div>
-                        <div class="rounded-2xl bg-white/10 p-3">
-                            <p class="text-white/55">Saldo</p>
-                            <p class="mt-1 font-semibold text-white"><?= esc(rupiah($activity['related_balance'])) ?></p>
-                        </div>
-                    </div>
-                    <p class="mt-3 text-xs font-medium text-white/70"><?= esc($activity['unit_name']) ?> · klik Edit untuk buka form kegiatan</p>
-                </div>
+                </article>
             <?php endforeach; ?>
         <?php endif; ?>
     </section>
