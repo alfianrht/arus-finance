@@ -2,12 +2,36 @@
 
 <?= $this->section('content') ?>
 <?php $surfaceText = surface_label($unit['short_name'] ?? $unit['name']); ?>
+<?php
+$scopeHeaderIsActivity = ($scopeMode ?? 'unit') === 'kegiatan';
+$scopeHeaderCardClass = $scopeHeaderIsActivity ? 'bg-zinc-950 text-white' : 'bg-lime-400 text-zinc-950';
+$scopeHeaderOverlayClass = $scopeHeaderIsActivity ? 'bg-white/5' : 'bg-white/10';
+$scopeHeaderMutedTextClass = $scopeHeaderIsActivity ? 'text-zinc-400' : 'text-zinc-700';
+$scopeHeaderMetaTextClass = $scopeHeaderIsActivity ? 'text-zinc-300' : 'text-zinc-700';
+$scopeHeaderBadgeClass = $scopeHeaderIsActivity
+    ? 'border border-white/15 bg-white/10 text-white'
+    : 'bg-zinc-950 text-white';
+$scopeHeaderActionClass = $scopeHeaderIsActivity
+    ? 'border border-white/15 bg-white/10 text-white'
+    : 'border border-zinc-950/10 bg-white/40 text-zinc-950';
+$scopeHeaderDividerClass = $scopeHeaderIsActivity ? 'border-white/10' : 'border-white/50';
+$scopeHeaderHighlightClass = $scopeHeaderIsActivity
+    ? 'bg-white/10 text-white border border-white/10'
+    : 'bg-white/40 text-zinc-950 border border-zinc-950/10';
+$scopeStatLabelClass = $scopeHeaderIsActivity ? 'text-zinc-400' : 'text-zinc-700';
+$scopeStatCardClass = $scopeHeaderIsActivity
+    ? 'rounded-2xl border border-white/10 bg-white/5 p-2.5'
+    : 'rounded-2xl border border-zinc-950/10 bg-white/35 p-2.5';
+$scopeIncomeValueClass = $scopeHeaderIsActivity ? 'text-emerald-400' : 'text-emerald-700';
+$scopeExpenseValueClass = $scopeHeaderIsActivity ? 'text-rose-400' : 'text-rose-700';
+$scopeSurplusValueClass = $scopeHeaderIsActivity ? 'text-white' : 'text-zinc-950';
+?>
 <div class="space-y-2">
-    <section class="rounded-3xl bg-white px-3 py-2 shadow-sm">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <section class="rounded-3xl bg-white px-3 py-2.5 shadow-sm">
+        <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0">
+                <h1 class="truncate text-base font-semibold tracking-tight text-zinc-950 sm:text-lg"><?= esc($unit['name']) ?></h1>
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <h1 class="truncate text-base font-semibold tracking-tight text-zinc-950 sm:text-lg"><?= esc($unit['name']) ?></h1>
                     <span class="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[9px] font-medium text-zinc-700">
                         <?= esc($reportSummary['period']) ?>
                     </span>
@@ -15,19 +39,18 @@
                         View only
                     </span>
                 </div>
-                <p class="mt-0.5 text-[10px] text-zinc-500">Laporan publik unit dengan akses PIN terbatas.</p>
             </div>
             <div class="flex items-center justify-between gap-2 rounded-2xl bg-zinc-950 px-3 py-2 text-white sm:min-w-56">
                 <div class="min-w-0">
                     <p class="text-[9px] text-white/55">Status akses</p>
-                    <div class="mt-0.5 flex items-center gap-1.5">
+                    <div class="mt-1 flex items-center gap-1.5">
                         <span class="material-symbols-rounded text-[12px] text-lime-300" aria-hidden="true"><?= $unlocked ? 'verified' : 'lock' ?></span>
                         <span class="inline-flex rounded-full border border-white/15 bg-white/10 px-2 py-1 text-[9px] font-semibold text-white">
                             <?= $unlocked ? 'Terbuka terbatas' : 'Terkunci PIN' ?>
                         </span>
                     </div>
                 </div>
-                <span class="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-black uppercase tracking-tight text-white/45"><?= esc($surfaceText) ?></span>
+                <span class="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 px-2 text-[10px] font-black uppercase tracking-tight text-white/45"><?= esc($surfaceText) ?></span>
             </div>
         </div>
     </section>
@@ -69,8 +92,8 @@
             </div>
         </section>
     <?php else: ?>
-        <section class="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_minmax(0,1.05fr)]">
-            <div class="space-y-2.5 lg:col-span-1">
+        <section class="grid gap-3 overflow-x-hidden lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_minmax(0,1.05fr)]">
+            <div class="min-w-0 space-y-2.5 lg:col-span-1">
                 <section class="space-y-2 rounded-3xl bg-white p-3 shadow-sm">
                     <div class="flex items-center justify-between">
                         <h2 class="text-sm font-semibold text-zinc-950">Ringkasan Unit / Program</h2>
@@ -117,22 +140,23 @@
                     </a>
                 </section>
 
-                <section class="rounded-3xl bg-white p-3 shadow-sm">
+                <section class="rounded-3xl bg-white p-3 shadow-sm hidden lg:block">
                     <div class="flex items-center justify-between">
                         <h2 class="text-sm font-semibold text-zinc-950">Kegiatan dalam Unit</h2>
-                        <p class="text-[11px] text-zinc-500">Masuk, biaya, saldo</p>
+                        <p class="text-[11px] text-zinc-500">Pilih scope</p>
                     </div>
                     <div class="mt-2.5 space-y-2.5">
                         <?php foreach ($reportActivities as $activity): ?>
-                            <?php $activitySurfaceText = surface_label($activity['short_name'] ?? $activity['name']); ?>
-                            <a href="<?= esc($activity['detail_url']) ?>" class="group relative block overflow-hidden rounded-3xl bg-zinc-950 p-3 text-white shadow-sm">
-                                <div class="absolute inset-0 bg-white/5" aria-hidden="true"></div>
+                            <a href="<?= esc($activity['detail_url']) ?>" class="<?= !empty($activity['is_selected']) ? 'ring-[3px] ring-lime-400' : '' ?> group relative block overflow-hidden rounded-3xl bg-zinc-950 p-3 text-white shadow-sm">
+                                <div class="absolute inset-0 <?= !empty($activity['is_selected']) ? 'bg-white/10' : 'bg-white/5' ?>" aria-hidden="true"></div>
+                                <?php if (!empty($activity['is_selected'])): ?>
+                                    <span class="absolute right-3 top-3 z-10 inline-flex rounded-full bg-lime-400 px-2 py-1 text-[9px] font-semibold text-zinc-950">Sedang ditinjau</span>
+                                <?php endif; ?>
                                 <div class="relative flex items-start justify-between gap-3">
                                     <div class="min-w-0">
                                         <p class="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Kegiatan</p>
                                         <h3 class="mt-1 text-sm font-semibold leading-tight text-white"><?= esc($activity['name']) ?></h3>
                                     </div>
-                                    <p class="text-sm font-black uppercase tracking-tight text-white"><?= esc($activitySurfaceText) ?></p>
                                 </div>
 
                                 <div class="relative mt-3">
@@ -164,80 +188,76 @@
                     </div>
                 </section>
 
-                <section class="rounded-3xl bg-white p-3 shadow-sm">
-                    <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-sm font-semibold text-zinc-950">Sorotan</h2>
-                        <span class="rounded-full bg-lime-100 px-3 py-1.5 text-[11px] font-medium text-zinc-950">Aktif</span>
-                    </div>
-                    <div class="mt-2.5 grid grid-cols-2 gap-2">
-                        <?php foreach ($reportHighlights as $item): ?>
-                            <div class="rounded-2xl bg-zinc-50 px-3 py-2.5">
-                                <p class="text-xs text-zinc-500"><?= esc($item['label']) ?></p>
-                                <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc($item['value']) ?></p>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
-
-                <section class="rounded-3xl bg-white p-3 shadow-sm">
-                    <div class="flex items-center gap-2 text-zinc-500">
-                        <span class="material-symbols-rounded text-base" aria-hidden="true">shield_lock</span>
-                        <p class="text-sm">Akses Terbatas</p>
-                    </div>
-                    <p class="mt-2 text-lg font-semibold tracking-tight text-zinc-950">View only</p>
-                    <div class="mt-2.5 space-y-2">
-                        <div class="flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-3 py-2.5">
-                            <span class="text-xs text-zinc-500">Akses</span>
-                            <span class="text-sm font-semibold text-zinc-950">Publik dengan PIN</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-3 py-2.5">
-                            <span class="text-xs text-zinc-500">Mode</span>
-                            <span class="text-sm font-semibold text-zinc-950">Tidak bisa ubah data</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 px-3 py-2.5">
-                            <span class="text-xs text-zinc-500">PIN</span>
-                            <span class="text-sm font-semibold text-zinc-950">Terverifikasi</span>
-                        </div>
-                    </div>
-                </section>
             </div>
 
-            <div class="space-y-2.5 lg:col-span-2">
-                <section class="rounded-3xl bg-white p-3 shadow-sm sm:p-4">
-                    <div class="flex items-center justify-between gap-3 text-zinc-500">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-rounded text-base" aria-hidden="true">account_balance_wallet</span>
-                            <p class="text-sm">Saldo Total</p>
-                        </div>
-                        <p class="text-[11px]">Ringkasan unit</p>
+            <div class="min-w-0 lg:col-span-2">
+                <section class="rounded-3xl bg-white p-3 shadow-sm lg:hidden">
+                    <div class="flex items-center justify-between gap-3">
+                        <h2 class="text-sm font-semibold text-zinc-950">Pilih Kegiatan</h2>
+                        <a href="<?= esc($scopeResetUrl) ?>" class="<?= $scopeMode === 'unit' ? 'bg-zinc-950 text-white' : 'border border-zinc-200 bg-white text-zinc-700' ?> inline-flex rounded-full px-3 py-2 text-[11px] font-semibold">
+                            Unit
+                        </a>
                     </div>
-                    <p class="mt-2.5 text-3xl font-semibold tracking-tight text-zinc-950 tabular-nums sm:text-4xl"><?= esc(rupiah($reportSummary['balance'])) ?></p>
-                    <div class="mt-3 grid grid-cols-3 gap-3">
-                        <div>
-                            <p class="text-xs text-zinc-500">Uang Masuk</p>
-                            <p class="mt-1.5 text-sm font-semibold text-emerald-600 tabular-nums"><?= esc(rupiah($reportSummary['income'])) ?></p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-zinc-500">Uang Keluar</p>
-                            <p class="mt-1.5 text-sm font-semibold text-rose-500 tabular-nums"><?= esc(rupiah($reportSummary['expense'])) ?></p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-zinc-500">Laba Sementara</p>
-                            <p class="mt-1.5 text-sm font-semibold text-zinc-950 tabular-nums"><?= esc(rupiah($reportSummary['surplus'])) ?></p>
+                    <div class="-mx-3 mt-2.5 overflow-x-auto px-3 pb-1" style="scrollbar-width: none;">
+                        <div class="flex w-max min-w-full gap-2">
+                        <?php foreach ($reportActivities as $activity): ?>
+                            <a
+                                href="<?= esc($activity['detail_url']) ?>"
+                                class="<?= !empty($activity['is_selected']) ? 'border-zinc-950 bg-zinc-950 text-white ring-2 ring-lime-400' : 'border-zinc-200 bg-white text-zinc-700' ?> relative block w-52 shrink-0 rounded-2xl border px-3 py-3 shadow-sm"
+                            >
+                                <?php if (!empty($activity['is_selected'])): ?>
+                                    <span class="absolute right-2 top-2 inline-flex rounded-full bg-lime-400 px-2 py-1 text-[9px] font-semibold text-zinc-950">Aktif</span>
+                                <?php endif; ?>
+                                <span class="block text-[10px] font-medium uppercase tracking-wide <?= !empty($activity['is_selected']) ? 'text-zinc-300' : 'text-zinc-400' ?>">Kegiatan</span>
+                                <span class="mt-1 block text-sm font-semibold leading-tight"><?= esc($activity['name']) ?></span>
+                                <span class="mt-2 block text-[11px] <?= !empty($activity['is_selected']) ? 'text-zinc-300' : 'text-zinc-500' ?>">
+                                    Saldo <?= esc(rupiah($activity['related_balance'] ?? $activity['surplus'])) ?>
+                                </span>
+                            </a>
+                        <?php endforeach; ?>
                         </div>
                     </div>
                 </section>
 
                 <section class="rounded-3xl bg-white py-3 shadow-sm sm:py-4">
                     <div class="px-3 sm:px-4 flex items-center justify-between gap-3">
-                        <h2 class="text-sm font-semibold text-zinc-950 sm:text-base">Transaksi Terbaru</h2>
-                        <p class="text-[11px] text-zinc-500">View only</p>
+                        <div class="min-w-0">
+                            <h2 class="text-sm font-semibold text-zinc-950 sm:text-base">
+                                <?= esc($scopeMode === 'kegiatan' ? 'Transaksi Kegiatan' : 'Transaksi Unit') ?>
+                            </h2>
+                            <p class="mt-0.5 truncate text-[11px] text-zinc-500"><?= esc($scopeTitle) ?></p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <?php if ($scopeMode === 'kegiatan'): ?>
+                                <a href="<?= esc($scopeResetUrl) ?>" class="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-zinc-700">
+                                    <span class="material-symbols-rounded text-[13px]" aria-hidden="true">keyboard_backspace</span>
+                                    <span>Unit</span>
+                                </a>
+                            <?php endif; ?>
+                            <p class="text-[11px] text-zinc-500">View only</p>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 px-3 sm:px-4">
+                        <div class="grid grid-cols-3 gap-2 rounded-2xl bg-zinc-50 p-2.5">
+                            <div class="rounded-xl bg-white px-2.5 py-2">
+                                <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Saldo</p>
+                                <p class="mt-1 text-sm font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($reportSummary['balance'])) ?></p>
+                            </div>
+                            <div class="rounded-xl bg-white px-2.5 py-2">
+                                <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Masuk</p>
+                                <p class="mt-1 text-sm font-semibold tabular-nums text-emerald-700"><?= esc(rupiah($reportSummary['income'])) ?></p>
+                            </div>
+                            <div class="rounded-xl bg-white px-2.5 py-2">
+                                <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Keluar</p>
+                                <p class="mt-1 text-sm font-semibold tabular-nums text-rose-700"><?= esc(rupiah($reportSummary['expense'])) ?></p>
+                            </div>
+                        </div>
                     </div>
                     <div class="mt-2.5 px-3 sm:px-4 flex flex-wrap gap-2">
                         <?php foreach ($transactionFilters as $filter): ?>
                             <?php $isActive = $selectedTransactionFilter === $filter['key']; ?>
                             <a
-                                href="<?= esc(route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'jenis' => $filter['key'] === 'semua' ? null : $filter['key'], 'transaksi_page' => null])) ?>"
+                                href="<?= esc(route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $filter['key'] === 'semua' ? null : $filter['key'], 'transaksi_page' => null])) ?>"
                                 class="<?= $isActive ? 'bg-zinc-950 text-white' : 'border border-zinc-200 bg-white text-zinc-600' ?> inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold transition-colors"
                             >
                                 <?= esc($filter['label']) ?>
@@ -246,17 +266,106 @@
                     </div>
                     <div class="mt-2.5 divide-y divide-zinc-100">
                         <?php foreach ($reportTransactions as $transaction): ?>
-                            <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
+                            <div class="flex items-start gap-3 px-4 py-2">
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl <?= esc($transaction['badge_class']) ?>">
+                                    <span class="material-symbols-rounded text-xl" aria-hidden="true"><?= esc($transaction['icon']) ?></span>
+                                </div>
+
+                                <div class="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-sm font-bold text-zinc-950"><?= esc($transaction['headline']) ?></p>
+
+                                        <div class="mt-0.5 flex min-w-0 items-center gap-1.5">
+                                            <span class="shrink-0 rounded bg-zinc-100 px-1 py-[2px] text-[8px] font-bold uppercase tracking-wider text-zinc-500">
+                                                <?= esc($transaction['badge_label']) ?>
+                                            </span>
+                                            <p class="truncate text-[11px] font-medium text-zinc-500"><?= esc($transaction['subline']) ?></p>
+                                        </div>
+
+                                        <div class="mt-1 flex items-center gap-3">
+                                            <span class="truncate text-[10px] font-medium text-zinc-400"><?= esc($transaction['meta']) ?></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="shrink-0 flex w-fit items-start justify-end gap-3">
+                                        <div class="min-w-0 flex-1 text-right">
+                                            <p class="text-sm font-bold tabular-nums <?= esc($transaction['amount_class']) ?>">
+                                                <?= esc($transaction['amount_prefix']) ?><?= esc(rupiah($transaction['amount'])) ?>
+                                            </p>
+                                            <?php if (!empty($transaction['admin_fee']) && $transaction['admin_fee'] > 0): ?>
+                                                <p class="mt-0.5 text-[10px] font-semibold tabular-nums text-rose-500">
+                                                    -<?= esc(rupiah($transaction['admin_fee'])) ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if (!empty($transaction['bill_preview_url'])): ?>
+                                            <button
+                                                type="button"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700"
+                                                onclick="openPublicBillPreview('<?= esc($transaction['bill_preview_url'], 'js') ?>', '<?= esc($transaction['headline'], 'js') ?>')"
+                                                aria-label="Lihat bukti transaksi"
+                                            >
+                                                <span class="material-symbols-rounded text-base" aria-hidden="true">receipt_long</span>
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="inline-flex h-8 w-8 shrink-0"></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                     <?= view('partials/pagination_controls', [
                         'pagination' => $reportTransactionPagination,
-                        'prevUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['prevPage']]),
-                        'nextUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['nextPage']]),
+                        'prevUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['prevPage']]),
+                        'nextUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['nextPage']]),
                     ]) ?>
                 </section>
+
             </div>
         </section>
+
+        <div id="publicBillPreviewModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-zinc-950/80 p-4" onclick="closePublicBillPreview()">
+            <div class="relative w-full max-w-3xl" onclick="event.stopPropagation()">
+                <button
+                    type="button"
+                    class="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-zinc-950 shadow-sm"
+                    onclick="closePublicBillPreview()"
+                    aria-label="Tutup preview bukti"
+                >
+                    <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
+                </button>
+                <img id="publicBillPreviewImage" src="" alt="" class="w-full rounded-3xl bg-white object-contain shadow-2xl">
+            </div>
+        </div>
+
+        <script>
+            function openPublicBillPreview(url, label) {
+                const modal = document.getElementById('publicBillPreviewModal');
+                const image = document.getElementById('publicBillPreviewImage');
+                image.src = url;
+                image.alt = label ? 'Bukti transaksi: ' + label : 'Bukti transaksi';
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.classList.add('overflow-hidden');
+            }
+
+            function closePublicBillPreview() {
+                const modal = document.getElementById('publicBillPreviewModal');
+                const image = document.getElementById('publicBillPreviewImage');
+                image.src = '';
+                image.alt = '';
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.classList.remove('overflow-hidden');
+            }
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    closePublicBillPreview();
+                }
+            });
+        </script>
     <?php endif; ?>
 </div>
 <?= $this->endSection() ?>

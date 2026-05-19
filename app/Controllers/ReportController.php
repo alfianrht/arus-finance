@@ -615,6 +615,61 @@ class ReportController extends BaseController
             $selectedTransactionFilter = 'semua';
         }
         $transactionPage = max(1, (int) ($this->request->getGet('transaksi_page') ?? 1));
+        $selectedActivitySlug = (string) ($this->request->getGet('kegiatan') ?? '');
+        $billPreviewUrl = base_url('images/logo-primary-2.webp');
+
+        $reportActivities = [
+            [
+                'slug' => 'operasional-simpaud-2026',
+                'name' => 'Operasional SIMPAUD 2026',
+                'short_name' => 'OPER',
+                'unit_name' => $unit['name'],
+                'income' => 52000000,
+                'expense' => 34150000,
+                'surplus' => 17850000,
+                'related_balance' => 17850000,
+                'related_accounts' => ['BCA Operasional', 'Kas Tunai'],
+                'detail_url' => current_url(),
+                'transaction_count' => 28,
+                'receiver_count' => 5,
+                'account_count' => 2,
+            ],
+            [
+                'slug' => 'simpaud-web-app-mobile-first-transformation',
+                'name' => 'SIMPAUD Web App Mobile First Transformation',
+                'short_name' => 'SIMP',
+                'unit_name' => $unit['name'],
+                'income' => 38500000,
+                'expense' => 27400000,
+                'surplus' => 11100000,
+                'related_balance' => 11100000,
+                'related_accounts' => ['BCA Operasional'],
+                'detail_url' => current_url(),
+                'transaction_count' => 21,
+                'receiver_count' => 4,
+                'account_count' => 1,
+            ],
+            [
+                'slug' => 'kemitraan-publikasi',
+                'name' => 'Kemitraan & Publikasi',
+                'short_name' => 'KEMP',
+                'unit_name' => $unit['name'],
+                'income' => 37000000,
+                'expense' => 27700000,
+                'surplus' => 9300000,
+                'related_balance' => 9300000,
+                'related_accounts' => ['Kas Tunai'],
+                'detail_url' => current_url(),
+                'transaction_count' => 35,
+                'receiver_count' => 5,
+                'account_count' => 1,
+            ],
+        ];
+
+        $allowedActivitySlugs = array_column($reportActivities, 'slug');
+        if ($selectedActivitySlug !== '' && ! in_array($selectedActivitySlug, $allowedActivitySlugs, true)) {
+            $selectedActivitySlug = '';
+        }
 
         $reportTransactions = [
             [
@@ -628,8 +683,10 @@ class ReportController extends BaseController
                 'amount' => 500000,
                 'amount_prefix' => '-',
                 'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
+                'admin_fee' => 2500,
                 'type_key' => 'keluar',
+                'activity_slug' => 'operasional-simpaud-2026',
+                'bill_preview_url' => $billPreviewUrl,
             ],
             [
                 'id' => '9002',
@@ -642,8 +699,10 @@ class ReportController extends BaseController
                 'amount' => 8000000,
                 'amount_prefix' => '+',
                 'amount_class' => 'text-emerald-600',
-                'admin_fee' => 0,
+                'admin_fee' => 6500,
                 'type_key' => 'masuk',
+                'activity_slug' => 'simpaud-web-app-mobile-first-transformation',
+                'bill_preview_url' => null,
             ],
             [
                 'id' => '9003',
@@ -656,8 +715,11 @@ class ReportController extends BaseController
                 'amount' => 1500000,
                 'amount_prefix' => '-',
                 'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
+                'admin_fee' => 2500,
                 'type_key' => 'honor',
+                'receiver_name' => 'Tim Internal',
+                'activity_slug' => 'kemitraan-publikasi',
+                'bill_preview_url' => $billPreviewUrl,
             ],
             [
                 'id' => '9004',
@@ -670,8 +732,10 @@ class ReportController extends BaseController
                 'amount' => 2500000,
                 'amount_prefix' => '-',
                 'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
+                'admin_fee' => 1000,
                 'type_key' => 'pindah',
+                'activity_slug' => 'operasional-simpaud-2026',
+                'bill_preview_url' => null,
             ],
             [
                 'id' => '9005',
@@ -684,8 +748,10 @@ class ReportController extends BaseController
                 'amount' => 750000,
                 'amount_prefix' => '-',
                 'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
+                'admin_fee' => 2500,
                 'type_key' => 'keluar',
+                'activity_slug' => 'kemitraan-publikasi',
+                'bill_preview_url' => $billPreviewUrl,
             ],
             [
                 'id' => '9006',
@@ -700,6 +766,8 @@ class ReportController extends BaseController
                 'amount_class' => 'text-emerald-600',
                 'admin_fee' => 0,
                 'type_key' => 'masuk',
+                'activity_slug' => 'kemitraan-publikasi',
+                'bill_preview_url' => null,
             ],
             [
                 'id' => '9007',
@@ -714,6 +782,9 @@ class ReportController extends BaseController
                 'amount_class' => 'text-rose-600',
                 'admin_fee' => 0,
                 'type_key' => 'honor',
+                'receiver_name' => 'Narasumber',
+                'activity_slug' => 'operasional-simpaud-2026',
+                'bill_preview_url' => $billPreviewUrl,
             ],
             [
                 'id' => '9008',
@@ -728,6 +799,8 @@ class ReportController extends BaseController
                 'amount_class' => 'text-rose-600',
                 'admin_fee' => 0,
                 'type_key' => 'keluar',
+                'activity_slug' => 'simpaud-web-app-mobile-first-transformation',
+                'bill_preview_url' => $billPreviewUrl,
             ],
             [
                 'id' => '9009',
@@ -742,6 +815,8 @@ class ReportController extends BaseController
                 'amount_class' => 'text-emerald-600',
                 'admin_fee' => 0,
                 'type_key' => 'masuk',
+                'activity_slug' => 'operasional-simpaud-2026',
+                'bill_preview_url' => null,
             ],
             [
                 'id' => '9010',
@@ -756,6 +831,8 @@ class ReportController extends BaseController
                 'amount_class' => 'text-rose-600',
                 'admin_fee' => 0,
                 'type_key' => 'pindah',
+                'activity_slug' => 'kemitraan-publikasi',
+                'bill_preview_url' => null,
             ],
             [
                 'id' => '9011',
@@ -770,6 +847,8 @@ class ReportController extends BaseController
                 'amount_class' => 'text-rose-600',
                 'admin_fee' => 0,
                 'type_key' => 'keluar',
+                'activity_slug' => 'operasional-simpaud-2026',
+                'bill_preview_url' => $billPreviewUrl,
             ],
             [
                 'id' => '9012',
@@ -784,8 +863,94 @@ class ReportController extends BaseController
                 'amount_class' => 'text-emerald-600',
                 'admin_fee' => 0,
                 'type_key' => 'masuk',
+                'activity_slug' => 'simpaud-web-app-mobile-first-transformation',
+                'bill_preview_url' => null,
             ],
         ];
+
+        $countHonorReceivers = static function (array $transactions, ?string $activitySlug = null): int {
+            $receivers = [];
+
+            foreach ($transactions as $transaction) {
+                if (($transaction['type_key'] ?? '') !== 'honor') {
+                    continue;
+                }
+
+                if ($activitySlug !== null && ($transaction['activity_slug'] ?? '') !== $activitySlug) {
+                    continue;
+                }
+
+                $receiverName = trim((string) ($transaction['receiver_name'] ?? ''));
+                if ($receiverName === '') {
+                    continue;
+                }
+
+                $receivers[strtolower($receiverName)] = true;
+            }
+
+            return count($receivers);
+        };
+
+        foreach ($reportActivities as &$activity) {
+            $activity['receiver_count'] = $countHonorReceivers($reportTransactions, $activity['slug']);
+        }
+        unset($activity);
+
+        $scopeActivity = null;
+        foreach ($reportActivities as &$activity) {
+            $activity['is_selected'] = $selectedActivitySlug !== '' && $activity['slug'] === $selectedActivitySlug;
+            $activity['detail_url'] = route_query('laporan/unit/' . $unit['slug'], [
+                'preview' => 1,
+                'kegiatan' => $activity['slug'],
+                'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
+                'transaksi_page' => null,
+            ]);
+
+            if ($activity['is_selected']) {
+                $scopeActivity = $activity;
+            }
+        }
+        unset($activity);
+
+        $scopeSummary = [
+            'period' => 'Januari - Desember 2026',
+            'income' => 127500000,
+            'expense' => 89250000,
+            'surplus' => 38250000,
+            'balance' => 45600000,
+        ];
+        $scopeTitle = $unit['name'];
+        $scopeLabel = 'Ringkasan unit';
+        $scopeMode = 'unit';
+        $scopeMeta = 'Semua kegiatan dalam unit ini';
+        $scopeHighlights = [
+            ['label' => 'Penerima Honor', 'value' => (string) $countHonorReceivers($reportTransactions) . ' penerima'],
+            ['label' => 'Rekening Terlibat', 'value' => '3 rekening'],
+            ['label' => 'Transaksi Tercatat', 'value' => '84 transaksi'],
+        ];
+
+        if (is_array($scopeActivity)) {
+            $scopeSummary = [
+                'period' => 'Januari - Desember 2026',
+                'income' => (float) $scopeActivity['income'],
+                'expense' => (float) $scopeActivity['expense'],
+                'surplus' => (float) $scopeActivity['surplus'],
+                'balance' => (float) $scopeActivity['related_balance'],
+            ];
+            $scopeTitle = $scopeActivity['name'];
+            $scopeLabel = 'Ringkasan kegiatan';
+            $scopeMode = 'kegiatan';
+            $scopeMeta = 'Sedang meninjau kegiatan yang dipilih';
+            $scopeHighlights = [
+                ['label' => 'Transaksi Tercatat', 'value' => (string) ($scopeActivity['transaction_count'] ?? 0) . ' transaksi'],
+                ['label' => 'Penerima Honor', 'value' => (string) ($scopeActivity['receiver_count'] ?? 0) . ' penerima'],
+                ['label' => 'Rekening Terlibat', 'value' => (string) ($scopeActivity['account_count'] ?? 0) . ' rekening'],
+            ];
+            $reportTransactions = array_values(array_filter(
+                $reportTransactions,
+                static fn(array $transaction): bool => ($transaction['activity_slug'] ?? '') === ($scopeActivity['slug'] ?? '')
+            ));
+        }
 
         $filteredPublicTransactions = $selectedTransactionFilter === 'semua'
             ? $reportTransactions
@@ -806,19 +971,8 @@ class ReportController extends BaseController
             'shareUrl' => current_url(),
             'demoPin' => '240519',
             'unlocked' => $unlocked,
-            'reportSummary' => [
-                'period' => 'Januari - Desember 2026',
-                'income' => 127500000,
-                'expense' => 89250000,
-                'surplus' => 38250000,
-                'balance' => 45600000,
-            ],
-            'reportHighlights' => [
-                ['label' => 'Kegiatan Aktif', 'value' => '6 kegiatan'],
-                ['label' => 'Penerima Terlibat', 'value' => '14 penerima'],
-                ['label' => 'Rekening Terlibat', 'value' => '3 rekening'],
-                ['label' => 'Transaksi Tercatat', 'value' => '84 transaksi'],
-            ],
+            'reportSummary' => $scopeSummary,
+            'reportHighlights' => $scopeHighlights,
             'reportUnitCard' => [
                 'slug' => $unit['slug'],
                 'name' => $unit['name'],
@@ -828,47 +982,15 @@ class ReportController extends BaseController
                 'surplus' => 38250000,
                 'related_balance' => 45600000,
                 'quick_activity_name' => 'Operasional SIMPAUD 2026',
-                'detail_url' => current_url(),
+                'detail_url' => route_query('laporan/unit/' . $unit['slug'], [
+                    'preview' => 1,
+                    'kegiatan' => null,
+                    'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
+                    'transaksi_page' => null,
+                ]),
                 'activities' => [1, 2, 3, 4, 5, 6],
             ],
-            'reportActivities' => [
-                [
-                    'slug' => 'operasional-simpaud-2026',
-                    'name' => 'Operasional SIMPAUD 2026',
-                    'short_name' => 'OPER',
-                    'unit_name' => $unit['name'],
-                    'income' => 52000000,
-                    'expense' => 34150000,
-                    'surplus' => 17850000,
-                    'related_balance' => 17850000,
-                    'related_accounts' => ['BCA Operasional', 'Kas Tunai'],
-                    'detail_url' => current_url(),
-                ],
-                [
-                    'slug' => 'simpaud-web-app-mobile-first-transformation',
-                    'name' => 'SIMPAUD Web App Mobile First Transformation',
-                    'short_name' => 'SIMP',
-                    'unit_name' => $unit['name'],
-                    'income' => 38500000,
-                    'expense' => 27400000,
-                    'surplus' => 11100000,
-                    'related_balance' => 11100000,
-                    'related_accounts' => ['BCA Operasional'],
-                    'detail_url' => current_url(),
-                ],
-                [
-                    'slug' => 'kemitraan-publikasi',
-                    'name' => 'Kemitraan & Publikasi',
-                    'short_name' => 'KEMP',
-                    'unit_name' => $unit['name'],
-                    'income' => 37000000,
-                    'expense' => 27700000,
-                    'surplus' => 9300000,
-                    'related_balance' => 9300000,
-                    'related_accounts' => ['Kas Tunai'],
-                    'detail_url' => current_url(),
-                ],
-            ],
+            'reportActivities' => $reportActivities,
             'transactionFilters' => [
                 ['key' => 'semua', 'label' => 'Semua'],
                 ['key' => 'masuk', 'label' => 'Masuk'],
@@ -877,6 +999,17 @@ class ReportController extends BaseController
                 ['key' => 'pindah', 'label' => 'Pindah Dana'],
             ],
             'selectedTransactionFilter' => $selectedTransactionFilter,
+            'selectedActivitySlug' => $selectedActivitySlug,
+            'scopeMode' => $scopeMode,
+            'scopeLabel' => $scopeLabel,
+            'scopeTitle' => $scopeTitle,
+            'scopeMeta' => $scopeMeta,
+            'scopeResetUrl' => route_query('laporan/unit/' . $unit['slug'], [
+                'preview' => 1,
+                'kegiatan' => null,
+                'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
+                'transaksi_page' => null,
+            ]),
             'reportTransactions' => $publicTransactionPagination['items'],
             'reportTransactionPagination' => $publicTransactionPagination,
         ]);
