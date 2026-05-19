@@ -20,31 +20,32 @@
         </a>
     </div>
 
-    <section class="rounded-3xl border border-zinc-100 bg-white p-5 shadow-sm">
-        <div class="relative flex items-start justify-between gap-4">
-            <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks Aktif</p>
-                <p class="mt-3 text-lg font-semibold text-zinc-950"><?= esc(count($activitySummaries)) ?> kegiatan siap dipilih saat mencatat</p>
-                <p class="mt-1 text-sm text-zinc-500">Setiap kegiatan terhubung ke satu unit dan sekarang langsung membaca ringkasan transaksi yang sudah tercatat.</p>
+    <section class="rounded-3xl border border-zinc-100 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+                <span class="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700">Konteks Aktif</span>
+                <p class="mt-3 text-sm font-medium text-zinc-700">Kegiatan aktif</p>
+                <p class="mt-0.5 text-3xl font-semibold tracking-tight tabular-nums text-zinc-950"><?= esc((string) count($activitySummaries)) ?></p>
+                <p class="mt-1.5 max-w-xs text-xs text-zinc-500">Ringkasan kegiatan yang siap dipakai saat mencatat transaksi.</p>
             </div>
-            <span class="absolute top-0 right-0 rounded-full bg-zinc-950 px-3 py-2 text-xs font-medium text-white">Konteks level 2</span>
+            <span class="shrink-0 rounded-full bg-zinc-950 px-3 py-1.5 text-[11px] font-semibold text-white">Konteks level 2</span>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Kegiatan</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc((string) count($activitySummaries)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Kegiatan</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc((string) count($activitySummaries)) ?></p>
             </div>
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Masuk</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalIncome)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Uang Masuk</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($totalIncome)) ?></p>
             </div>
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Keluar</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalExpense)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Uang Keluar</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($totalExpense)) ?></p>
             </div>
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Saldo</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalBalance)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Saldo</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($totalBalance)) ?></p>
             </div>
         </div>
     </section>

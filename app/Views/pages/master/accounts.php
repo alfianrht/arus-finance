@@ -20,31 +20,32 @@
         </a>
     </div>
 
-    <section class="rounded-3xl border border-zinc-100 bg-white p-5 shadow-sm">
+    <section class="rounded-3xl border border-zinc-100 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
         <div class="flex items-start justify-between gap-4">
-            <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Arus Uang</p>
-                <p class="mt-3 text-lg font-semibold text-zinc-950"><?= esc(count($accountSummaries)) ?> sumber dan tujuan dana</p>
-                <p class="mt-1 text-sm text-zinc-500">Master ini dipakai untuk uang masuk, biaya, pindah dana, dan sekarang langsung membaca mutasi transaksi yang sudah tercatat.</p>
+            <div class="min-w-0">
+                <span class="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700">Arus Uang</span>
+                <p class="mt-3 text-sm font-medium text-zinc-700">Rekening aktif</p>
+                <p class="mt-0.5 text-3xl font-semibold tracking-tight tabular-nums text-zinc-950"><?= esc((string) count($accountSummaries)) ?></p>
+                <p class="mt-1.5 max-w-xs text-xs text-zinc-500">Sumber dan tujuan dana yang dipakai oleh transaksi aktif.</p>
             </div>
-            <span class="rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700">Tanpa mapping terpisah</span>
+            <span class="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-semibold text-zinc-700">Tanpa mapping terpisah</span>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Rekening</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc((string) count($accountSummaries)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Rekening</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc((string) count($accountSummaries)) ?></p>
             </div>
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Masuk</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalIncome)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Uang Masuk</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($totalIncome)) ?></p>
             </div>
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Keluar</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalExpense)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Uang Keluar</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($totalExpense)) ?></p>
             </div>
-            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Saldo</p>
-                <p class="mt-1 text-base font-black text-zinc-950"><?= esc(rupiah($totalBalance)) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2.5">
+                <p class="text-xs text-zinc-500">Saldo</p>
+                <p class="mt-0.5 text-base font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($totalBalance)) ?></p>
             </div>
         </div>
     </section>
