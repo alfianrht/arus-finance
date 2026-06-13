@@ -16,6 +16,7 @@ use App\Services\TransactionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
 use RuntimeException;
+use Throwable;
 
 class TransactionController extends BaseController
 {
@@ -105,7 +106,7 @@ class TransactionController extends BaseController
     public function simpanMasuk(): RedirectResponse
     {
         if (! $this->validate($this->transactionRules(['category_id', 'to_account_id']))) {
-            return redirect()->back()->withInput()->with('error', 'Semua kolom wajib diisi dengan benar.');
+            return redirect()->back()->withInput()->with('error', $this->validationErrorMessage());
         }
 
         try {
@@ -130,7 +131,7 @@ class TransactionController extends BaseController
                 'created_by' => $this->currentUserId(),
             ];
             $this->transactionService->create($payload);
-        } catch (RuntimeException $e) {
+        } catch (Throwable $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
         }
 
@@ -827,22 +828,36 @@ class TransactionController extends BaseController
         return ($from !== '' && str_starts_with($from, site_url())) ? $from : $fallback;
     }
 
-    private function redirectBackWithTransactionError(RuntimeException $e, ?string $proofImage = null): RedirectResponse
+    private function redirectBackWithTransactionError(Throwable $e, ?string $proofImage = null): RedirectResponse
     {
         if ($proofImage !== null && $proofImage !== '') {
             $this->fileUploadService->deleteProof($proofImage);
         }
 
         $message = trim($e->getMessage());
+        log_message('error', 'Transaction save failed: {message}', ['message' => $message]);
+
         if (str_contains(strtolower($message), 'saldo rekening tidak mencukupi')) {
             $message = 'Saldo rekening tidak cukup. Pilih rekening lain, kurangi nominal, atau isi saldo awal lebih dulu.';
         } elseif (str_contains(strtolower($message), 'sesi login tidak valid') || str_contains(strtolower($message), 'akun login tidak ditemukan')) {
             $message = 'Sesi login Anda sudah tidak valid. Silakan masuk ulang lalu coba simpan transaksi lagi.';
+        } elseif (str_contains(strtolower($message), 'csrf')) {
+            $message = 'Sesi form sudah berubah. Muat ulang halaman lalu coba simpan lagi.';
         } elseif ($message === '') {
             $message = 'Transaksi belum bisa diproses. Silakan cek kembali form Anda.';
         }
 
         return redirect()->back()->withInput()->with('warning', $message);
+    }
+
+    private function validationErrorMessage(): string
+    {
+        $errors = $this->validator?->getErrors() ?? [];
+        if ($errors === []) {
+            return 'Semua kolom wajib diisi dengan benar.';
+        }
+
+        return (string) array_values($errors)[0];
     }
 
     private function findHonorCategory(): ?array
