@@ -124,7 +124,7 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
         <div class="mt-4 space-y-2.5">
             <?php foreach ($pocketCards as $pocketCard): ?>
                 <article class="rounded-[1.35rem] border border-zinc-950/10 bg-white px-4 py-3 shadow-sm">
-                    <div class="flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] lg:items-center">
+                    <div class="flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(19.5rem,1fr)_auto] lg:items-center">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="rounded-full border border-zinc-950/15 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-700"><?= esc($pocketCard['type_label']) ?></span>
@@ -141,18 +141,18 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
                             </p>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2">
-                                <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Masuk</p>
-                                <p class="mt-1 text-xs font-semibold text-zinc-950"><?= esc(rupiah($pocketCard['income'])) ?></p>
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:min-w-[19.5rem]">
+                            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 min-w-0">
+                                <p class="text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-500">Masuk</p>
+                                <p class="mt-1 whitespace-nowrap text-[11px] font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($pocketCard['income'])) ?></p>
                             </div>
-                            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2">
-                                <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Keluar</p>
-                                <p class="mt-1 text-xs font-semibold text-zinc-950"><?= esc(rupiah($pocketCard['expense'])) ?></p>
+                            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 min-w-0">
+                                <p class="text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-500">Keluar</p>
+                                <p class="mt-1 whitespace-nowrap text-[11px] font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($pocketCard['expense'])) ?></p>
                             </div>
-                            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 sm:col-span-1 col-span-2">
-                                <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Saldo</p>
-                                <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc(rupiah($pocketCard['balance'])) ?></p>
+                            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 min-w-0 sm:col-span-1 col-span-2">
+                                <p class="text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-500">Saldo</p>
+                                <p class="mt-1 whitespace-nowrap text-[12px] font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($pocketCard['balance'])) ?></p>
                             </div>
                         </div>
 
