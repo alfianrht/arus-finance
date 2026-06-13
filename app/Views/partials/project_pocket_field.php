@@ -5,6 +5,7 @@ $placeholder = $placeholder ?? 'Pilih kantong proyek';
 $activityFieldName = $activityFieldName ?? 'activity_id';
 $readonly = $readonly ?? false;
 $mode = $mode ?? 'all';
+$preferDefaultSelection = (bool) ($preferDefaultSelection ?? ($projectPocketField['prefer_default_selection'] ?? false));
 $selectedActivityId = (int) ($projectPocketField['selected_activity_id'] ?? 0);
 $selectedPocketId = $fieldName === 'counter_project_pocket_id'
     ? (int) ($projectPocketField['selected_counter_pocket_id'] ?? 0)
@@ -17,9 +18,16 @@ if ($mode === 'execution') {
     $showField = $showField && (bool) ($currentGroup['requires_explicit'] ?? false);
 }
 
+$defaultPocketId = (int) ($currentGroup['default_pocket_id'] ?? 0);
+if ($preferDefaultSelection && $selectedPocketId < 1 && $fieldName !== 'counter_project_pocket_id' && $defaultPocketId > 0) {
+    $selectedPocketId = $defaultPocketId;
+}
+
 $helperText = $mode === 'execution'
     ? 'Opsional. Isi jika pindah dana ini memang memindahkan saldo antar kantong di kegiatan yang sama.'
-    : 'Jika kegiatan memakai model kantong proyek, transaksi ini akan masuk ke kantong yang dipilih.';
+    : ($preferDefaultSelection
+        ? 'Default diarahkan ke Kantong Utama. Ubah jika uang masuk ini memang masuk ke kantong lain.'
+        : 'Jika kegiatan memakai model kantong proyek, transaksi ini akan masuk ke kantong yang dipilih.');
 
 $config = [
     'fieldName' => $fieldName,
@@ -28,6 +36,7 @@ $config = [
     'mode' => $mode,
     'placeholder' => $placeholder,
     'readonly' => $readonly,
+    'preferDefaultSelection' => $preferDefaultSelection,
     'groups' => $groups,
     'excludeFieldName' => $fieldName === 'counter_project_pocket_id' ? 'project_pocket_id' : null,
 ];
@@ -108,7 +117,7 @@ $config = [
         select.disabled = !!config.readonly;
 
         var existingValue = select.value || String(config.selectedPocketId || '');
-        var requiresExplicit = config.mode === 'execution' || !!group.requires_explicit;
+        var requiresExplicit = (!config.preferDefaultSelection) && (config.mode === 'execution' || !!group.requires_explicit);
         var excludeField = config.excludeFieldName ? form.querySelector('[name="' + config.excludeFieldName + '"]') : null;
         var excludeValue = excludeField ? String(excludeField.value || '') : '';
         var options = [];
@@ -149,9 +158,11 @@ $config = [
         if (helper) {
             helper.textContent = config.mode === 'execution'
                 ? 'Opsional. Isi jika pindah dana ini memang memindahkan saldo antar kantong di kegiatan yang sama.'
-                : (group.requires_explicit
+                : (config.preferDefaultSelection
+                    ? 'Default diarahkan ke Kantong Utama. Ubah jika uang masuk ini memang masuk ke kantong lain.'
+                    : (group.requires_explicit
                     ? 'Kegiatan ini sudah memakai kantong proyek. Pilih kantong tujuan transaksi sebelum menyimpan.'
-                    : 'Kegiatan proyek ini baru memakai Kantong Utama. Transaksi akan diarahkan ke sana otomatis.');
+                    : 'Kegiatan proyek ini baru memakai Kantong Utama. Transaksi akan diarahkan ke sana otomatis.'));
         }
     };
 

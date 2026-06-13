@@ -213,7 +213,7 @@ class ProjectPocketService
         return is_array($pocket) ? $pocket : null;
     }
 
-    public function resolvePocketIdForTransaction(int $institutionId, int $activityId, ?int $requestedPocketId): ?int
+    public function resolvePocketIdForTransaction(int $institutionId, int $activityId, ?int $requestedPocketId, bool $preferMainWhenEmpty = false): ?int
     {
         if (! $this->hasProjectMode($institutionId, $activityId)) {
             return null;
@@ -239,7 +239,7 @@ class ProjectPocketService
             return (int) $pocket['id'];
         }
 
-        if (! $this->activityRequiresExplicitPocket($institutionId, $activityId)) {
+        if ($preferMainWhenEmpty || ! $this->activityRequiresExplicitPocket($institutionId, $activityId)) {
             return (int) $mainPocket['id'];
         }
 

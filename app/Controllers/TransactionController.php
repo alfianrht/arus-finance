@@ -96,7 +96,7 @@ class TransactionController extends BaseController
             'selectedIncomeCategory' => $incomeCategories[0]['name'] ?? '',
             'accounts' => $accounts,
             'activeContext' => $activeContext,
-            'projectPocketField' => $this->buildProjectPocketFieldData($this->flattenActivities($units), $activeContext['activity_id']),
+            'projectPocketField' => $this->buildProjectPocketFieldData($this->flattenActivities($units), $activeContext['activity_id'], 0, 0, true),
         ];
 
         return view('pages/catat/masuk', $data);
@@ -117,7 +117,7 @@ class TransactionController extends BaseController
                 'admin_fee' => 0,
                 'unit_id' => (int) $this->request->getPost('unit_id'),
                 'activity_id' => (int) $this->request->getPost('activity_id'),
-                'project_pocket_id' => $this->resolveProjectPocketIdFromRequest((int) $this->request->getPost('activity_id')),
+                'project_pocket_id' => $this->resolveProjectPocketIdFromRequest((int) $this->request->getPost('activity_id'), true),
                 'counter_project_pocket_id' => null,
                 'category_id' => (int) $this->request->getPost('category_id'),
                 'from_account_id' => null,
@@ -733,22 +733,25 @@ class TransactionController extends BaseController
         array $activities,
         int $selectedActivityId = 0,
         int $selectedPocketId = 0,
-        int $selectedCounterPocketId = 0
+        int $selectedCounterPocketId = 0,
+        bool $preferDefaultSelection = false
     ): array {
         return [
             'groups' => $this->projectPocketService->buildActivityPocketGroups($this->currentInstitutionId(), $activities),
             'selected_activity_id' => $selectedActivityId,
             'selected_pocket_id' => $selectedPocketId,
             'selected_counter_pocket_id' => $selectedCounterPocketId,
+            'prefer_default_selection' => $preferDefaultSelection,
         ];
     }
 
-    private function resolveProjectPocketIdFromRequest(int $activityId): ?int
+    private function resolveProjectPocketIdFromRequest(int $activityId, bool $preferMainWhenEmpty = false): ?int
     {
         return $this->projectPocketService->resolvePocketIdForTransaction(
             $this->currentInstitutionId(),
             $activityId,
-            (int) ($this->request->getPost('project_pocket_id') ?? 0)
+            (int) ($this->request->getPost('project_pocket_id') ?? 0),
+            $preferMainWhenEmpty
         );
     }
 

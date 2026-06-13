@@ -69,20 +69,29 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="rounded-full bg-lime-400 px-3 py-1.5 text-[11px] font-semibold text-zinc-950">Unit · <?= esc($unit['name']) ?></span>
-                    <span class="rounded-full bg-zinc-950 px-3 py-1.5 text-[11px] font-semibold text-white">Kegiatan · <?= esc($activity['name']) ?></span>
-                    <span class="rounded-full border border-zinc-950/10 bg-white px-3 py-1.5 text-[11px] font-semibold text-zinc-700"><?= esc((string) ($projectSummary['execution_pocket_count'] ?? 0)) ?> kantong pelaksanaan</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-lime-400 px-3 py-1.5 text-[11px] font-semibold text-zinc-950">
+                        <span class="material-symbols-rounded text-[14px]" aria-hidden="true">apartment</span>
+                        <span class="truncate"><?= esc($unit['name']) ?></span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-950 px-3 py-1.5 text-[11px] font-semibold text-white">
+                        <span class="material-symbols-rounded text-[14px]" aria-hidden="true">workspaces</span>
+                        <span class="truncate"><?= esc($activity['name']) ?></span>
+                    </span>
+                    <span class="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-zinc-950/10 bg-white px-2.5 text-[11px] font-semibold text-zinc-700" title="<?= esc((string) ($projectSummary['execution_pocket_count'] ?? 0)) ?> kantong pelaksanaan" aria-label="<?= esc((string) ($projectSummary['execution_pocket_count'] ?? 0)) ?> kantong pelaksanaan">
+                        <span class="material-symbols-rounded text-[15px]" aria-hidden="true">inventory_2</span>
+                        <span class="ml-1"><?= esc((string) ($projectSummary['execution_pocket_count'] ?? 0)) ?></span>
+                    </span>
                 </div>
                 <p class="mt-3 text-sm font-semibold text-zinc-950">Ringkasan Proyek</p>
                 <p class="mt-1 text-xs text-zinc-500">Kontrak dan termin disimpan di Kantong Utama, sedangkan biaya operasional dipisahkan ke kantong pelaksanaan.</p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                <button type="button" data-modal-open="project-settings-modal" class="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950 shadow-sm">
-                    Atur Proyek
+                <button type="button" data-modal-open="project-settings-modal" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-950 shadow-sm" title="Atur Proyek" aria-label="Atur Proyek">
+                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">tune</span>
                 </button>
-                <button type="button" data-modal-open="add-pocket-modal" class="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm">
-                    Tambah Kantong
+                <button type="button" data-modal-open="add-pocket-modal" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-950 text-white shadow-sm" title="Tambah Kantong" aria-label="Tambah Kantong">
+                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">add</span>
                 </button>
             </div>
         </div>
@@ -147,17 +156,21 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-between gap-2 lg:flex-col lg:items-end">
-                            <a href="<?= esc($pocketCard['detail_url']) ?>" class="inline-flex h-10 items-center justify-center rounded-full border border-zinc-950 bg-white px-4 text-xs font-semibold text-zinc-950 shadow-sm">
-                                Lihat Kantong
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="<?= esc($pocketCard['detail_url']) ?>" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-950 bg-white text-zinc-950 shadow-sm" title="Lihat Kantong" aria-label="Lihat Kantong">
+                                <span class="material-symbols-rounded text-[18px]" aria-hidden="true">arrow_outward</span>
                             </a>
                             <?php if (($pocketCard['pocket_type'] ?? '') === 'execution'): ?>
                                 <form action="<?= esc($pocketCard['deactivate_url']) ?>" method="post">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="inline-flex h-9 items-center justify-center rounded-full bg-zinc-950 px-3 text-[11px] font-semibold text-white">Nonaktifkan</button>
+                                    <button type="submit" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-950 text-white shadow-sm" title="Nonaktifkan Kantong" aria-label="Nonaktifkan Kantong">
+                                        <span class="material-symbols-rounded text-[18px]" aria-hidden="true">block</span>
+                                    </button>
                                 </form>
                             <?php else: ?>
-                                <span class="inline-flex h-9 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 px-3 text-[11px] font-semibold text-zinc-500">Kantong Utama</span>
+                                <span class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-500" title="Kantong Utama" aria-label="Kantong Utama">
+                                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">kid_star</span>
+                                </span>
                             <?php endif; ?>
                         </div>
                     </div>
