@@ -124,7 +124,7 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
         <div class="mt-4 space-y-2.5">
             <?php foreach ($pocketCards as $pocketCard): ?>
                 <article class="rounded-[1.35rem] border border-zinc-950/10 bg-white px-4 py-3 shadow-sm">
-                    <div class="flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(24rem,1.15fr)_auto] lg:items-center">
+                    <div class="flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(27rem,1.25fr)_auto] lg:items-center">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="rounded-full border border-zinc-950/15 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-700"><?= esc($pocketCard['type_label']) ?></span>
@@ -141,7 +141,7 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
                             </p>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:min-w-[24rem]">
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:min-w-[27rem]">
                             <div class="min-w-0 rounded-2xl border border-zinc-100 bg-zinc-50 px-3.5 py-2">
                                 <p class="text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-500">Masuk</p>
                                 <p class="mt-1 whitespace-nowrap text-[11px] font-semibold tabular-nums text-zinc-950"><?= esc(rupiah($pocketCard['income'])) ?></p>
