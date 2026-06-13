@@ -72,6 +72,35 @@
     </div>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold text-zinc-950">Mode Kantong Proyek</h2>
+                <p class="mt-1 text-xs text-zinc-500">Aktifkan jika kegiatan ini perlu dipisah antara kontrak utama dan kantong pelaksanaan.</p>
+            </div>
+            <span class="rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700">Belum aktif</span>
+        </div>
+
+        <form action="<?= esc($projectActivationUrl) ?>" method="post" class="mt-4 grid gap-3 sm:grid-cols-2">
+            <?= csrf_field() ?>
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-zinc-900">Nilai Kontrak</label>
+                <input type="text" inputmode="numeric" name="contract_value" value="<?= esc(old('contract_value', '')) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400" placeholder="Opsional, isi jika kegiatan ini berbasis kontrak">
+            </div>
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-zinc-900">Jumlah Termin</label>
+                <input type="number" min="0" name="contract_terms_count" value="<?= esc(old('contract_terms_count', '')) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400" placeholder="0">
+            </div>
+            <div class="space-y-2 sm:col-span-2">
+                <label class="text-sm font-semibold text-zinc-900">Catatan Awal</label>
+                <textarea name="notes" rows="3" class="w-full rounded-2xl border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400" placeholder="Contoh: rumah utama termin proyek dan tagihan pelaksanaan."><?= esc(old('notes', '')) ?></textarea>
+            </div>
+            <div class="sm:col-span-2">
+                <button type="submit" class="inline-flex h-12 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm">Aktifkan Mode Proyek</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Rincian Biaya per Kategori</h2>
             <p class="text-xs text-zinc-500">Kegiatan aktif</p>

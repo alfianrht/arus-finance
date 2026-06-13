@@ -1111,6 +1111,7 @@ class ReportController extends BaseController
             'activeNav' => 'rekap',
             'backUrl' => site_url('rekap'),
             'activity' => $activity,
+            'projectActivationUrl' => site_url('kegiatan/' . $activity['slug'] . '/proyek'),
             'activityTransactions' => $activityTransactionPagination['items'],
             'activityTransactionPagination' => $activityTransactionPagination,
             'transferItems' => $activityTransferPagination['items'],
