@@ -88,6 +88,7 @@ $routes->get('rekening/(:segment)', 'ReportController::rekening/$1', ['filter' =
 $routes->get('penerima/(:segment)', 'ReportController::penerima/$1', ['filter' => 'auth']);
 $routes->get('unit/(:segment)', 'ReportController::unit/$1', ['filter' => 'auth']);
 $routes->get('unit/(:segment)/bagikan', 'ReportController::bagikanUnit/$1', ['filter' => 'auth']);
+$routes->post('unit/(:segment)/bagikan', 'ReportController::simpanBagikanUnit/$1', ['filter' => 'auth']);
 $routes->get('kegiatan/(:segment)', 'ReportController::kegiatan/$1', ['filter' => 'auth']);
 $routes->post('kegiatan/(:segment)/proyek', 'ReportController::updateProyekKegiatan/$1', ['filter' => 'auth']);
 $routes->post('kegiatan/(:segment)/kantong', 'ReportController::simpanKantongKegiatan/$1', ['filter' => 'auth']);
@@ -95,3 +96,4 @@ $routes->get('kegiatan/(:segment)/kantong/(:segment)', 'ReportController::kanton
 $routes->post('kegiatan/(:segment)/kantong/(:segment)', 'ReportController::updateKantongKegiatan/$1/$2', ['filter' => 'auth']);
 $routes->post('kegiatan/(:segment)/kantong/(:segment)/nonaktif', 'ReportController::nonaktifkanKantongKegiatan/$1/$2', ['filter' => 'auth']);
 $routes->get('laporan/unit/(:segment)', 'ReportController::laporanUnitPublik/$1');
+$routes->post('laporan/unit/(:segment)/unlock', 'ReportController::bukaLaporanUnitPublik/$1');

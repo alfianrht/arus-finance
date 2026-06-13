@@ -8,9 +8,11 @@
             <div class="min-w-0">
                 <h1 class="truncate text-base font-semibold tracking-tight text-zinc-950 sm:text-lg"><?= esc($unit['name']) ?></h1>
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[9px] font-medium text-zinc-700">
-                        <?= esc($reportSummary['period']) ?>
-                    </span>
+                    <?php if (! empty($reportSummary['period'])): ?>
+                        <span class="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[9px] font-medium text-zinc-700">
+                            <?= esc($reportSummary['period']) ?>
+                        </span>
+                    <?php endif; ?>
                     <span class="inline-flex rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[9px] font-medium text-zinc-700">
                         View only
                     </span>
@@ -20,9 +22,13 @@
                 <div class="min-w-0">
                     <p class="text-[9px] text-white/55">Status akses</p>
                     <div class="mt-1 flex items-center gap-1.5">
-                        <span class="material-symbols-rounded text-[12px] text-lime-300" aria-hidden="true"><?= $unlocked ? 'verified' : 'lock' ?></span>
+                        <span class="material-symbols-rounded text-[12px] text-lime-300" aria-hidden="true"><?= $unlocked ? 'verified' : ($shareEnabled ? 'shield_lock' : 'block') ?></span>
                         <span class="inline-flex rounded-full border border-white/15 bg-white/10 px-2 py-1 text-[9px] font-semibold text-white">
-                            <?= $unlocked ? 'Terbuka terbatas' : 'Terkunci PIN' ?>
+                            <?=
+                                $unlocked
+                                    ? 'Terbuka terbatas'
+                                    : ($shareEnabled ? 'Terkunci PIN' : 'Belum aktif')
+                            ?>
                         </span>
                     </div>
                 </div>
@@ -36,24 +42,29 @@
             <div class="rounded-3xl bg-white p-4 shadow-sm">
                 <div class="flex items-start gap-3">
                     <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-3xl bg-zinc-100 text-zinc-950">
-                        <span class="material-symbols-rounded text-[24px]" aria-hidden="true">lock</span>
+                        <span class="material-symbols-rounded text-[24px]" aria-hidden="true"><?= $shareEnabled ? 'lock' : 'visibility_off' ?></span>
                     </div>
                     <div class="min-w-0">
-                        <h2 class="text-xl font-semibold tracking-tight text-zinc-950">Masukkan PIN akses</h2>
-                        <p class="mt-1 text-sm text-zinc-500">Laporan unit ini hanya bisa dilihat oleh pihak yang menerima PIN.</p>
+                        <h2 class="text-xl font-semibold tracking-tight text-zinc-950"><?= $shareEnabled ? 'Masukkan PIN akses' : 'Laporan belum dibagikan' ?></h2>
+                        <p class="mt-1 text-sm text-zinc-500">
+                            <?= $shareEnabled ? 'Laporan unit ini hanya bisa dilihat oleh pihak yang menerima PIN.' : 'Admin belum mengaktifkan akses publik untuk laporan unit ini.' ?>
+                        </p>
                     </div>
                 </div>
-                <form method="get" action="<?= esc($shareUrl) ?>" class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <input type="hidden" name="preview" value="1">
-                    <label class="block">
-                        <span class="text-xs font-medium uppercase tracking-wide text-zinc-500">PIN</span>
-                        <input type="password" inputmode="numeric" placeholder="6 digit PIN" class="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-center text-lg font-semibold tracking-[0.3em] text-zinc-950 outline-none">
-                    </label>
-                    <button type="submit" class="inline-flex h-12 items-center justify-center gap-2 self-end rounded-full bg-zinc-950 px-6 text-sm font-semibold text-white">
-                        <span class="material-symbols-rounded text-base" aria-hidden="true">lock_open</span>
-                        <span>Buka</span>
-                    </button>
-                </form>
+
+                <?php if ($shareEnabled): ?>
+                    <form method="post" action="<?= esc($unlockUrl) ?>" class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                        <?= csrf_field() ?>
+                        <label class="block">
+                            <span class="text-xs font-medium uppercase tracking-wide text-zinc-500">PIN</span>
+                            <input name="pin" type="password" inputmode="numeric" maxlength="6" placeholder="6 digit PIN" class="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-center text-lg font-semibold tracking-[0.3em] text-zinc-950 outline-none">
+                        </label>
+                        <button type="submit" class="inline-flex h-12 items-center justify-center gap-2 self-end rounded-full bg-zinc-950 px-6 text-sm font-semibold text-white">
+                            <span class="material-symbols-rounded text-base" aria-hidden="true">lock_open</span>
+                            <span>Buka</span>
+                        </button>
+                    </form>
+                <?php endif; ?>
             </div>
             <div class="rounded-3xl bg-white p-4 shadow-sm">
                 <h2 class="text-base font-semibold text-zinc-950">Isi Laporan</h2>
@@ -163,7 +174,6 @@
                         <?php endforeach; ?>
                     </div>
                 </section>
-
             </div>
 
             <div class="min-w-0 space-y-2 lg:col-span-2">
@@ -185,25 +195,25 @@
                                 <span class="mt-1 line-clamp-2 block min-h-[0.5rem] text-sm font-semibold leading-tight"><?= esc($reportUnitCard['name']) ?></span>
                                 <span class="mt-auto block text-[10px] font-medium uppercase tracking-wide <?= $scopeMode === 'unit' ? 'text-zinc-800/70' : 'text-zinc-400' ?>">Saldo</span>
                                 <span class="mt-1 block whitespace-nowrap text-[12px] font-semibold tabular-nums <?= $scopeMode === 'unit' ? 'text-zinc-950' : 'text-zinc-700' ?>">
-                                    <?= esc(rupiah($reportSummary['balance'])) ?>
+                                    <?= esc(rupiah($reportUnitCard['related_balance'])) ?>
                                 </span>
                             </a>
-                        <?php foreach ($reportActivities as $activity): ?>
-                            <a
-                                href="<?= esc($activity['detail_url']) ?>"
-                                class="<?= !empty($activity['is_selected']) ? 'border-zinc-950 bg-zinc-950 text-white ring-2 ring-lime-400' : 'border-zinc-200 bg-white text-zinc-700' ?> relative flex h-32 w-52 shrink-0 flex-col rounded-2xl border px-3 py-3 shadow-sm"
-                            >
-                                <?php if (!empty($activity['is_selected'])): ?>
-                                    <span class="absolute right-2 top-2 inline-flex rounded-full bg-lime-400 px-2 py-1 text-[9px] font-semibold text-zinc-950">Aktif</span>
-                                <?php endif; ?>
-                                <span class="block text-[10px] font-medium uppercase tracking-wide <?= !empty($activity['is_selected']) ? 'text-zinc-300' : 'text-zinc-400' ?>">Kegiatan</span>
-                                <span class="mt-1 line-clamp-2 block min-h-[0.5rem] text-sm font-semibold leading-tight"><?= esc($activity['name']) ?></span>
-                                <span class="mt-auto block text-[10px] font-medium uppercase tracking-wide <?= !empty($activity['is_selected']) ? 'text-zinc-400' : 'text-zinc-400' ?>">Saldo</span>
-                                <span class="mt-1 block whitespace-nowrap text-[12px] font-semibold tabular-nums <?= !empty($activity['is_selected']) ? 'text-white' : 'text-zinc-700' ?>">
-                                    <?= esc(rupiah($activity['related_balance'] ?? $activity['surplus'])) ?>
-                                </span>
-                            </a>
-                        <?php endforeach; ?>
+                            <?php foreach ($reportActivities as $activity): ?>
+                                <a
+                                    href="<?= esc($activity['detail_url']) ?>"
+                                    class="<?= !empty($activity['is_selected']) ? 'border-zinc-950 bg-zinc-950 text-white ring-2 ring-lime-400' : 'border-zinc-200 bg-white text-zinc-700' ?> relative flex h-32 w-52 shrink-0 flex-col rounded-2xl border px-3 py-3 shadow-sm"
+                                >
+                                    <?php if (!empty($activity['is_selected'])): ?>
+                                        <span class="absolute right-2 top-2 inline-flex rounded-full bg-lime-400 px-2 py-1 text-[9px] font-semibold text-zinc-950">Aktif</span>
+                                    <?php endif; ?>
+                                    <span class="block text-[10px] font-medium uppercase tracking-wide <?= !empty($activity['is_selected']) ? 'text-zinc-300' : 'text-zinc-400' ?>">Kegiatan</span>
+                                    <span class="mt-1 line-clamp-2 block min-h-[0.5rem] text-sm font-semibold leading-tight"><?= esc($activity['name']) ?></span>
+                                    <span class="mt-auto block text-[10px] font-medium uppercase tracking-wide <?= !empty($activity['is_selected']) ? 'text-zinc-400' : 'text-zinc-400' ?>">Saldo</span>
+                                    <span class="mt-1 block whitespace-nowrap text-[12px] font-semibold tabular-nums <?= !empty($activity['is_selected']) ? 'text-white' : 'text-zinc-700' ?>">
+                                        <?= esc(rupiah($activity['related_balance'] ?? $activity['surplus'])) ?>
+                                    </span>
+                                </a>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </section>
@@ -246,7 +256,7 @@
                         <?php foreach ($transactionFilters as $filter): ?>
                             <?php $isActive = $selectedTransactionFilter === $filter['key']; ?>
                             <a
-                                href="<?= esc(route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $filter['key'] === 'semua' ? null : $filter['key'], 'transaksi_page' => null])) ?>"
+                                href="<?= esc(route_query('laporan/unit/' . $unit['slug'], ['preview' => $previewAuthorized ? '1' : null, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $filter['key'] === 'semua' ? null : $filter['key'], 'transaksi_page' => null])) ?>"
                                 class="<?= $isActive ? 'bg-zinc-950 text-white' : 'border border-zinc-200 bg-white text-zinc-600' ?> inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold transition-colors"
                             >
                                 <?= esc($filter['label']) ?>
@@ -254,6 +264,16 @@
                         <?php endforeach; ?>
                     </div>
                     <div class="mt-2.5 divide-y divide-zinc-100">
+                        <?php if ($reportTransactions === []): ?>
+                            <div class="px-4 py-6">
+                                <?= view('partials/empty_state', [
+                                    'icon' => 'receipt_long',
+                                    'title' => 'Belum ada transaksi untuk scope ini.',
+                                    'description' => 'Transaksi akan muncul setelah unit atau kegiatan ini memiliki pencatatan.',
+                                    'compact' => true,
+                                ]) ?>
+                            </div>
+                        <?php endif; ?>
                         <?php foreach ($reportTransactions as $transaction): ?>
                             <div class="flex items-start gap-3 px-4 py-2">
                                 <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl <?= esc($transaction['badge_class']) ?>">
@@ -276,28 +296,14 @@
                                         </div>
                                     </div>
 
-                                    <div class="shrink-0 flex w-fit items-start justify-end gap-3">
-                                        <div class="min-w-0 flex-1 text-right">
-                                            <p class="text-sm font-bold tabular-nums <?= esc($transaction['amount_class']) ?>">
-                                                <?= esc($transaction['amount_prefix']) ?><?= esc(rupiah($transaction['amount'])) ?>
+                                    <div class="shrink-0 w-fit text-right">
+                                        <p class="text-sm font-bold tabular-nums <?= esc($transaction['amount_class']) ?>">
+                                            <?= esc($transaction['amount_prefix']) ?><?= esc(rupiah($transaction['amount'])) ?>
+                                        </p>
+                                        <?php if (!empty($transaction['admin_fee']) && $transaction['admin_fee'] > 0): ?>
+                                            <p class="mt-0.5 text-[10px] font-semibold tabular-nums text-rose-500">
+                                                -<?= esc(rupiah($transaction['admin_fee'])) ?>
                                             </p>
-                                            <?php if (!empty($transaction['admin_fee']) && $transaction['admin_fee'] > 0): ?>
-                                                <p class="mt-0.5 text-[10px] font-semibold tabular-nums text-rose-500">
-                                                    -<?= esc(rupiah($transaction['admin_fee'])) ?>
-                                                </p>
-                                            <?php endif; ?>
-                                        </div>
-                                        <?php if (!empty($transaction['bill_preview_url'])): ?>
-                                            <button
-                                                type="button"
-                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700"
-                                                onclick="openPublicBillPreview('<?= esc($transaction['bill_preview_url'], 'js') ?>', '<?= esc($transaction['headline'], 'js') ?>')"
-                                                aria-label="Lihat bukti transaksi"
-                                            >
-                                                <span class="material-symbols-rounded text-base" aria-hidden="true">receipt_long</span>
-                                            </button>
-                                        <?php else: ?>
-                                            <span class="inline-flex h-8 w-8 shrink-0"></span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -306,55 +312,12 @@
                     </div>
                     <?= view('partials/pagination_controls', [
                         'pagination' => $reportTransactionPagination,
-                        'prevUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['prevPage']]),
-                        'nextUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => 1, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['nextPage']]),
+                        'prevUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => $previewAuthorized ? '1' : null, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['prevPage']]),
+                        'nextUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => $previewAuthorized ? '1' : null, 'kegiatan' => $selectedActivitySlug !== '' ? $selectedActivitySlug : null, 'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter, 'transaksi_page' => $reportTransactionPagination['nextPage']]),
                     ]) ?>
                 </section>
-
             </div>
         </section>
-
-        <div id="publicBillPreviewModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-zinc-950/80 p-4" onclick="closePublicBillPreview()">
-            <div class="relative w-full max-w-3xl" onclick="event.stopPropagation()">
-                <button
-                    type="button"
-                    class="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-zinc-950 shadow-sm"
-                    onclick="closePublicBillPreview()"
-                    aria-label="Tutup preview bukti"
-                >
-                    <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
-                </button>
-                <img id="publicBillPreviewImage" src="" alt="" class="w-full rounded-3xl bg-white object-contain shadow-2xl">
-            </div>
-        </div>
-
-        <script>
-            function openPublicBillPreview(url, label) {
-                const modal = document.getElementById('publicBillPreviewModal');
-                const image = document.getElementById('publicBillPreviewImage');
-                image.src = url;
-                image.alt = label ? 'Bukti transaksi: ' + label : 'Bukti transaksi';
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                document.body.classList.add('overflow-hidden');
-            }
-
-            function closePublicBillPreview() {
-                const modal = document.getElementById('publicBillPreviewModal');
-                const image = document.getElementById('publicBillPreviewImage');
-                image.src = '';
-                image.alt = '';
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                document.body.classList.remove('overflow-hidden');
-            }
-
-            document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape') {
-                    closePublicBillPreview();
-                }
-            });
-        </script>
     <?php endif; ?>
 </div>
 <?= $this->endSection() ?>

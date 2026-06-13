@@ -4,15 +4,19 @@ namespace App\Controllers;
 
 use App\Models\ActivityModel;
 use App\Models\BookPeriodModel;
-use App\Services\ProjectPocketService;
+use App\Models\ProjectPocketModel;
+use App\Models\UnitPublicShareModel;
 use App\Models\UnitModel;
+use App\Services\ProjectPocketService;
 use App\Services\TransactionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\Database\BaseBuilder;
+use RuntimeException;
 
 class ReportController extends BaseController
 {
+    private const PUBLIC_UNIT_SHARE_ACCESS_SESSION_KEY = 'arus_public_unit_share_access';
     private TransactionService $transactionService;
     private ProjectPocketService $projectPocketService;
 
@@ -581,6 +585,8 @@ class ReportController extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
+        $share = $this->findUnitPublicShare((int) $unit['id']);
+
         return view('pages/share/unit_share_setup', [
             'pageTitle' => 'Bagikan Laporan Unit',
             'activeNav' => 'rekap',
@@ -591,426 +597,168 @@ class ReportController extends BaseController
                 'short_name' => substr($unit['name'], 0, 4),
             ],
             'shareUrl' => site_url('laporan/unit/' . $unit['slug']),
-            'demoPin' => '240519',
+            'previewUrl' => route_query('laporan/unit/' . $unit['slug'], ['preview' => 1]),
+            'shareState' => [
+                'is_enabled' => (bool) ($share['is_enabled'] ?? false),
+                'has_pin' => trim((string) ($share['pin_hash'] ?? '')) !== '',
+                'pin_last_rotated_at' => $share['pin_last_rotated_at'] ?? null,
+            ],
+            'latestPin' => session()->getFlashdata('share_plain_pin'),
         ]);
+    }
+
+    public function simpanBagikanUnit(string $slug): RedirectResponse
+    {
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        $allUnits = $this->loadAllUnitProgramRows($institutionId);
+        $unitId = $this->resolveUnitId($slug, $allUnits);
+        $unit = $unitId === null
+            ? null
+            : $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
+
+        if (! $unit) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $action = trim((string) $this->request->getPost('action'));
+        $shareModel = new UnitPublicShareModel();
+        $share = $this->findUnitPublicShare((int) $unit['id']);
+        $userId = $this->currentAuthUserId();
+
+        try {
+            if ($action === 'enable') {
+                $plainPin = $this->generatePublicSharePin();
+                $payload = [
+                    'unit_id' => (int) $unit['id'],
+                    'is_enabled' => 1,
+                    'pin_hash' => password_hash($plainPin, PASSWORD_DEFAULT),
+                    'pin_last_rotated_at' => date('Y-m-d H:i:s'),
+                    'updated_by' => $userId,
+                ];
+
+                if ($share === null) {
+                    $payload['created_by'] = $userId;
+                    $shareModel->insert($payload);
+                } else {
+                    $shareModel->update((int) $share['id'], $payload);
+                }
+
+                $this->forgetPublicUnitShareAccess((int) $unit['id']);
+
+                return redirect()->back()
+                    ->with('success', 'Share laporan unit berhasil diaktifkan.')
+                    ->with('share_plain_pin', $plainPin);
+            }
+
+            if ($action === 'rotate_pin') {
+                if ($share === null) {
+                    throw new RuntimeException('Share laporan unit belum aktif.');
+                }
+
+                $plainPin = $this->generatePublicSharePin();
+                $shareModel->update((int) $share['id'], [
+                    'is_enabled' => 1,
+                    'pin_hash' => password_hash($plainPin, PASSWORD_DEFAULT),
+                    'pin_last_rotated_at' => date('Y-m-d H:i:s'),
+                    'updated_by' => $userId,
+                ]);
+
+                $this->forgetPublicUnitShareAccess((int) $unit['id']);
+
+                return redirect()->back()
+                    ->with('success', 'PIN akses berhasil diganti.')
+                    ->with('share_plain_pin', $plainPin);
+            }
+
+            if ($action === 'disable') {
+                if ($share === null) {
+                    return redirect()->back()->with('warning', 'Share laporan unit belum aktif.');
+                }
+
+                $shareModel->update((int) $share['id'], [
+                    'is_enabled' => 0,
+                    'updated_by' => $userId,
+                ]);
+
+                $this->forgetPublicUnitShareAccess((int) $unit['id']);
+
+                return redirect()->back()->with('success', 'Share laporan unit berhasil dinonaktifkan.');
+            }
+        } catch (RuntimeException $e) {
+            return redirect()->back()->with('warning', $e->getMessage());
+        }
+
+        return redirect()->back()->with('warning', 'Aksi share laporan tidak dikenali.');
     }
 
     public function laporanUnitPublik(string $slug): string
     {
-        $institutionId = $this->currentInstitutionId();
-        $db = \Config\Database::connect();
-
-        if ($institutionId) {
-            $allUnits = $this->loadAllUnitProgramRows($institutionId);
-            $unitId = $this->resolveUnitId($slug, $allUnits);
-            $unit = $unitId === null
-                ? null
-                : $db->table('units')->where('id', $unitId)->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
-        } else {
-            $unit = $db->table('units')->where('slug', $slug)->where('deleted_at', null)->get()->getRowArray();
-        }
+        $unit = $this->findPublicUnitBySlug($slug);
 
         if (! $unit) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $unlocked = $this->request->getGet('preview') === '1';
-        $selectedTransactionFilter = strtolower((string) ($this->request->getGet('jenis') ?? 'semua'));
-        if (! in_array($selectedTransactionFilter, ['semua', 'masuk', 'keluar', 'honor', 'pindah'], true)) {
-            $selectedTransactionFilter = 'semua';
-        }
-        $transactionPage = max(1, (int) ($this->request->getGet('transaksi_page') ?? 1));
-        $selectedActivitySlug = (string) ($this->request->getGet('kegiatan') ?? '');
-        $billPreviewUrl = base_url('images/logo-primary-2.webp');
-
-        $reportActivities = [
-            [
-                'slug' => 'operasional-simpaud-2026',
-                'name' => 'Operasional SIMPAUD 2026',
-                'short_name' => 'OPER',
-                'unit_name' => $unit['name'],
-                'income' => 52000000,
-                'expense' => 34150000,
-                'surplus' => 17850000,
-                'related_balance' => 17850000,
-                'related_accounts' => ['BCA Operasional', 'Kas Tunai'],
-                'detail_url' => current_url(),
-                'transaction_count' => 28,
-                'receiver_count' => 5,
-                'account_count' => 2,
-            ],
-            [
-                'slug' => 'simpaud-web-app-mobile-first-transformation',
-                'name' => 'SIMPAUD Web App Mobile First Transformation',
-                'short_name' => 'SIMP',
-                'unit_name' => $unit['name'],
-                'income' => 38500000,
-                'expense' => 27400000,
-                'surplus' => 11100000,
-                'related_balance' => 11100000,
-                'related_accounts' => ['BCA Operasional'],
-                'detail_url' => current_url(),
-                'transaction_count' => 21,
-                'receiver_count' => 4,
-                'account_count' => 1,
-            ],
-            [
-                'slug' => 'kemitraan-publikasi',
-                'name' => 'Kemitraan & Publikasi',
-                'short_name' => 'KEMP',
-                'unit_name' => $unit['name'],
-                'income' => 37000000,
-                'expense' => 27700000,
-                'surplus' => 9300000,
-                'related_balance' => 9300000,
-                'related_accounts' => ['Kas Tunai'],
-                'detail_url' => current_url(),
-                'transaction_count' => 35,
-                'receiver_count' => 5,
-                'account_count' => 1,
-            ],
-        ];
-
-        $allowedActivitySlugs = array_column($reportActivities, 'slug');
-        if ($selectedActivitySlug !== '' && ! in_array($selectedActivitySlug, $allowedActivitySlugs, true)) {
-            $selectedActivitySlug = '';
-        }
-
-        $reportTransactions = [
-            [
-                'id' => '9001',
-                'badge_label' => 'Biaya',
-                'badge_class' => 'bg-rose-50 text-rose-600',
-                'icon' => 'north_east',
-                'headline' => 'Operasional dari BCA Operasional',
-                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
-                'meta' => '17 Mei 2026 · Pembayaran vendor operasional',
-                'amount' => 500000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 2500,
-                'type_key' => 'keluar',
-                'activity_slug' => 'operasional-simpaud-2026',
-                'bill_preview_url' => $billPreviewUrl,
-            ],
-            [
-                'id' => '9002',
-                'badge_label' => 'Masuk',
-                'badge_class' => 'bg-emerald-50 text-emerald-700',
-                'icon' => 'south',
-                'headline' => 'Pelatihan ke BCA Operasional',
-                'subline' => $unit['name'] . ' / SIMPAUD Web App Mobile First Transformation',
-                'meta' => '16 Mei 2026 · Pemasukan program pelatihan',
-                'amount' => 8000000,
-                'amount_prefix' => '+',
-                'amount_class' => 'text-emerald-600',
-                'admin_fee' => 6500,
-                'type_key' => 'masuk',
-                'activity_slug' => 'simpaud-web-app-mobile-first-transformation',
-                'bill_preview_url' => null,
-            ],
-            [
-                'id' => '9003',
-                'badge_label' => 'Honor',
-                'badge_class' => 'bg-orange-50 text-orange-700',
-                'icon' => 'payments',
-                'headline' => 'Honor untuk Tim Internal',
-                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
-                'meta' => '15 Mei 2026 · Honor tim internal',
-                'amount' => 1500000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 2500,
-                'type_key' => 'honor',
-                'receiver_name' => 'Tim Internal',
-                'activity_slug' => 'kemitraan-publikasi',
-                'bill_preview_url' => $billPreviewUrl,
-            ],
-            [
-                'id' => '9004',
-                'badge_label' => 'Pindah Dana',
-                'badge_class' => 'bg-sky-50 text-sky-700',
-                'icon' => 'sync_alt',
-                'headline' => 'BCA Operasional ke Kas Tunai',
-                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
-                'meta' => '14 Mei 2026 · Pindah dana operasional',
-                'amount' => 2500000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 1000,
-                'type_key' => 'pindah',
-                'activity_slug' => 'operasional-simpaud-2026',
-                'bill_preview_url' => null,
-            ],
-            [
-                'id' => '9005',
-                'badge_label' => 'Biaya',
-                'badge_class' => 'bg-rose-50 text-rose-600',
-                'icon' => 'north_east',
-                'headline' => 'Iklan dari BCA Operasional',
-                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
-                'meta' => '13 Mei 2026 · Iklan promosi',
-                'amount' => 750000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 2500,
-                'type_key' => 'keluar',
-                'activity_slug' => 'kemitraan-publikasi',
-                'bill_preview_url' => $billPreviewUrl,
-            ],
-            [
-                'id' => '9006',
-                'badge_label' => 'Masuk',
-                'badge_class' => 'bg-emerald-50 text-emerald-700',
-                'icon' => 'south',
-                'headline' => 'Kemitraan ke Kas Tunai',
-                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
-                'meta' => '12 Mei 2026 · Dana kemitraan',
-                'amount' => 4200000,
-                'amount_prefix' => '+',
-                'amount_class' => 'text-emerald-600',
-                'admin_fee' => 0,
-                'type_key' => 'masuk',
-                'activity_slug' => 'kemitraan-publikasi',
-                'bill_preview_url' => null,
-            ],
-            [
-                'id' => '9007',
-                'badge_label' => 'Honor',
-                'badge_class' => 'bg-orange-50 text-orange-700',
-                'icon' => 'payments',
-                'headline' => 'Honor untuk Narasumber',
-                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
-                'meta' => '11 Mei 2026 · Honor narasumber',
-                'amount' => 900000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
-                'type_key' => 'honor',
-                'receiver_name' => 'Narasumber',
-                'activity_slug' => 'operasional-simpaud-2026',
-                'bill_preview_url' => $billPreviewUrl,
-            ],
-            [
-                'id' => '9008',
-                'badge_label' => 'Biaya',
-                'badge_class' => 'bg-rose-50 text-rose-600',
-                'icon' => 'north_east',
-                'headline' => 'Internet dari BCA Operasional',
-                'subline' => $unit['name'] . ' / SIMPAUD Web App Mobile First Transformation',
-                'meta' => '10 Mei 2026 · Langganan internet',
-                'amount' => 350000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
-                'type_key' => 'keluar',
-                'activity_slug' => 'simpaud-web-app-mobile-first-transformation',
-                'bill_preview_url' => $billPreviewUrl,
-            ],
-            [
-                'id' => '9009',
-                'badge_label' => 'Masuk',
-                'badge_class' => 'bg-emerald-50 text-emerald-700',
-                'icon' => 'south',
-                'headline' => 'Program ke BCA Operasional',
-                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
-                'meta' => '09 Mei 2026 · Dana program',
-                'amount' => 6700000,
-                'amount_prefix' => '+',
-                'amount_class' => 'text-emerald-600',
-                'admin_fee' => 0,
-                'type_key' => 'masuk',
-                'activity_slug' => 'operasional-simpaud-2026',
-                'bill_preview_url' => null,
-            ],
-            [
-                'id' => '9010',
-                'badge_label' => 'Pindah Dana',
-                'badge_class' => 'bg-sky-50 text-sky-700',
-                'icon' => 'sync_alt',
-                'headline' => 'Kas Tunai ke BCA Operasional',
-                'subline' => $unit['name'] . ' / Kemitraan & Publikasi',
-                'meta' => '08 Mei 2026 · Penyesuaian kas',
-                'amount' => 1200000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
-                'type_key' => 'pindah',
-                'activity_slug' => 'kemitraan-publikasi',
-                'bill_preview_url' => null,
-            ],
-            [
-                'id' => '9011',
-                'badge_label' => 'Biaya',
-                'badge_class' => 'bg-rose-50 text-rose-600',
-                'icon' => 'north_east',
-                'headline' => 'ATK dari Kas Tunai',
-                'subline' => $unit['name'] . ' / Operasional SIMPAUD 2026',
-                'meta' => '07 Mei 2026 · ATK operasional',
-                'amount' => 210000,
-                'amount_prefix' => '-',
-                'amount_class' => 'text-rose-600',
-                'admin_fee' => 0,
-                'type_key' => 'keluar',
-                'activity_slug' => 'operasional-simpaud-2026',
-                'bill_preview_url' => $billPreviewUrl,
-            ],
-            [
-                'id' => '9012',
-                'badge_label' => 'Masuk',
-                'badge_class' => 'bg-emerald-50 text-emerald-700',
-                'icon' => 'south',
-                'headline' => 'Pelatihan ke Kas Tunai',
-                'subline' => $unit['name'] . ' / SIMPAUD Web App Mobile First Transformation',
-                'meta' => '06 Mei 2026 · Pemasukan pelatihan',
-                'amount' => 5300000,
-                'amount_prefix' => '+',
-                'amount_class' => 'text-emerald-600',
-                'admin_fee' => 0,
-                'type_key' => 'masuk',
-                'activity_slug' => 'simpaud-web-app-mobile-first-transformation',
-                'bill_preview_url' => null,
-            ],
-        ];
-
-        $countHonorReceivers = static function (array $transactions, ?string $activitySlug = null): int {
-            $receivers = [];
-
-            foreach ($transactions as $transaction) {
-                if (($transaction['type_key'] ?? '') !== 'honor') {
-                    continue;
-                }
-
-                if ($activitySlug !== null && ($transaction['activity_slug'] ?? '') !== $activitySlug) {
-                    continue;
-                }
-
-                $receiverName = trim((string) ($transaction['receiver_name'] ?? ''));
-                if ($receiverName === '') {
-                    continue;
-                }
-
-                $receivers[strtolower($receiverName)] = true;
-            }
-
-            return count($receivers);
-        };
-
-        foreach ($reportActivities as &$activity) {
-            $activity['receiver_count'] = $countHonorReceivers($reportTransactions, $activity['slug']);
-        }
-        unset($activity);
-
-        $scopeActivity = null;
-        foreach ($reportActivities as &$activity) {
-            $activity['is_selected'] = $selectedActivitySlug !== '' && $activity['slug'] === $selectedActivitySlug;
-            $activity['detail_url'] = route_query('laporan/unit/' . $unit['slug'], [
-                'preview' => 1,
-                'kegiatan' => $activity['slug'],
-                'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
-                'transaksi_page' => null,
-            ]);
-
-            if ($activity['is_selected']) {
-                $scopeActivity = $activity;
-            }
-        }
-        unset($activity);
-
-        $scopeSummary = [
-            'period' => 'Januari - Desember 2026',
-            'income' => 127500000,
-            'expense' => 89250000,
-            'surplus' => 38250000,
-            'balance' => 45600000,
-        ];
-        $scopeTitle = $unit['name'];
-        $scopeMode = 'unit';
-        $scopeHighlights = [
-            ['label' => 'Penerima Honor', 'value' => (string) $countHonorReceivers($reportTransactions) . ' penerima'],
-            ['label' => 'Rekening Terlibat', 'value' => '3 rekening'],
-            ['label' => 'Transaksi Tercatat', 'value' => '84 transaksi'],
-        ];
-
-        if (is_array($scopeActivity)) {
-            $scopeSummary = [
-                'period' => 'Januari - Desember 2026',
-                'income' => (float) $scopeActivity['income'],
-                'expense' => (float) $scopeActivity['expense'],
-                'surplus' => (float) $scopeActivity['surplus'],
-                'balance' => (float) $scopeActivity['related_balance'],
-            ];
-            $scopeTitle = $scopeActivity['name'];
-            $scopeMode = 'kegiatan';
-            $scopeHighlights = [
-                ['label' => 'Transaksi Tercatat', 'value' => (string) ($scopeActivity['transaction_count'] ?? 0) . ' transaksi'],
-                ['label' => 'Penerima Honor', 'value' => (string) ($scopeActivity['receiver_count'] ?? 0) . ' penerima'],
-                ['label' => 'Rekening Terlibat', 'value' => (string) ($scopeActivity['account_count'] ?? 0) . ' rekening'],
-            ];
-            $reportTransactions = array_values(array_filter(
-                $reportTransactions,
-                static fn(array $transaction): bool => ($transaction['activity_slug'] ?? '') === ($scopeActivity['slug'] ?? '')
-            ));
-        }
-
-        $filteredPublicTransactions = $selectedTransactionFilter === 'semua'
-            ? $reportTransactions
-            : array_values(array_filter(
-                $reportTransactions,
-                static fn(array $transaction): bool => ($transaction['type_key'] ?? '') === $selectedTransactionFilter
-            ));
-
-        $publicTransactionPagination = paginate_items($filteredPublicTransactions, $transactionPage, 10);
-
-        return view('pages/share/unit_public_report', [
+        $share = $this->findUnitPublicShare((int) $unit['id']);
+        $previewAuthorized = $this->isPublicUnitPreviewAuthorized();
+        $shareEnabled = (bool) ($share['is_enabled'] ?? false) && trim((string) ($share['pin_hash'] ?? '')) !== '';
+        $unlocked = $previewAuthorized || ($shareEnabled && $this->hasPublicUnitShareAccess((int) $unit['id'], $share));
+        $data = [
             'pageTitle' => 'Laporan Unit',
             'unit' => [
                 'slug' => $unit['slug'],
                 'name' => $unit['name'],
                 'short_name' => substr($unit['name'], 0, 4),
             ],
-            'shareUrl' => current_url(),
-            'demoPin' => '240519',
+            'shareUrl' => site_url('laporan/unit/' . $unit['slug']),
+            'unlockUrl' => site_url('laporan/unit/' . $unit['slug'] . '/unlock'),
             'unlocked' => $unlocked,
-            'reportSummary' => $scopeSummary,
-            'reportHighlights' => $scopeHighlights,
-            'reportUnitCard' => [
-                'slug' => $unit['slug'],
-                'name' => $unit['name'],
-                'short_name' => substr($unit['name'], 0, 4),
-                'income' => 127500000,
-                'expense' => 89250000,
-                'surplus' => 38250000,
-                'related_balance' => 45600000,
-                'detail_url' => route_query('laporan/unit/' . $unit['slug'], [
-                    'preview' => 1,
-                    'kegiatan' => null,
-                    'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
-                    'transaksi_page' => null,
-                ]),
-                'activities' => [1, 2, 3, 4, 5, 6],
+            'shareEnabled' => $shareEnabled,
+            'previewAuthorized' => $previewAuthorized,
+            'reportSummary' => [
+                'period' => $this->publicReportPeriodLabel((int) ($unit['institution_id'] ?? 0)),
+                'income' => 0.0,
+                'expense' => 0.0,
+                'surplus' => 0.0,
+                'balance' => 0.0,
             ],
-            'reportActivities' => $reportActivities,
-            'transactionFilters' => [
-                ['key' => 'semua', 'label' => 'Semua'],
-                ['key' => 'masuk', 'label' => 'Masuk'],
-                ['key' => 'keluar', 'label' => 'Biaya'],
-                ['key' => 'honor', 'label' => 'Honor'],
-                ['key' => 'pindah', 'label' => 'Pindah Dana'],
-            ],
-            'selectedTransactionFilter' => $selectedTransactionFilter,
-            'selectedActivitySlug' => $selectedActivitySlug,
-            'scopeMode' => $scopeMode,
-            'scopeTitle' => $scopeTitle,
-            'scopeResetUrl' => route_query('laporan/unit/' . $unit['slug'], [
-                'preview' => 1,
-                'kegiatan' => null,
-                'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
-                'transaksi_page' => null,
-            ]),
-            'reportTransactions' => $publicTransactionPagination['items'],
-            'reportTransactionPagination' => $publicTransactionPagination,
-        ]);
+            'reportHighlights' => $this->buildPublicLockedHighlights($unit),
+        ];
+
+        if ($unlocked) {
+            $data = array_merge($data, $this->buildPublicUnitReportData($unit, $previewAuthorized));
+        }
+
+        return view('pages/share/unit_public_report', $data);
+    }
+
+    public function bukaLaporanUnitPublik(string $slug): RedirectResponse
+    {
+        $unit = $this->findPublicUnitBySlug($slug);
+        if (! $unit) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $share = $this->findUnitPublicShare((int) $unit['id']);
+        if (! is_array($share) || (int) ($share['is_enabled'] ?? 0) !== 1 || trim((string) ($share['pin_hash'] ?? '')) === '') {
+            return redirect()->to(site_url('laporan/unit/' . $unit['slug']))
+                ->with('warning', 'Laporan unit ini belum diaktifkan untuk publik.');
+        }
+
+        $pin = preg_replace('/\D+/', '', (string) $this->request->getPost('pin'));
+        if (! is_string($pin) || strlen($pin) !== 6) {
+            return redirect()->back()->withInput()->with('warning', 'PIN harus terdiri dari 6 digit.');
+        }
+
+        if (! password_verify($pin, (string) $share['pin_hash'])) {
+            return redirect()->back()->withInput()->with('warning', 'PIN yang Anda masukkan belum benar.');
+        }
+
+        $this->rememberPublicUnitShareAccess((int) $unit['id'], $share);
+
+        return redirect()->to(site_url('laporan/unit/' . $unit['slug']))
+            ->with('success', 'Akses laporan berhasil dibuka.');
     }
 
     public function kegiatan(string $slug): string
@@ -1585,6 +1333,411 @@ class ReportController extends BaseController
         }
         usort($receivers, fn($a, $b) => $b['total_received'] <=> $a['total_received']);
         return $receivers;
+    }
+
+    private function buildPublicUnitReportData(array $unit, bool $previewAuthorized = false): array
+    {
+        $db = \Config\Database::connect();
+        $request = service('request');
+        $institutionId = (int) ($unit['institution_id'] ?? 0);
+        $unitId = (int) ($unit['id'] ?? 0);
+        $selectedTransactionFilter = strtolower((string) ($request->getGet('jenis') ?? 'semua'));
+        if (! in_array($selectedTransactionFilter, ['semua', 'masuk', 'keluar', 'honor', 'pindah'], true)) {
+            $selectedTransactionFilter = 'semua';
+        }
+
+        $transactionPage = max(1, (int) ($request->getGet('transaksi_page') ?? 1));
+        $selectedActivitySlug = trim((string) ($request->getGet('kegiatan') ?? ''));
+        $activities = $db->table('activities')
+            ->where('unit_id', $unitId)
+            ->where('deleted_at', null)
+            ->where('is_active', 1)
+            ->orderBy('sort_order', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $filterActivityId = $this->resolveActivityId($selectedActivitySlug, $activities);
+        if ($filterActivityId === null) {
+            $selectedActivitySlug = '';
+        }
+
+        $unitBuilder = $db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('unit_id', $unitId)
+            ->where('deleted_at', null);
+
+        $reportUnitCard = [
+            'slug' => $unit['slug'],
+            'name' => $unit['name'],
+            'short_name' => substr((string) $unit['name'], 0, 4),
+            'income' => $this->sumIncome(clone $unitBuilder),
+            'expense' => $this->sumExpense(clone $unitBuilder),
+            'surplus' => 0.0,
+            'related_balance' => 0.0,
+            'detail_url' => $this->buildPublicReportUrl((string) $unit['slug'], [
+                'preview' => $previewAuthorized ? '1' : null,
+                'kegiatan' => null,
+                'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
+                'transaksi_page' => null,
+            ]),
+            'activities' => array_column($activities, 'id'),
+        ];
+        $reportUnitCard['surplus'] = $reportUnitCard['income'] - $reportUnitCard['expense'];
+        $reportUnitCard['related_balance'] = $reportUnitCard['surplus'];
+
+        $activityRows = [];
+        foreach ($activities as $activity) {
+            $activityBuilder = (clone $unitBuilder)->where('activity_id', (int) $activity['id']);
+            $income = $this->sumIncome(clone $activityBuilder);
+            $expense = $this->sumExpense(clone $activityBuilder);
+            $recentRows = (clone $activityBuilder)
+                ->orderBy('transaction_date', 'DESC')
+                ->orderBy('transaction_time', 'DESC')
+                ->orderBy('id', 'DESC')
+                ->get()
+                ->getResultArray();
+            $transactionCount = count($recentRows);
+            $formatted = $this->transactionService->formatTransactions($recentRows);
+            $receiverCount = $this->countHonorReceivers($formatted);
+
+            $activityRows[] = [
+                'id' => (int) $activity['id'],
+                'slug' => $activity['slug'] ?? ('act-' . $activity['id']),
+                'name' => $activity['name'],
+                'short_name' => substr((string) $activity['name'], 0, 4),
+                'unit_name' => $unit['name'],
+                'income' => $income,
+                'expense' => $expense,
+                'surplus' => $income - $expense,
+                'related_balance' => $income - $expense,
+                'detail_url' => $this->buildPublicReportUrl((string) $unit['slug'], [
+                    'preview' => $previewAuthorized ? '1' : null,
+                    'kegiatan' => $activity['slug'] ?? null,
+                    'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
+                    'transaksi_page' => null,
+                ]),
+                'transaction_count' => $transactionCount,
+                'receiver_count' => $receiverCount,
+                'is_selected' => false,
+            ];
+        }
+
+        $scopeActivity = null;
+        foreach ($activityRows as &$activityRow) {
+            $activityRow['is_selected'] = $selectedActivitySlug !== '' && $selectedActivitySlug === ($activityRow['slug'] ?? '');
+            if ($activityRow['is_selected']) {
+                $scopeActivity = $activityRow;
+            }
+        }
+        unset($activityRow);
+
+        $reportBuilder = clone $unitBuilder;
+        if ($filterActivityId !== null) {
+            $reportBuilder->where('activity_id', $filterActivityId);
+        }
+
+        $recentRows = (clone $reportBuilder)
+            ->orderBy('transaction_date', 'DESC')
+            ->orderBy('transaction_time', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->get()
+            ->getResultArray();
+        $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
+        $publicTransactions = $this->formatPublicTransactions($formattedTransactions, $recentRows, $unit, $activities);
+
+        $filteredPublicTransactions = $selectedTransactionFilter === 'semua'
+            ? $publicTransactions
+            : array_values(array_filter(
+                $publicTransactions,
+                static fn(array $transaction): bool => ($transaction['type_key'] ?? '') === $selectedTransactionFilter
+            ));
+
+        $scopeMode = $scopeActivity === null ? 'unit' : 'kegiatan';
+        $scopeTitle = $scopeActivity['name'] ?? $unit['name'];
+        $reportSummary = [
+            'period' => $this->publicReportPeriodLabel($institutionId),
+            'income' => $scopeActivity['income'] ?? $reportUnitCard['income'],
+            'expense' => $scopeActivity['expense'] ?? $reportUnitCard['expense'],
+            'surplus' => $scopeActivity['surplus'] ?? $reportUnitCard['surplus'],
+            'balance' => $scopeActivity['related_balance'] ?? $reportUnitCard['related_balance'],
+        ];
+        $transactionPagination = paginate_items($filteredPublicTransactions, $transactionPage, 10);
+
+        return [
+            'reportSummary' => $reportSummary,
+            'reportHighlights' => $this->buildPublicHighlights($activityRows, $publicTransactions, $scopeActivity),
+            'reportUnitCard' => $reportUnitCard,
+            'reportActivities' => $activityRows,
+            'transactionFilters' => [
+                ['key' => 'semua', 'label' => 'Semua'],
+                ['key' => 'masuk', 'label' => 'Masuk'],
+                ['key' => 'keluar', 'label' => 'Biaya'],
+                ['key' => 'honor', 'label' => 'Honor'],
+                ['key' => 'pindah', 'label' => 'Pindah Dana'],
+            ],
+            'selectedTransactionFilter' => $selectedTransactionFilter,
+            'selectedActivitySlug' => $selectedActivitySlug,
+            'scopeMode' => $scopeMode,
+            'scopeTitle' => $scopeTitle,
+            'scopeResetUrl' => $this->buildPublicReportUrl((string) $unit['slug'], [
+                'preview' => $previewAuthorized ? '1' : null,
+                'kegiatan' => null,
+                'jenis' => $selectedTransactionFilter === 'semua' ? null : $selectedTransactionFilter,
+                'transaksi_page' => null,
+            ]),
+            'reportTransactions' => $transactionPagination['items'],
+            'reportTransactionPagination' => $transactionPagination,
+        ];
+    }
+
+    private function buildPublicLockedHighlights(array $unit): array
+    {
+        $db = \Config\Database::connect();
+        $institutionId = (int) ($unit['institution_id'] ?? 0);
+        $unitId = (int) ($unit['id'] ?? 0);
+
+        $activities = $db->table('activities')
+            ->where('unit_id', $unitId)
+            ->where('deleted_at', null)
+            ->where('is_active', 1)
+            ->countAllResults();
+        $rows = $db->table('transactions')
+            ->where('institution_id', $institutionId)
+            ->where('unit_id', $unitId)
+            ->where('deleted_at', null)
+            ->orderBy('transaction_date', 'DESC')
+            ->orderBy('transaction_time', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->get()
+            ->getResultArray();
+        $formatted = $this->transactionService->formatTransactions($rows);
+
+        return [
+            ['label' => 'Kegiatan Aktif', 'value' => $activities . ' kegiatan'],
+            ['label' => 'Penerima Honor', 'value' => $this->countHonorReceivers($formatted) . ' penerima'],
+            ['label' => 'Transaksi Tercatat', 'value' => count($formatted) . ' transaksi'],
+        ];
+    }
+
+    private function buildPublicHighlights(array $activities, array $transactions, ?array $scopeActivity): array
+    {
+        if (is_array($scopeActivity)) {
+            return [
+                ['label' => 'Transaksi Tercatat', 'value' => (string) ($scopeActivity['transaction_count'] ?? 0) . ' transaksi'],
+                ['label' => 'Penerima Honor', 'value' => (string) ($scopeActivity['receiver_count'] ?? 0) . ' penerima'],
+                ['label' => 'Saldo Scope', 'value' => rupiah((float) ($scopeActivity['related_balance'] ?? 0))],
+            ];
+        }
+
+        return [
+            ['label' => 'Kegiatan Aktif', 'value' => count($activities) . ' kegiatan'],
+            ['label' => 'Penerima Honor', 'value' => $this->countHonorReceivers($transactions) . ' penerima'],
+            ['label' => 'Transaksi Tercatat', 'value' => count($transactions) . ' transaksi'],
+        ];
+    }
+
+    private function countHonorReceivers(array $transactions): int
+    {
+        $receivers = [];
+        foreach ($transactions as $transaction) {
+            if (($transaction['type_key'] ?? '') !== 'honor') {
+                continue;
+            }
+
+            $receiverName = trim((string) ($transaction['receiver_name'] ?? ''));
+            if ($receiverName === '') {
+                continue;
+            }
+
+            $receivers[strtolower($receiverName)] = true;
+        }
+
+        return count($receivers);
+    }
+
+    private function formatPublicTransactions(array $formattedTransactions, array $rows, array $unit, array $activities): array
+    {
+        $activityMap = [];
+        foreach ($activities as $activity) {
+            $activityMap[(int) $activity['id']] = $activity;
+        }
+
+        $rowMap = [];
+        foreach ($rows as $row) {
+            $rowMap[(int) ($row['id'] ?? 0)] = $row;
+        }
+
+        $pocketMap = [];
+        foreach ((new ProjectPocketModel())->findAll() as $pocket) {
+            $pocketMap[(int) ($pocket['id'] ?? 0)] = $pocket;
+        }
+
+        $items = [];
+        foreach ($formattedTransactions as $transaction) {
+            $type = (string) ($transaction['type_key'] ?? '');
+            $category = trim((string) ($transaction['category'] ?? ''));
+            $receiverName = trim((string) ($transaction['receiver_name'] ?? ''));
+            $activity = $activityMap[(int) ($transaction['activity_id'] ?? 0)] ?? null;
+            $row = $rowMap[(int) ($transaction['id'] ?? 0)] ?? null;
+            $projectPocket = $pocketMap[(int) ($transaction['project_pocket_id'] ?? 0)] ?? null;
+
+            $headline = match ($type) {
+                'masuk' => $category !== '' ? $category : 'Uang Masuk',
+                'pindah' => 'Pindah Dana Internal',
+                'honor' => 'Honor untuk ' . ($receiverName !== '' ? $receiverName : 'Penerima'),
+                default => $category !== '' ? $category : 'Biaya',
+            };
+
+            $sublineParts = [$unit['name']];
+            if (is_array($activity) && ($activity['name'] ?? '') !== '') {
+                $sublineParts[] = $activity['name'];
+            }
+            if (is_array($projectPocket) && ($projectPocket['name'] ?? '') !== '' && $type !== 'pindah') {
+                $sublineParts[] = $projectPocket['name'];
+            }
+
+            $metaParts = [date('d M Y', strtotime((string) ($transaction['transaction_date'] ?? 'now')))];
+            $notes = trim((string) ($transaction['notes'] ?? ''));
+            if ($notes !== '') {
+                $metaParts[] = $notes;
+            }
+
+            $items[] = [
+                'id' => (string) ($transaction['id'] ?? ''),
+                'badge_label' => $transaction['badge_label'] ?? '',
+                'badge_class' => $transaction['badge_class'] ?? 'bg-zinc-100 text-zinc-700',
+                'icon' => $transaction['icon'] ?? 'receipt_long',
+                'headline' => $headline,
+                'subline' => implode(' / ', array_filter($sublineParts)),
+                'meta' => implode(' · ', array_filter($metaParts)),
+                'amount' => (float) ($transaction['amount'] ?? 0),
+                'amount_prefix' => $transaction['amount_prefix'] ?? '+',
+                'amount_class' => $transaction['amount_class'] ?? 'text-zinc-950',
+                'admin_fee' => (float) ($transaction['admin_fee'] ?? 0),
+                'type_key' => $type,
+                'receiver_name' => $receiverName,
+                'activity_slug' => is_array($activity) ? (string) ($activity['slug'] ?? '') : '',
+                'project_pocket_name' => is_array($projectPocket) ? (string) ($projectPocket['name'] ?? '') : '',
+            ];
+        }
+
+        return $items;
+    }
+
+    private function sumIncome(BaseBuilder $builder): float
+    {
+        return (float) ($builder->where('type', 'masuk')->selectSum('amount')->get()->getRow()->amount ?? 0);
+    }
+
+    private function sumExpense(BaseBuilder $builder): float
+    {
+        $mainBuilder = clone $builder;
+        $pindahBuilder = clone $builder;
+        $main = (float) ($mainBuilder->whereIn('type', ['keluar', 'honor'])->select('SUM(amount + admin_fee) as total')->get()->getRow()->total ?? 0);
+        $pindahFee = (float) ($pindahBuilder->where('type', 'pindah')->selectSum('admin_fee')->get()->getRow()->admin_fee ?? 0);
+
+        return $main + $pindahFee;
+    }
+
+    private function publicReportPeriodLabel(int $institutionId): string
+    {
+        $period = (new BookPeriodModel())
+            ->where('institution_id', $institutionId)
+            ->where('is_active', 1)
+            ->first();
+
+        if (! is_array($period)) {
+            return 'Semua periode';
+        }
+
+        return date('F Y', strtotime((string) $period['start_date'])) . ' - ' . date('F Y', strtotime((string) $period['end_date']));
+    }
+
+    private function findPublicUnitBySlug(string $slug): ?array
+    {
+        return (new UnitModel())
+            ->where('slug', $slug)
+            ->where('deleted_at', null)
+            ->where('is_active', 1)
+            ->first();
+    }
+
+    private function findUnitPublicShare(int $unitId): ?array
+    {
+        $share = (new UnitPublicShareModel())
+            ->where('unit_id', $unitId)
+            ->first();
+
+        return is_array($share) ? $share : null;
+    }
+
+    private function generatePublicSharePin(): string
+    {
+        return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
+    private function currentAuthUserId(): int
+    {
+        $userId = (int) ($this->session->get('auth_user_id') ?? 0);
+        if ($userId < 1) {
+            throw new RuntimeException('Sesi login tidak valid. Silakan masuk ulang.');
+        }
+
+        return $userId;
+    }
+
+    private function isPublicUnitPreviewAuthorized(): bool
+    {
+        return (int) ($this->session->get('auth_user_id') ?? 0) > 0
+            && $this->request->getGet('preview') === '1';
+    }
+
+    private function rememberPublicUnitShareAccess(int $unitId, ?array $share = null): void
+    {
+        $access = $this->session->get(self::PUBLIC_UNIT_SHARE_ACCESS_SESSION_KEY);
+        $access = is_array($access) ? $access : [];
+        $access[$unitId] = [
+            'version' => $this->publicShareAccessVersion($share),
+            'unlocked_at' => date('Y-m-d H:i:s'),
+        ];
+        $this->session->set(self::PUBLIC_UNIT_SHARE_ACCESS_SESSION_KEY, $access);
+    }
+
+    private function forgetPublicUnitShareAccess(int $unitId): void
+    {
+        $access = $this->session->get(self::PUBLIC_UNIT_SHARE_ACCESS_SESSION_KEY);
+        $access = is_array($access) ? $access : [];
+        unset($access[$unitId]);
+        $this->session->set(self::PUBLIC_UNIT_SHARE_ACCESS_SESSION_KEY, $access);
+    }
+
+    private function hasPublicUnitShareAccess(int $unitId, ?array $share = null): bool
+    {
+        $access = $this->session->get(self::PUBLIC_UNIT_SHARE_ACCESS_SESSION_KEY);
+        $access = is_array($access) ? $access : [];
+        $record = $access[$unitId] ?? null;
+
+        if (! is_array($record)) {
+            return ! empty($record) && $this->publicShareAccessVersion($share) === 'legacy';
+        }
+
+        return ($record['version'] ?? null) === $this->publicShareAccessVersion($share);
+    }
+
+    private function buildPublicReportUrl(string $unitSlug, array $params = []): string
+    {
+        return route_query('laporan/unit/' . $unitSlug, $params);
+    }
+
+    private function publicShareAccessVersion(?array $share = null): string
+    {
+        $pinHash = trim((string) ($share['pin_hash'] ?? ''));
+        if ($pinHash === '') {
+            return 'legacy';
+        }
+
+        return sha1($pinHash);
     }
 
     private function getInvolvedAccounts($db, array $rows): array
