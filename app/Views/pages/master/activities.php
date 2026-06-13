@@ -69,10 +69,20 @@
                     <div class="relative -mt-5 pt-[26px] flex items-center justify-between gap-3 rounded-[1.4rem] border <?= $isInactive ? 'border-zinc-200 bg-zinc-100/90' : 'border-zinc-100 bg-white' ?> px-4 py-3 shadow-sm">
                         <div class="min-w-0">
                             <p class="text-sm font-semibold <?= $isInactive ? 'text-rose-600' : 'text-zinc-950' ?>"><?= esc($activity['status_label']) ?></p>
-                            <p class="mt-1 text-xs text-zinc-500"><?= esc($activity['unit_name']) ?> · klik kartu untuk buka form kegiatan</p>
+                            <p class="mt-1 text-xs text-zinc-500">
+                                <?= esc($activity['unit_name']) ?>
+                                <?php if (!empty($activity['is_project_mode'])): ?>
+                                    · mode proyek aktif · <?= esc((string) ($activity['project_pocket_count'] ?? 0)) ?> kantong
+                                <?php else: ?>
+                                    · klik kartu untuk buka form kegiatan
+                                <?php endif; ?>
+                            </p>
                         </div>
                         <div class="flex shrink-0 items-center gap-2">
                             <a href="<?= site_url('kegiatan/' . $activity['slug']) ?>" class="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-950">Lihat Kegiatan</a>
+                            <?php if (!empty($activity['is_project_mode'])): ?>
+                                <a href="<?= site_url('kegiatan/' . $activity['slug']) ?>" class="rounded-full bg-zinc-950 px-3 py-2 text-xs font-semibold text-white">Kelola Kantong</a>
+                            <?php endif; ?>
                             <?php if ((int) ($activity['transaction_count'] ?? 0) === 0): ?>
                                 <button
                                     type="button"

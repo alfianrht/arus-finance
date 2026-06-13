@@ -68,6 +68,14 @@
             </div>
         </div>
 
+        <?= view('partials/project_pocket_field', [
+            'projectPocketField' => $transactionForm['project_pocket_field'],
+            'fieldName' => 'project_pocket_id',
+            'label' => 'Kantong Proyek',
+            'placeholder' => 'Pilih kantong proyek',
+            'readonly' => ! $isEditMode,
+        ]) ?>
+
         <?php if ($transaction['type_key'] === 'masuk'): ?>
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-zinc-900">Kategori Pemasukan</label>
@@ -135,6 +143,15 @@
         <?php endif; ?>
 
         <?php if ($transaction['type_key'] === 'pindah'): ?>
+            <?= view('partials/project_pocket_field', [
+                'projectPocketField' => $transactionForm['project_pocket_field'],
+                'fieldName' => 'counter_project_pocket_id',
+                'label' => 'Ke Kantong',
+                'placeholder' => 'Pilih kantong tujuan',
+                'readonly' => ! $isEditMode,
+                'mode' => 'execution',
+            ]) ?>
+
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-zinc-900">Dari rekening / dompet</label>

@@ -11,6 +11,7 @@ use App\Models\TransactionModel;
 use App\Models\UnitModel;
 use App\Models\UserModel;
 use App\Services\FileUploadService;
+use App\Services\ProjectPocketService;
 use App\Services\TransactionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -20,11 +21,13 @@ class TransactionController extends BaseController
 {
     private TransactionService $transactionService;
     private FileUploadService $fileUploadService;
+    private ProjectPocketService $projectPocketService;
 
     public function __construct()
     {
         $this->transactionService = new TransactionService();
         $this->fileUploadService = new FileUploadService();
+        $this->projectPocketService = new ProjectPocketService();
     }
 
     public function index(): string
@@ -93,6 +96,7 @@ class TransactionController extends BaseController
             'selectedIncomeCategory' => $incomeCategories[0]['name'] ?? '',
             'accounts' => $accounts,
             'activeContext' => $activeContext,
+            'projectPocketField' => $this->buildProjectPocketFieldData($this->flattenActivities($units), $activeContext['activity_id']),
         ];
 
         return view('pages/catat/masuk', $data);
@@ -113,6 +117,8 @@ class TransactionController extends BaseController
                 'admin_fee' => 0,
                 'unit_id' => (int) $this->request->getPost('unit_id'),
                 'activity_id' => (int) $this->request->getPost('activity_id'),
+                'project_pocket_id' => $this->resolveProjectPocketIdFromRequest((int) $this->request->getPost('activity_id')),
+                'counter_project_pocket_id' => null,
                 'category_id' => (int) $this->request->getPost('category_id'),
                 'from_account_id' => null,
                 'to_account_id' => (int) $this->request->getPost('to_account_id'),
@@ -165,6 +171,7 @@ class TransactionController extends BaseController
             'expenseCategories' => $expenseCategories,
             'selectedCategory' => $selectedCategory,
             'activeContext' => $activeContext,
+            'projectPocketField' => $this->buildProjectPocketFieldData($this->flattenActivities($units), $activeContext['activity_id']),
         ]);
     }
 
@@ -183,6 +190,8 @@ class TransactionController extends BaseController
                 'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
                 'unit_id' => (int) $this->request->getPost('unit_id'),
                 'activity_id' => (int) $this->request->getPost('activity_id'),
+                'project_pocket_id' => $this->resolveProjectPocketIdFromRequest((int) $this->request->getPost('activity_id')),
+                'counter_project_pocket_id' => null,
                 'category_id' => (int) $this->request->getPost('category_id'),
                 'from_account_id' => (int) $this->request->getPost('from_account_id'),
                 'to_account_id' => null,
@@ -221,6 +230,7 @@ class TransactionController extends BaseController
             'activities' => $this->flattenActivities($units),
             'honorCat' => $honorCategory,
             'activeContext' => $activeContext,
+            'projectPocketField' => $this->buildProjectPocketFieldData($this->flattenActivities($units), $activeContext['activity_id']),
         ]);
     }
 
@@ -244,6 +254,8 @@ class TransactionController extends BaseController
                 'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
                 'unit_id' => (int) $this->request->getPost('unit_id'),
                 'activity_id' => (int) $this->request->getPost('activity_id'),
+                'project_pocket_id' => $this->resolveProjectPocketIdFromRequest((int) $this->request->getPost('activity_id')),
+                'counter_project_pocket_id' => null,
                 'category_id' => (int) $honorCategory['id'],
                 'from_account_id' => (int) $this->request->getPost('from_account_id'),
                 'to_account_id' => null,
@@ -279,6 +291,7 @@ class TransactionController extends BaseController
             'accounts' => $this->loadAccounts(),
             'activities' => $this->flattenActivities($units),
             'activeContext' => $activeContext,
+            'projectPocketField' => $this->buildProjectPocketFieldData($this->flattenActivities($units), $activeContext['activity_id']),
         ]);
     }
 
@@ -296,6 +309,12 @@ class TransactionController extends BaseController
         }
 
         try {
+            $activityId = (int) $this->request->getPost('activity_id');
+            $projectPocketId = $this->resolveProjectPocketIdFromRequest($activityId);
+            $counterProjectPocketId = $projectPocketId === null
+                ? null
+                : $this->resolveCounterProjectPocketIdFromRequest($activityId, (int) $projectPocketId);
+
             $payload = [
                 'institution_id' => $this->currentInstitutionId(),
                 'book_period_id' => $this->activeBookPeriodId(),
@@ -303,7 +322,9 @@ class TransactionController extends BaseController
                 'amount' => $this->normalizeMoney((string) $this->request->getPost('amount')),
                 'admin_fee' => $this->resolveAdminFee((string) $this->request->getPost('admin_fee_preset'), (string) $this->request->getPost('admin_fee_custom')),
                 'unit_id' => (int) $this->request->getPost('unit_id'),
-                'activity_id' => (int) $this->request->getPost('activity_id'),
+                'activity_id' => $activityId,
+                'project_pocket_id' => $projectPocketId,
+                'counter_project_pocket_id' => $counterProjectPocketId,
                 'category_id' => null,
                 'from_account_id' => $fromAccountId,
                 'to_account_id' => $toAccountId,
@@ -391,6 +412,9 @@ class TransactionController extends BaseController
             'proof_image' => $this->storeProofUpload($type, (string) ($existing['proof_image'] ?? '')),
         ];
 
+        $payload['project_pocket_id'] = $this->resolveProjectPocketIdFromRequest((int) $payload['activity_id']);
+        $payload['counter_project_pocket_id'] = null;
+
         if ($type === 'masuk') {
             $payload['category_id'] = (int) $this->request->getPost('category_id');
             $payload['to_account_id'] = (int) $this->request->getPost('to_account_id');
@@ -403,6 +427,9 @@ class TransactionController extends BaseController
             $payload['to_account_id'] = (int) $this->request->getPost('to_account_id');
             $payload['receiver_id'] = null;
             $payload['admin_fee'] = $this->resolveAdminFee((string) ($this->request->getPost('admin_fee_preset') ?: $this->request->getPost('admin_fee')), (string) ($this->request->getPost('admin_fee_custom') ?: $this->request->getPost('admin_fee_manual')));
+            $payload['counter_project_pocket_id'] = $payload['project_pocket_id'] === null
+                ? null
+                : $this->resolveCounterProjectPocketIdFromRequest((int) $payload['activity_id'], (int) $payload['project_pocket_id']);
         } else {
             $payload['category_id'] = (int) $this->request->getPost('category_id');
             $payload['from_account_id'] = (int) $this->request->getPost('from_account_id');
@@ -630,6 +657,12 @@ class TransactionController extends BaseController
             'description_value' => old('notes', $transaction['notes']),
             'unit_options' => $this->buildOptionSet($units, old('unit_id', (string) $transaction['unit_id'])),
             'activity_options' => $this->buildOptionSet($activities, old('activity_id', (string) $transaction['activity_id'])),
+            'project_pocket_field' => $this->buildProjectPocketFieldData(
+                $activities,
+                (int) old('activity_id', (string) $transaction['activity_id']),
+                (int) old('project_pocket_id', (string) $transaction['project_pocket_id']),
+                (int) old('counter_project_pocket_id', (string) $transaction['counter_project_pocket_id'])
+            ),
             'account_options' => $this->buildOptionSet($accounts, old('from_account_id', $transaction['from_account_id'] > 0 ? (string) $transaction['from_account_id'] : (string) $transaction['to_account_id'])),
             'to_account_options' => $this->buildOptionSet($accounts, old('to_account_id', (string) $transaction['to_account_id'])),
             'income_category_options' => $this->buildOptionSet($incomeCategories, old('category_id', (string) $transaction['category_id'])),
@@ -694,6 +727,39 @@ class TransactionController extends BaseController
     private function resolveAdminFee(string $preset, string $custom): float
     {
         return $preset === 'manual' ? $this->normalizeMoney($custom) : $this->normalizeMoney($preset);
+    }
+
+    private function buildProjectPocketFieldData(
+        array $activities,
+        int $selectedActivityId = 0,
+        int $selectedPocketId = 0,
+        int $selectedCounterPocketId = 0
+    ): array {
+        return [
+            'groups' => $this->projectPocketService->buildActivityPocketGroups($this->currentInstitutionId(), $activities),
+            'selected_activity_id' => $selectedActivityId,
+            'selected_pocket_id' => $selectedPocketId,
+            'selected_counter_pocket_id' => $selectedCounterPocketId,
+        ];
+    }
+
+    private function resolveProjectPocketIdFromRequest(int $activityId): ?int
+    {
+        return $this->projectPocketService->resolvePocketIdForTransaction(
+            $this->currentInstitutionId(),
+            $activityId,
+            (int) ($this->request->getPost('project_pocket_id') ?? 0)
+        );
+    }
+
+    private function resolveCounterProjectPocketIdFromRequest(int $activityId, int $sourcePocketId): ?int
+    {
+        return $this->projectPocketService->resolveCounterPocketIdForTransfer(
+            $this->currentInstitutionId(),
+            $activityId,
+            $sourcePocketId,
+            (int) ($this->request->getPost('counter_project_pocket_id') ?? 0)
+        );
     }
 
     private function storeProofUpload(string $type, string $existingPath = ''): ?string

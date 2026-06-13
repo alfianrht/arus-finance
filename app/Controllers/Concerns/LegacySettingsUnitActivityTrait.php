@@ -394,6 +394,12 @@ trait LegacySettingsUnitActivityTrait
                 ->where('activity_id', (int) $activity['id'])
                 ->where('deleted_at', null)
                 ->countAllResults();
+            $activity['project_pocket_count'] = (int) $db->table('project_pockets')
+                ->where('institution_id', $this->currentInstitutionId())
+                ->where('activity_id', (int) $activity['id'])
+                ->where('deleted_at', null)
+                ->countAllResults();
+            $activity['is_project_mode'] = $activity['project_pocket_count'] > 0;
         }
         unset($activity);
 

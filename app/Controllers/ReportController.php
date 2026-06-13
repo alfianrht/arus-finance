@@ -4,17 +4,22 @@ namespace App\Controllers;
 
 use App\Models\ActivityModel;
 use App\Models\BookPeriodModel;
+use App\Services\ProjectPocketService;
 use App\Models\UnitModel;
 use App\Services\TransactionService;
+use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\Database\BaseBuilder;
 
 class ReportController extends BaseController
 {
     private TransactionService $transactionService;
+    private ProjectPocketService $projectPocketService;
 
     public function __construct()
     {
         $this->transactionService = new TransactionService();
+        $this->projectPocketService = new ProjectPocketService();
     }
 
     public function index(): string
@@ -1010,28 +1015,13 @@ class ReportController extends BaseController
 
     public function kegiatan(string $slug): string
     {
-        $institutionId = $this->currentInstitutionId();
-        $db = \Config\Database::connect();
-        $units = $this->loadUnitProgramRows($institutionId);
-        $allUnits = $this->loadAllUnitProgramRows($institutionId);
-        $allUnitIds = array_column($allUnits, 'id');
-        $allActivities = $allUnitIds === []
-            ? []
-            : $db->table('activities')->whereIn('unit_id', $allUnitIds)->where('deleted_at', null)->get()->getResultArray();
-        $activityId = $this->resolveActivityId($slug, $allActivities);
-        $act = $activityId === null
-            ? null
-            : $db->table('activities')->where('id', $activityId)->where('deleted_at', null)->get()->getRowArray();
-        
-        if (! $act) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $unit = $db->table('units')->where('id', $act['unit_id'])->where('institution_id', $institutionId)->where('deleted_at', null)->get()->getRowArray();
-        if (!$unit) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
+        $context = $this->findActivityContextOrFail($slug);
+        $institutionId = $context['institution_id'];
+        $db = $context['db'];
+        $activityId = (int) $context['activity']['id'];
+        $act = $context['activity'];
+        $unit = $context['unit'];
+        $units = $context['units'];
         $request = service('request');
         $selectedPeriodSlug = $request->getGet('periode') ?: 'semua';
         $selectedUnitSlug = $request->getGet('unit') ?: 'semua';
@@ -1055,9 +1045,10 @@ class ReportController extends BaseController
         $actExp = $actExpMain + $actExpPindah;
 
         $activity = [
+            'id' => $activityId,
             'slug' => $act['slug'] ?? ('act-' . $activityId),
             'name' => $act['name'],
-            'short_name' => substr($act['name'], 0, 4),
+            'short_name' => $act['short_name'] ?? substr($act['name'], 0, 4),
             'unit_name' => $unit['name'] ?? '',
             'income' => $actInc,
             'expense' => $actExp,
@@ -1067,6 +1058,16 @@ class ReportController extends BaseController
             'masuk_url' => route_query('catat/masuk', ['unit' => $unit['slug'] ?? null, 'kegiatan' => $act['slug'] ?? null]),
             'keluar_url' => route_query('catat/keluar', ['unit' => $unit['slug'] ?? null, 'kegiatan' => $act['slug'] ?? null]),
         ];
+
+        if ($this->projectPocketService->hasProjectMode($institutionId, $activityId)) {
+            return view('pages/project_activity_detail', $this->buildProjectActivityDetailData(
+                $activity,
+                $unit,
+                clone $tBuilder,
+                $selectedPeriodSlug,
+                $selectedUnitSlug
+            ));
+        }
 
         $recentRows = (clone $tBuilder)->orderBy('transaction_date', 'DESC')->orderBy('transaction_time', 'DESC')->orderBy('id', 'DESC')->get()->getResultArray();
         $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
@@ -1120,6 +1121,98 @@ class ReportController extends BaseController
         ];
 
         return view('pages/activity_detail', $data);
+    }
+
+    public function updateProyekKegiatan(string $slug): RedirectResponse
+    {
+        $context = $this->findActivityContextOrFail($slug);
+        $mainPocket = $this->projectPocketService->ensureMainPocket($context['institution_id'], $context['activity']);
+
+        $this->projectPocketService->updatePocket($mainPocket, [
+            'notes' => (string) $this->request->getPost('notes'),
+            'contract_value' => (string) $this->request->getPost('contract_value'),
+            'contract_terms_count' => (int) $this->request->getPost('contract_terms_count'),
+        ]);
+
+        return redirect()->to(site_url('kegiatan/' . $context['activity']['slug']))
+            ->with('success', 'Pengaturan proyek berhasil diperbarui.');
+    }
+
+    public function simpanKantongKegiatan(string $slug): RedirectResponse
+    {
+        $context = $this->findActivityContextOrFail($slug);
+
+        try {
+            $this->projectPocketService->createExecutionPocket($context['institution_id'], $context['activity'], [
+                'name' => (string) $this->request->getPost('name'),
+                'notes' => (string) $this->request->getPost('notes'),
+                'is_active' => 1,
+            ]);
+        } catch (\RuntimeException $e) {
+            return redirect()->back()->withInput()->with('warning', $e->getMessage());
+        }
+
+        return redirect()->to(site_url('kegiatan/' . $context['activity']['slug']))
+            ->with('success', 'Kantong pelaksanaan berhasil ditambahkan.');
+    }
+
+    public function kantongKegiatan(string $slug, string $pocketSlug): string
+    {
+        $context = $this->findActivityContextOrFail($slug);
+        $pocket = $this->projectPocketService->findPocket($context['institution_id'], (int) $context['activity']['id'], $pocketSlug);
+
+        if (! is_array($pocket)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        return view('pages/project_pocket_detail', $this->buildProjectPocketDetailData(
+            $context['activity'],
+            $context['unit'],
+            $pocket
+        ));
+    }
+
+    public function updateKantongKegiatan(string $slug, string $pocketSlug): RedirectResponse
+    {
+        $context = $this->findActivityContextOrFail($slug);
+        $pocket = $this->projectPocketService->findPocket($context['institution_id'], (int) $context['activity']['id'], $pocketSlug);
+
+        if (! is_array($pocket)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        try {
+            $updatedPocket = $this->projectPocketService->updatePocket($pocket, [
+                'name' => (string) $this->request->getPost('name'),
+                'notes' => (string) $this->request->getPost('notes'),
+                'contract_value' => (string) $this->request->getPost('contract_value'),
+                'contract_terms_count' => (int) $this->request->getPost('contract_terms_count'),
+            ]);
+        } catch (\RuntimeException $e) {
+            return redirect()->back()->withInput()->with('warning', $e->getMessage());
+        }
+
+        return redirect()->to(site_url('kegiatan/' . $context['activity']['slug'] . '/kantong/' . $updatedPocket['slug']))
+            ->with('success', 'Kantong berhasil diperbarui.');
+    }
+
+    public function nonaktifkanKantongKegiatan(string $slug, string $pocketSlug): RedirectResponse
+    {
+        $context = $this->findActivityContextOrFail($slug);
+        $pocket = $this->projectPocketService->findPocket($context['institution_id'], (int) $context['activity']['id'], $pocketSlug);
+
+        if (! is_array($pocket)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        try {
+            $this->projectPocketService->deactivatePocket($pocket);
+        } catch (\RuntimeException $e) {
+            return redirect()->back()->with('warning', $e->getMessage());
+        }
+
+        return redirect()->to(site_url('kegiatan/' . $context['activity']['slug']))
+            ->with('success', 'Kantong pelaksanaan dinonaktifkan.');
     }
 
     public function penerima(string $slug): string
@@ -1176,6 +1269,295 @@ class ReportController extends BaseController
         ];
 
         return view('pages/receiver_detail', $data);
+    }
+
+    private function findActivityContextOrFail(string $slug): array
+    {
+        $institutionId = $this->currentInstitutionId();
+        $db = \Config\Database::connect();
+        $units = $this->loadUnitProgramRows($institutionId);
+        $allUnits = $this->loadAllUnitProgramRows($institutionId);
+        $allUnitIds = array_column($allUnits, 'id');
+        $allActivities = $allUnitIds === []
+            ? []
+            : $db->table('activities')
+                ->whereIn('unit_id', $allUnitIds)
+                ->where('deleted_at', null)
+                ->get()
+                ->getResultArray();
+        $activityId = $this->resolveActivityId($slug, $allActivities);
+        $activity = $activityId === null
+            ? null
+            : $db->table('activities')->where('id', $activityId)->where('deleted_at', null)->get()->getRowArray();
+
+        if (! is_array($activity)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $unit = $db->table('units')
+            ->where('id', $activity['unit_id'])
+            ->where('institution_id', $institutionId)
+            ->where('deleted_at', null)
+            ->get()
+            ->getRowArray();
+
+        if (! is_array($unit)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        return [
+            'institution_id' => $institutionId,
+            'db' => $db,
+            'units' => $units,
+            'all_units' => $allUnits,
+            'activity' => $activity,
+            'unit' => $unit,
+        ];
+    }
+
+    private function buildProjectActivityDetailData(array $activity, array $unit, BaseBuilder $tBuilder, string $selectedPeriodSlug, string $selectedUnitSlug): array
+    {
+        $institutionId = $this->currentInstitutionId();
+        $mainPocket = $this->projectPocketService->ensureMainPocket($institutionId, [
+            'id' => $activity['id'] ?? 0,
+            'unit_id' => $unit['id'] ?? 0,
+        ]);
+        $pockets = $this->projectPocketService->getByActivity($institutionId, (int) $activity['id'], false);
+        $recentRows = (clone $tBuilder)
+            ->orderBy('transaction_date', 'DESC')
+            ->orderBy('transaction_time', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->get()
+            ->getResultArray();
+        $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
+        $transactionPage = max(1, (int) ($this->request->getGet('transaksi_page') ?? 1));
+        $projectTransactionPagination = paginate_items($formattedTransactions, $transactionPage, 10);
+
+        $pocketCards = [];
+        $totalPocketBalance = 0.0;
+        $mainPocketSummary = null;
+        foreach ($pockets as $pocket) {
+            $summary = $this->summarizePocketRows($recentRows, (int) $pocket['id']);
+            $totalPocketBalance += (float) $summary['balance'];
+
+            if ((string) ($pocket['pocket_type'] ?? '') === 'main') {
+                $mainPocketSummary = $summary;
+            }
+
+            $pocketCards[] = [
+                'id' => (int) $pocket['id'],
+                'name' => (string) $pocket['name'],
+                'slug' => (string) $pocket['slug'],
+                'pocket_type' => (string) $pocket['pocket_type'],
+                'type_label' => (string) (($pocket['pocket_type'] ?? '') === 'main' ? 'Kantong Utama' : 'Pelaksanaan'),
+                'notes' => trim((string) ($pocket['notes'] ?? '')),
+                'is_active' => (int) ($pocket['is_active'] ?? 0) === 1,
+                'balance' => (float) $summary['balance'],
+                'income' => (float) $summary['income'],
+                'expense' => (float) $summary['expense'],
+                'transfer_in' => (float) $summary['transfer_in'],
+                'transfer_out' => (float) $summary['transfer_out'],
+                'transaction_count' => (int) $summary['transaction_count'],
+                'detail_url' => site_url('kegiatan/' . $activity['slug'] . '/kantong/' . $pocket['slug']),
+                'edit_url' => site_url('kegiatan/' . $activity['slug'] . '/kantong/' . $pocket['slug']),
+                'deactivate_url' => site_url('kegiatan/' . $activity['slug'] . '/kantong/' . $pocket['slug'] . '/nonaktif'),
+                'short_name' => (string) (($pocket['pocket_type'] ?? '') === 'main' ? 'UTM' : substr((string) $pocket['name'], 0, 4)),
+                'unit_name' => $activity['name'],
+                'related_balance' => (float) $summary['balance'],
+                'surplus' => (float) $summary['balance'],
+                'detail_badge' => (string) (($pocket['pocket_type'] ?? '') === 'main' ? 'Kontrak' : 'Operasional'),
+            ];
+        }
+
+        $mainPocketSummary = $mainPocketSummary ?? $this->summarizePocketRows($recentRows, (int) ($mainPocket['id'] ?? 0));
+        $contractValue = (float) ($mainPocket['contract_value'] ?? 0);
+        $terminCair = (float) ($mainPocketSummary['contract_income'] ?? 0);
+
+        return [
+            'pageTitle' => $activity['name'],
+            'activeNav' => 'rekap',
+            'backUrl' => site_url('rekap'),
+            'activity' => $activity,
+            'unit' => $unit,
+            'projectSummary' => [
+                'contract_value' => $contractValue,
+                'contract_terms_count' => (int) ($mainPocket['contract_terms_count'] ?? 0),
+                'termin_cair' => $terminCair,
+                'outstanding' => $contractValue - $terminCair,
+                'total_pocket_balance' => $totalPocketBalance,
+                'transaction_count' => count($recentRows),
+                'execution_pocket_count' => count(array_filter($pockets, static fn(array $pocket): bool => ($pocket['pocket_type'] ?? '') === 'execution' && (int) ($pocket['is_active'] ?? 0) === 1)),
+            ],
+            'mainPocket' => $mainPocket,
+            'pocketCards' => $pocketCards,
+            'projectTransactions' => $projectTransactionPagination['items'],
+            'projectTransactionPagination' => $projectTransactionPagination,
+            'projectFilters' => [
+                'periode' => $selectedPeriodSlug,
+                'unit' => $selectedUnitSlug,
+            ],
+        ];
+    }
+
+    private function buildProjectPocketDetailData(array $activity, array $unit, array $pocket): array
+    {
+        $db = \Config\Database::connect();
+        $transactionPage = max(1, (int) ($this->request->getGet('transaksi_page') ?? 1));
+        $transferPage = max(1, (int) ($this->request->getGet('mutasi_page') ?? 1));
+
+        $tBuilder = $db->table('transactions')
+            ->where('institution_id', $this->currentInstitutionId())
+            ->where('activity_id', (int) $activity['id'])
+            ->where('deleted_at', null)
+            ->groupStart()
+                ->where('project_pocket_id', (int) $pocket['id'])
+                ->orWhere('counter_project_pocket_id', (int) $pocket['id'])
+            ->groupEnd();
+
+        $recentRows = (clone $tBuilder)
+            ->orderBy('transaction_date', 'DESC')
+            ->orderBy('transaction_time', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->get()
+            ->getResultArray();
+        $formattedTransactions = $this->transactionService->formatTransactions($recentRows);
+        $summary = $this->summarizePocketRows($recentRows, (int) $pocket['id']);
+
+        $activityTransactions = [];
+        $transferItems = [];
+        foreach ($formattedTransactions as $item) {
+            if (($item['type_key'] ?? '') === 'pindah') {
+                $transferItems[] = $item;
+            } else {
+                $activityTransactions[] = $item;
+            }
+        }
+
+        $categoryMap = [];
+        foreach ($formattedTransactions as $item) {
+            if (($item['type_key'] ?? '') !== 'keluar') {
+                continue;
+            }
+            if ((int) ($item['project_pocket_id'] ?? 0) !== (int) $pocket['id']) {
+                continue;
+            }
+
+            $categoryName = trim((string) ($item['category'] ?? '')) !== '' ? (string) $item['category'] : 'Lainnya';
+            $categoryMap[$categoryName] = ($categoryMap[$categoryName] ?? 0) + (float) ($item['amount'] ?? 0) + (float) ($item['admin_fee'] ?? 0);
+        }
+
+        $categoryBreakdown = [];
+        foreach ($categoryMap as $name => $amount) {
+            $categoryBreakdown[] = [
+                'category_name' => $name,
+                'total_amount' => $amount,
+                'percentage' => (float) $summary['expense'] > 0 ? ($amount / (float) $summary['expense']) * 100 : 0,
+            ];
+        }
+        usort($categoryBreakdown, static fn(array $a, array $b): int => $b['total_amount'] <=> $a['total_amount']);
+
+        $activityTransactionPagination = paginate_items($activityTransactions, $transactionPage, 10);
+        $activityTransferPagination = paginate_items($transferItems, $transferPage, 10);
+
+        return [
+            'pageTitle' => $pocket['name'],
+            'activeNav' => 'rekap',
+            'backUrl' => site_url('kegiatan/' . $activity['slug']),
+            'activity' => [
+                'slug' => $activity['slug'],
+                'project_slug' => $activity['slug'],
+                'name' => $pocket['name'],
+                'short_name' => ($pocket['pocket_type'] ?? '') === 'main' ? 'UTM' : substr((string) $pocket['name'], 0, 4),
+                'unit_name' => $activity['name'],
+                'income' => (float) $summary['income'],
+                'expense' => (float) $summary['expense'],
+                'surplus' => (float) $summary['balance'],
+                'related_accounts' => [],
+                'related_balance' => (float) $summary['balance'],
+                'masuk_url' => route_query('catat/masuk', ['unit' => $unit['slug'] ?? null, 'kegiatan' => $activity['slug'] ?? null]),
+                'keluar_url' => route_query('catat/keluar', ['unit' => $unit['slug'] ?? null, 'kegiatan' => $activity['slug'] ?? null]),
+            ],
+            'pocket' => $pocket,
+            'activityTransactions' => $activityTransactionPagination['items'],
+            'activityTransactionPagination' => $activityTransactionPagination,
+            'transferItems' => $activityTransferPagination['items'],
+            'activityTransferPagination' => $activityTransferPagination,
+            'categoryBreakdown' => $categoryBreakdown,
+            'involvedReceivers' => $this->getInvolvedReceivers($db, clone $tBuilder),
+            'involvedAccounts' => $this->getInvolvedAccounts($db, $recentRows),
+            'pocketSummary' => $summary,
+        ];
+    }
+
+    private function summarizePocketRows(array $rows, int $pocketId): array
+    {
+        $income = 0.0;
+        $expense = 0.0;
+        $transferIn = 0.0;
+        $transferOut = 0.0;
+        $contractIncome = 0.0;
+        $transactionCount = 0;
+        $categoryBreakdown = [];
+
+        foreach ($rows as $row) {
+            $type = (string) ($row['type'] ?? '');
+            $sourcePocketId = (int) ($row['project_pocket_id'] ?? 0);
+            $targetPocketId = (int) ($row['counter_project_pocket_id'] ?? 0);
+            $amount = (float) ($row['amount'] ?? 0);
+            $adminFee = (float) ($row['admin_fee'] ?? 0);
+            $isSource = $sourcePocketId === $pocketId;
+            $isTarget = $targetPocketId === $pocketId;
+
+            if (! $isSource && ! $isTarget) {
+                continue;
+            }
+
+            $transactionCount++;
+
+            if ($type === 'masuk' && $isSource) {
+                $income += $amount;
+                $contractIncome += $amount;
+                continue;
+            }
+
+            if (in_array($type, ['keluar', 'honor'], true) && $isSource) {
+                $expense += $amount + $adminFee;
+                $category = trim((string) ($row['category'] ?? '')) !== '' ? (string) $row['category'] : 'Lainnya';
+                $categoryBreakdown[$category] = ($categoryBreakdown[$category] ?? 0) + $amount + $adminFee;
+                continue;
+            }
+
+            if ($type !== 'pindah') {
+                continue;
+            }
+
+            if ($isSource && $targetPocketId > 0 && $targetPocketId !== $pocketId) {
+                $expense += $amount + $adminFee;
+                $transferOut += $amount;
+                continue;
+            }
+
+            if ($isTarget && $sourcePocketId > 0 && $sourcePocketId !== $pocketId) {
+                $income += $amount;
+                $transferIn += $amount;
+                continue;
+            }
+
+            if ($isSource) {
+                $expense += $adminFee;
+            }
+        }
+
+        return [
+            'income' => $income,
+            'expense' => $expense,
+            'balance' => $income - $expense,
+            'transfer_in' => $transferIn,
+            'transfer_out' => $transferOut,
+            'contract_income' => $contractIncome,
+            'transaction_count' => $transactionCount,
+            'category_breakdown' => $categoryBreakdown,
+        ];
     }
 
     private function getInvolvedReceivers($db, $tBuilder): array

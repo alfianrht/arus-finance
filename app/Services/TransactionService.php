@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AccountModel;
 use App\Models\ActivityModel;
+use App\Models\ProjectPocketModel;
 use App\Models\ReceiverModel;
 use App\Models\TransactionCategoryModel;
 use App\Models\TransactionModel;
@@ -216,6 +217,7 @@ class TransactionService
         $categories = $this->indexById((new TransactionCategoryModel())->findAll());
         $accounts = $this->indexById((new AccountModel())->findAll());
         $receivers = $this->indexById((new ReceiverModel())->findAll());
+        $projectPockets = $this->indexById((new ProjectPocketModel())->findAll());
 
         $items = [];
         foreach ($rows as $row) {
@@ -226,6 +228,8 @@ class TransactionService
             $fromAccount = $accounts[(int) ($row['from_account_id'] ?? 0)] ?? null;
             $toAccount = $accounts[(int) ($row['to_account_id'] ?? 0)] ?? null;
             $receiver = $receivers[(int) ($row['receiver_id'] ?? 0)] ?? null;
+            $projectPocket = $projectPockets[(int) ($row['project_pocket_id'] ?? 0)] ?? null;
+            $counterProjectPocket = $projectPockets[(int) ($row['counter_project_pocket_id'] ?? 0)] ?? null;
 
             $badge = match ($type) {
                 'masuk' => ['label' => 'Masuk', 'class' => 'bg-emerald-50 text-emerald-700', 'icon' => 'south'],
@@ -242,9 +246,15 @@ class TransactionService
             };
 
             $subline = ($unit['name'] ?? 'Tanpa Unit') . ' / ' . ($activity['name'] ?? 'Tanpa Kegiatan');
+            if (is_array($projectPocket) && ($projectPocket['name'] ?? '') !== '') {
+                $subline .= ' / ' . $projectPocket['name'];
+            }
             $metaParts = [date('d M Y', strtotime((string) $row['transaction_date']))];
             if (! empty($row['notes'])) {
                 $metaParts[] = $row['notes'];
+            }
+            if ($type === 'pindah' && is_array($counterProjectPocket) && ($counterProjectPocket['name'] ?? '') !== '') {
+                $metaParts[] = 'Ke ' . $counterProjectPocket['name'];
             }
 
             $items[] = [
@@ -264,6 +274,11 @@ class TransactionService
                 'unit_name' => $unit['name'] ?? '',
                 'activity_id' => (int) ($activity['id'] ?? 0),
                 'activity_name' => $activity['name'] ?? '',
+                'project_pocket_id' => (int) ($projectPocket['id'] ?? 0),
+                'project_pocket_name' => $projectPocket['name'] ?? '',
+                'project_pocket_type' => $projectPocket['pocket_type'] ?? '',
+                'counter_project_pocket_id' => (int) ($counterProjectPocket['id'] ?? 0),
+                'counter_project_pocket_name' => $counterProjectPocket['name'] ?? '',
                 'category_id' => (int) ($category['id'] ?? 0),
                 'category' => $category['name'] ?? '',
                 'from_account_id' => (int) ($fromAccount['id'] ?? 0),

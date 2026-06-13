@@ -102,6 +102,21 @@
             </div>
         </div>
 
+        <?= view('partials/project_pocket_field', [
+            'projectPocketField' => $projectPocketField,
+            'fieldName' => 'project_pocket_id',
+            'label' => 'Dari Kantong',
+            'placeholder' => 'Pilih kantong asal',
+        ]) ?>
+
+        <?= view('partials/project_pocket_field', [
+            'projectPocketField' => $projectPocketField,
+            'fieldName' => 'counter_project_pocket_id',
+            'label' => 'Ke Kantong',
+            'placeholder' => 'Pilih kantong tujuan',
+            'mode' => 'execution',
+        ]) ?>
+
         <div class="space-y-2">
             <label class="text-sm font-semibold text-zinc-900">Tanggal</label>
             <input type="date" name="transaction_date" value="<?= esc(old('transaction_date', date('Y-m-d'))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-zinc-300 focus:ring-2 focus:ring-lime-400" required>

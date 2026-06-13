@@ -19,6 +19,8 @@ class TransactionModel extends Model
         'admin_fee',
         'unit_id',
         'activity_id',
+        'project_pocket_id',
+        'counter_project_pocket_id',
         'category_id',
         'from_account_id',
         'to_account_id',
