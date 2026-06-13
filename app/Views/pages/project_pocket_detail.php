@@ -1,11 +1,15 @@
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
-<?php $surfaceText = surface_label($activity['short_name'] ?? $activity['name']); ?>
+<?php
+$surfaceText = surface_label($activity['short_name'] ?? $activity['name']);
+$isMainPocket = ($pocket['pocket_type'] ?? '') === 'main';
+$openPocketSettingsModal = old('form_scope') === 'pocket_settings';
+?>
 <div class="space-y-3">
     <?= view('partials/top_nav_back', [
         'title' => $activity['name'],
-        'subtitle' => ($pocket['pocket_type'] ?? '') === 'main' ? 'Kantong utama proyek' : 'Kantong pelaksanaan proyek',
+        'subtitle' => $isMainPocket ? 'Kantong utama proyek' : 'Kantong pelaksanaan proyek',
         'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
@@ -13,7 +17,7 @@
         <div class="absolute inset-0 bg-white/5" aria-hidden="true"></div>
         <div class="relative flex items-start justify-between gap-4">
             <div class="min-w-0">
-                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400"><?= esc(($pocket['pocket_type'] ?? '') === 'main' ? 'Kantong Utama' : 'Kantong Pelaksanaan') ?></p>
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400"><?= esc($isMainPocket ? 'Kantong Utama' : 'Kantong Pelaksanaan') ?></p>
                 <p class="mt-2 text-2xl font-semibold leading-tight text-white"><?= esc($activity['name']) ?></p>
                 <p class="mt-2 text-sm text-zinc-400"><?= esc($activity['unit_name']) ?></p>
             </div>
@@ -49,42 +53,69 @@
     </section>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-zinc-950">Pengaturan Kantong</h2>
-            <span class="rounded-full bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700"><?= esc(($pocket['pocket_type'] ?? '') === 'main' ? 'Utama' : 'Pelaksanaan') ?></span>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-950 px-3 py-1.5 text-[11px] font-semibold text-white">
+                        <span class="material-symbols-rounded text-[14px]" aria-hidden="true">workspaces</span>
+                        <span class="truncate"><?= esc($activity['unit_name']) ?></span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-zinc-950/10 bg-white px-3 py-1.5 text-[11px] font-semibold text-zinc-700">
+                        <span class="material-symbols-rounded text-[14px]" aria-hidden="true"><?= $isMainPocket ? 'kid_star' : 'inventory_2' ?></span>
+                        <span><?= esc($isMainPocket ? 'Kantong Utama' : 'Kantong Pelaksanaan') ?></span>
+                    </span>
+                    <?php if (!((bool) ($pocket['is_active'] ?? true))): ?>
+                        <span class="inline-flex rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-semibold text-rose-600">Nonaktif</span>
+                    <?php endif; ?>
+                </div>
+                <p class="mt-3 text-sm font-semibold text-zinc-950">Pengaturan Kantong</p>
+                <p class="mt-1 text-xs text-zinc-500">
+                    <?= esc($isMainPocket
+                        ? 'Kontrak, termin, dan catatan utama kantong dikelola dari sini.'
+                        : 'Nama dan catatan kantong pelaksanaan bisa dirapikan tanpa mengubah detail transaksi.') ?>
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                <button type="button" data-pocket-modal-open="pocket-settings-modal" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-950 shadow-sm" title="Atur Kantong" aria-label="Atur Kantong">
+                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">tune</span>
+                </button>
+                <?php if (! $isMainPocket): ?>
+                    <form action="<?= esc(site_url('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'] . '/nonaktif')) ?>" method="post">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-950 text-white shadow-sm" title="Nonaktifkan Kantong" aria-label="Nonaktifkan Kantong">
+                            <span class="material-symbols-rounded text-[18px]" aria-hidden="true">block</span>
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
         </div>
-        <form action="<?= esc(site_url('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'])) ?>" method="post" class="mt-4 grid gap-3 sm:grid-cols-2">
-            <?= csrf_field() ?>
-            <?php if (($pocket['pocket_type'] ?? '') === 'execution'): ?>
-                <div class="space-y-2">
-                    <label class="text-sm font-semibold text-zinc-900">Nama Kantong</label>
-                    <input type="text" name="name" value="<?= esc(old('name', $pocket['name'] ?? '')) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400">
+
+        <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <?php if ($isMainPocket): ?>
+                <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2.5">
+                    <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Nilai Kontrak</p>
+                    <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc(rupiah((float) ($pocket['contract_value'] ?? 0))) ?></p>
+                </div>
+                <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2.5">
+                    <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Jumlah Termin</p>
+                    <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc((string) ($pocket['contract_terms_count'] ?? 0)) ?></p>
+                </div>
+            <?php else: ?>
+                <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2.5">
+                    <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Tipe</p>
+                    <p class="mt-1 text-sm font-semibold text-zinc-950">Pelaksanaan</p>
+                </div>
+                <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2.5">
+                    <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Status</p>
+                    <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc(((bool) ($pocket['is_active'] ?? true)) ? 'Aktif' : 'Nonaktif') ?></p>
                 </div>
             <?php endif; ?>
-            <?php if (($pocket['pocket_type'] ?? '') === 'main'): ?>
-                <div class="space-y-2">
-                    <label class="text-sm font-semibold text-zinc-900">Nilai Kontrak</label>
-                    <input type="text" inputmode="numeric" name="contract_value" value="<?= esc(old('contract_value', rupiah((float) ($pocket['contract_value'] ?? 0)))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400">
-                </div>
-                <div class="space-y-2">
-                    <label class="text-sm font-semibold text-zinc-900">Jumlah Termin</label>
-                    <input type="number" min="0" name="contract_terms_count" value="<?= esc(old('contract_terms_count', (string) ($pocket['contract_terms_count'] ?? ''))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400">
-                </div>
-            <?php endif; ?>
-            <div class="space-y-2 sm:col-span-2">
-                <label class="text-sm font-semibold text-zinc-900">Catatan</label>
-                <textarea name="notes" rows="3" class="w-full rounded-2xl border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400"><?= esc(old('notes', $pocket['notes'] ?? '')) ?></textarea>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2.5 col-span-2 sm:col-span-1">
+                <p class="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Catatan</p>
+                <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc(trim((string) ($pocket['notes'] ?? '')) !== '' ? mb_strimwidth((string) $pocket['notes'], 0, 60, '...') : '-') ?></p>
             </div>
-            <div class="sm:col-span-2">
-                <button type="submit" class="inline-flex h-12 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm">Simpan Perubahan</button>
-            </div>
-        </form>
-        <?php if (($pocket['pocket_type'] ?? '') === 'execution'): ?>
-            <form action="<?= esc(site_url('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'] . '/nonaktif')) ?>" method="post" class="mt-3">
-                <?= csrf_field() ?>
-                <button type="submit" class="inline-flex h-12 items-center justify-center rounded-full border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-950 shadow-sm">Nonaktifkan</button>
-            </form>
-        <?php endif; ?>
+        </div>
     </section>
 
     <section class="rounded-3xl bg-white p-4 shadow-sm">
@@ -216,4 +247,117 @@
         ]) ?>
     </section>
 </div>
+
+<div id="pocket-settings-modal" class="<?= $openPocketSettingsModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 transition sm:items-center" aria-hidden="<?= $openPocketSettingsModal ? 'false' : 'true' ?>">
+    <div class="w-full max-w-2xl rounded-[2rem] bg-white p-5 shadow-2xl transition">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <p class="text-sm font-semibold text-zinc-950">Pengaturan Kantong</p>
+                <p class="mt-1 text-xs text-zinc-500">
+                    <?= esc($isMainPocket ? 'Atur kontrak, termin, dan catatan kantong utama.' : 'Atur nama dan catatan kantong pelaksanaan.') ?>
+                </p>
+            </div>
+            <button type="button" data-pocket-modal-close="pocket-settings-modal" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700">
+                <span class="material-symbols-rounded text-base" aria-hidden="true">close</span>
+            </button>
+        </div>
+
+        <form action="<?= esc(site_url('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'])) ?>" method="post" class="mt-4 grid gap-3 sm:grid-cols-2">
+            <?= csrf_field() ?>
+            <input type="hidden" name="form_scope" value="pocket_settings">
+            <?php if (! $isMainPocket): ?>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-zinc-900">Nama Kantong</label>
+                    <input type="text" name="name" value="<?= esc(old('name', $pocket['name'] ?? '')) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400">
+                </div>
+            <?php endif; ?>
+            <?php if ($isMainPocket): ?>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-zinc-900">Nilai Kontrak</label>
+                    <input type="text" inputmode="numeric" name="contract_value" value="<?= esc(old('contract_value', rupiah((float) ($pocket['contract_value'] ?? 0)))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-zinc-900">Jumlah Termin</label>
+                    <input type="number" min="0" name="contract_terms_count" value="<?= esc(old('contract_terms_count', (string) ($pocket['contract_terms_count'] ?? ''))) ?>" class="h-12 w-full rounded-2xl border border-zinc-100 bg-white px-4 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400">
+                </div>
+            <?php endif; ?>
+            <div class="space-y-2 sm:col-span-2">
+                <label class="text-sm font-semibold text-zinc-900">Catatan</label>
+                <textarea name="notes" rows="4" class="w-full rounded-2xl border border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-950 outline-none focus:border-zinc-300 focus:ring-2 focus:ring-lime-400"><?= esc(old('notes', $pocket['notes'] ?? '')) ?></textarea>
+            </div>
+            <div class="sm:col-span-2 flex flex-wrap items-center justify-end gap-2 pt-1">
+                <button type="button" data-pocket-modal-close="pocket-settings-modal" class="inline-flex h-11 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950">Batal</button>
+                <button type="submit" class="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var openModal = function (modalId) {
+            var modal = document.getElementById(modalId);
+            if (!modal) {
+                return;
+            }
+
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        var closeModal = function (modalId) {
+            var modal = document.getElementById(modalId);
+            if (!modal) {
+                return;
+            }
+
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        document.querySelectorAll('[data-pocket-modal-open]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openModal(button.getAttribute('data-pocket-modal-open'));
+            });
+        });
+
+        document.querySelectorAll('[data-pocket-modal-close]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                closeModal(button.getAttribute('data-pocket-modal-close'));
+            });
+        });
+
+        ['pocket-settings-modal'].forEach(function (modalId) {
+            var modal = document.getElementById(modalId);
+            if (!modal) {
+                return;
+            }
+
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    closeModal(modalId);
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            ['pocket-settings-modal'].forEach(function (modalId) {
+                var modal = document.getElementById(modalId);
+                if (modal && modal.getAttribute('aria-hidden') === 'false') {
+                    closeModal(modalId);
+                }
+            });
+        });
+
+        if (<?= $openPocketSettingsModal ? 'true' : 'false' ?>) {
+            document.body.classList.add('overflow-hidden');
+        }
+    })();
+</script>
 <?= $this->endSection() ?>
