@@ -13,7 +13,9 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
         'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
-    <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
         <div class="absolute inset-0 bg-white/5" aria-hidden="true"></div>
         <div class="relative flex items-start justify-between gap-4">
             <div class="min-w-0">
@@ -52,9 +54,9 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
                 <p class="mt-1 text-xs font-semibold text-white"><?= esc(rupiah($projectSummary['outstanding'] ?? 0)) ?></p>
             </div>
         </div>
-    </section>
+            </section>
 
-    <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-3">
         <a href="<?= esc($activity['masuk_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950 shadow-sm">
             <span class="material-symbols-rounded text-base" aria-hidden="true">add</span>
             <span>Uang Masuk</span>
@@ -63,9 +65,9 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
             <span class="material-symbols-rounded text-base" aria-hidden="true">remove</span>
             <span>Uang Keluar</span>
         </a>
-    </div>
+            </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
@@ -110,9 +112,9 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
                 <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc(rupiah($projectSummary['outstanding'] ?? 0)) ?></p>
             </div>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between gap-3">
             <div>
                 <h2 class="text-base font-semibold text-zinc-950">Daftar Kantong</h2>
@@ -177,9 +179,11 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
                 </article>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Kegiatan</h2>
             <p class="text-xs text-zinc-500"><?= esc($activity['name']) ?></p>
@@ -204,10 +208,12 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
             'prevUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => $projectFilters['periode'], 'unit' => $projectFilters['unit'], 'transaksi_page' => $projectTransactionPagination['prevPage']]),
             'nextUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => $projectFilters['periode'], 'unit' => $projectFilters['unit'], 'transaksi_page' => $projectTransactionPagination['nextPage']]),
         ]) ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 
-<div id="project-settings-modal" class="<?= $openProjectModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 transition sm:items-center" aria-hidden="<?= $openProjectModal ? 'false' : 'true' ?>">
+<div id="project-settings-modal" class="<?= $openProjectModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 px-4 pb-6 pt-6 transition sm:pt-8" aria-hidden="<?= $openProjectModal ? 'false' : 'true' ?>">
     <div class="w-full max-w-2xl rounded-[2rem] bg-white p-5 shadow-2xl transition">
         <div class="flex items-start justify-between gap-4">
             <div>
@@ -242,7 +248,7 @@ $openPocketModal = old('form_scope') === 'add_execution_pocket';
     </div>
 </div>
 
-<div id="add-pocket-modal" class="<?= $openPocketModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 transition sm:items-center" aria-hidden="<?= $openPocketModal ? 'false' : 'true' ?>">
+<div id="add-pocket-modal" class="<?= $openPocketModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 px-4 pb-6 pt-6 transition sm:pt-8" aria-hidden="<?= $openPocketModal ? 'false' : 'true' ?>">
     <div class="w-full max-w-xl rounded-[2rem] bg-white p-5 shadow-2xl transition">
         <div class="flex items-start justify-between gap-4">
             <div>

@@ -8,7 +8,9 @@
         'backUrl' => $backUrl,
     ]) ?>
 
-    <section class="relative block">
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <section class="relative block">
         <div class="relative overflow-hidden rounded-3xl border border-zinc-950 bg-white p-5 text-zinc-950 shadow-sm">
             <span class="absolute left-1/2 top-0 h-1 w-24 -translate-x-1/2 rounded-b-2xl bg-zinc-950"></span>
             <span class="absolute bottom-0 left-1/2 h-2 w-24 -translate-x-1/2 rounded-t-2xl bg-zinc-950"></span>
@@ -52,9 +54,9 @@
                 <p class="shrink-0 text-xs font-medium text-zinc-950/70"><?= esc($account['movement_count']) ?> mutasi</p>
             </div>
         </div>
-    </section>
+            </section>
 
-    <div class="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
+            <div class="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
         <div class="rounded-2xl border border-zinc-100 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
             <div class="flex items-center gap-1.5 sm:gap-2">
                 <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 sm:h-8 sm:w-8">
@@ -91,9 +93,9 @@
             </div>
             <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc((string) $account['transaction_count']) ?></p>
         </div>
-    </div>
+            </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Kegiatan Terkait</h2>
             <p class="text-xs text-zinc-500">Memakai rekening ini</p>
@@ -113,9 +115,9 @@
                 <?= view('partials/activity_card', ['activity' => $activity]) ?>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
+            <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-4">
             <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
         </div>
@@ -141,9 +143,11 @@
                 </div>
             <?php endif; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
         <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terkait</h2>
             <p class="text-xs text-zinc-500"><?= esc($account['name']) ?></p>
@@ -168,6 +172,8 @@
             'prevUrl' => route_query('rekening/' . $account['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $accountTransactionPagination['prevPage']]),
             'nextUrl' => route_query('rekening/' . $account['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $accountTransactionPagination['nextPage']]),
         ]) ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 <?= $this->endSection() ?>

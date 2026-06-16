@@ -13,7 +13,9 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
         'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
-    <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
         <div class="absolute inset-0 bg-white/5" aria-hidden="true"></div>
         <div class="relative flex items-start justify-between gap-4">
             <div class="min-w-0">
@@ -50,9 +52,9 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
                 <p class="mt-1 text-sm font-semibold text-white"><?= esc(rupiah($pocketSummary['transfer_out'] ?? 0)) ?></p>
             </div>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
@@ -116,9 +118,9 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
                 <p class="mt-1 text-sm font-semibold text-zinc-950"><?= esc(trim((string) ($pocket['notes'] ?? '')) !== '' ? mb_strimwidth((string) $pocket['notes'], 0, 60, '...') : '-') ?></p>
             </div>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Rincian Biaya per Kategori</h2>
             <p class="text-xs text-zinc-500">Scope kantong</p>
@@ -144,36 +146,9 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
                 ]) ?>
             <?php endif; ?>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
-        <div class="px-4 flex items-center justify-between">
-            <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
-            <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Antar rekening / kantong</span>
-        </div>
-        <div class="mt-3 divide-y divide-zinc-100">
-            <?php if ($transferItems === []): ?>
-                <div class="px-4 pb-1">
-                    <?= view('partials/empty_state', [
-                        'icon' => 'swap_horiz',
-                        'title' => 'Belum ada pindah dana.',
-                        'description' => 'Pindah dana akan muncul di sini saat ada perpindahan antar rekening atau antar kantong pada scope ini.',
-                        'compact' => true,
-                    ]) ?>
-                </div>
-            <?php endif; ?>
-            <?php foreach ($transferItems as $transaction): ?>
-                <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
-            <?php endforeach; ?>
-        </div>
-        <?= view('partials/pagination_controls', [
-            'pagination' => $activityTransferPagination,
-            'prevUrl' => route_query('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'], ['mutasi_page' => $activityTransferPagination['prevPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
-            'nextUrl' => route_query('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'], ['mutasi_page' => $activityTransferPagination['nextPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
-        ]) ?>
-    </section>
-
-    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
+            <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-4">
             <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
         </div>
@@ -198,9 +173,9 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
                 </div>
             <?php endif; ?>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Rekening Terlibat</h2>
             <p class="text-xs text-zinc-500">Dipakai kantong ini</p>
@@ -218,9 +193,38 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
                 <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="px-4 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
+            <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Antar rekening / kantong</span>
+        </div>
+        <div class="mt-3 divide-y divide-zinc-100">
+            <?php if ($transferItems === []): ?>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'swap_horiz',
+                        'title' => 'Belum ada pindah dana.',
+                        'description' => 'Pindah dana akan muncul di sini saat ada perpindahan antar rekening atau antar kantong pada scope ini.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
+            <?php endif; ?>
+            <?php foreach ($transferItems as $transaction): ?>
+                <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
+            <?php endforeach; ?>
+        </div>
+        <?= view('partials/pagination_controls', [
+            'pagination' => $activityTransferPagination,
+            'prevUrl' => route_query('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'], ['mutasi_page' => $activityTransferPagination['prevPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
+            'nextUrl' => route_query('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'], ['mutasi_page' => $activityTransferPagination['nextPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
+        ]) ?>
+            </section>
+
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terakhir Kantong</h2>
             <p class="text-xs text-zinc-500"><?= esc($activity['name']) ?></p>
@@ -245,10 +249,12 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
             'prevUrl' => route_query('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'], ['transaksi_page' => $activityTransactionPagination['prevPage'], 'mutasi_page' => $activityTransferPagination['page']]),
             'nextUrl' => route_query('kegiatan/' . $activity['project_slug'] . '/kantong/' . $pocket['slug'], ['transaksi_page' => $activityTransactionPagination['nextPage'], 'mutasi_page' => $activityTransferPagination['page']]),
         ]) ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 
-<div id="pocket-settings-modal" class="<?= $openPocketSettingsModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 transition sm:items-center" aria-hidden="<?= $openPocketSettingsModal ? 'false' : 'true' ?>">
+<div id="pocket-settings-modal" class="<?= $openPocketSettingsModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 px-4 pb-6 pt-6 transition sm:pt-8" aria-hidden="<?= $openPocketSettingsModal ? 'false' : 'true' ?>">
     <div class="w-full max-w-2xl rounded-[2rem] bg-white p-5 shadow-2xl transition">
         <div class="flex items-start justify-between gap-4">
             <div>

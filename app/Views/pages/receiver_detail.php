@@ -9,7 +9,9 @@
     ]) ?>
 
     <?php $surfaceText = surface_label($receiver['name']); ?>
-    <section class="relative overflow-hidden rounded-3xl bg-white p-5 text-zinc-950 shadow-sm">
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <section class="relative overflow-hidden rounded-3xl bg-white p-5 text-zinc-950 shadow-sm">
         <div class="absolute inset-0 bg-white/40" aria-hidden="true"></div>
         <p class="pointer-events-none absolute -bottom-3 left-3 text-7xl font-black uppercase tracking-tight text-zinc-100" aria-hidden="true"><?= esc($surfaceText) ?></p>
 
@@ -34,9 +36,9 @@
             <p class="mt-1 text-4xl font-black tracking-tight text-zinc-950"><?= esc(rupiah($receiver['total_amount'])) ?></p>
             <p class="mt-2 text-sm text-zinc-500"><?= esc((string) $receiver['transaction_count']) ?> transaksi terkait</p>
         </div>
-    </section>
+            </section>
 
-    <div class="grid grid-cols-2 gap-2 sm:gap-3">
+            <div class="grid grid-cols-2 gap-2 sm:gap-3">
         <div class="rounded-2xl bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
             <div class="flex items-center gap-1.5 sm:gap-2">
                 <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lime-100 text-zinc-950 sm:h-8 sm:w-8">
@@ -55,9 +57,9 @@
             </div>
             <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc((string) $receiver['transaction_count']) ?></p>
         </div>
-    </div>
+            </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Kegiatan Terkait</h2>
             <p class="text-xs text-zinc-500">Melibatkan penerima ini</p>
@@ -75,9 +77,9 @@
                 <?= view('partials/activity_card', ['activity' => $activity]) ?>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Rekening Terkait</h2>
             <p class="text-xs text-zinc-500">Dipakai transaksi penerima ini</p>
@@ -95,9 +97,11 @@
                 <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
         <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terkait</h2>
             <p class="text-xs text-zinc-500"><?= esc($receiver['name']) ?></p>
@@ -122,6 +126,8 @@
             'prevUrl' => route_query('penerima/' . $receiver['id'], ['transaksi_page' => $receiverTransactionPagination['prevPage']]),
             'nextUrl' => route_query('penerima/' . $receiver['id'], ['transaksi_page' => $receiverTransactionPagination['nextPage']]),
         ]) ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 <?= $this->endSection() ?>

@@ -9,22 +9,24 @@
         'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
-    <?php if (isset($activeContext)): ?>
-    <section class="rounded-2xl bg-lime-50 p-4">
-        <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks cepat untuk pencatatan</p>
-        <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc($activeContext['display']) ?></p>
-        <p class="mt-1 text-sm text-zinc-600">Tombol aksi di halaman ini akan langsung memakai kegiatan tersebut.</p>
-    </section>
-    <?php endif; ?>
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <?php if (isset($activeContext)): ?>
+            <section class="rounded-2xl bg-lime-50 p-4">
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Konteks cepat untuk pencatatan</p>
+                <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc($activeContext['display']) ?></p>
+                <p class="mt-1 text-sm text-zinc-600">Tombol aksi di halaman ini akan langsung memakai kegiatan tersebut.</p>
+            </section>
+            <?php endif; ?>
 
-    <div class="flex justify-end">
-        <a href="<?= esc(site_url('unit/' . $unit['slug'] . '/bagikan')) ?>" class="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-950 shadow-sm">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">share</span>
-            <span>Bagikan dengan PIN</span>
-        </a>
-    </div>
+            <div class="flex justify-end">
+                <a href="<?= esc(site_url('unit/' . $unit['slug'] . '/bagikan')) ?>" class="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-950 shadow-sm">
+                    <span class="material-symbols-rounded text-base" aria-hidden="true">share</span>
+                    <span>Bagikan dengan PIN</span>
+                </a>
+            </div>
 
-    <section class="relative overflow-hidden rounded-3xl bg-lime-400 p-5 text-zinc-950 shadow-sm">
+            <section class="relative overflow-hidden rounded-3xl bg-lime-400 p-5 text-zinc-950 shadow-sm">
         <div class="absolute inset-0 bg-white/10" aria-hidden="true"></div>
         <div class="relative flex items-start justify-between gap-4">
             <div class="min-w-0">
@@ -72,9 +74,9 @@
             </span>
         </div>
         <?php endif; ?>
-    </section>
+            </section>
 
-    <section class="space-y-3">
+            <section class="space-y-3">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Daftar Kegiatan</h2>
             <p class="text-xs text-zinc-500">Turunan dari unit ini</p>
@@ -92,9 +94,9 @@
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
+            <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-4">
             <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
         </div>
@@ -120,9 +122,9 @@
                 </div>
             <?php endif; ?>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Rekening Terlibat</h2>
             <p class="text-xs text-zinc-500">Terkait transaksi unit ini</p>
@@ -140,9 +142,11 @@
                 <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
         <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terakhir Unit</h2>
             <p class="text-xs text-zinc-500"><?= esc($unit['name']) ?></p>
@@ -167,6 +171,8 @@
             'prevUrl' => route_query('unit/' . $unit['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $unitTransactionPagination['prevPage']]),
             'nextUrl' => route_query('unit/' . $unit['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'kegiatan' => service('request')->getGet('kegiatan') ?: 'semua', 'transaksi_page' => $unitTransactionPagination['nextPage']]),
         ]) ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 <?= $this->endSection() ?>

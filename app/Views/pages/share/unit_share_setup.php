@@ -107,7 +107,7 @@ $showPinModal = $latestPin !== '';
     </section>
 </div>
 
-<div id="enable-share-modal" class="pointer-events-none fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 opacity-0 transition sm:items-center" aria-hidden="true">
+<div id="enable-share-modal" class="pointer-events-none fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 px-4 pb-6 pt-6 opacity-0 transition sm:pt-8" aria-hidden="true">
     <div class="w-full max-w-lg rounded-[2rem] bg-white p-5 shadow-2xl transition">
         <div class="flex items-start justify-between gap-4">
             <div>
@@ -127,7 +127,7 @@ $showPinModal = $latestPin !== '';
     </div>
 </div>
 
-<div id="rotate-pin-modal" class="pointer-events-none fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 opacity-0 transition sm:items-center" aria-hidden="true">
+<div id="rotate-pin-modal" class="pointer-events-none fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 px-4 pb-6 pt-6 opacity-0 transition sm:pt-8" aria-hidden="true">
     <div class="w-full max-w-lg rounded-[2rem] bg-white p-5 shadow-2xl transition">
         <div class="flex items-start justify-between gap-4">
             <div>
@@ -147,7 +147,7 @@ $showPinModal = $latestPin !== '';
     </div>
 </div>
 
-<div id="share-pin-result-modal" class="<?= $showPinModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 transition sm:items-center" aria-hidden="<?= $showPinModal ? 'false' : 'true' ?>">
+<div id="share-pin-result-modal" class="<?= $showPinModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 px-4 pb-6 pt-6 transition sm:pt-8" aria-hidden="<?= $showPinModal ? 'false' : 'true' ?>">
     <div class="w-full max-w-lg rounded-[2rem] bg-white p-5 shadow-2xl transition">
         <div class="flex items-start justify-between gap-4">
             <div>

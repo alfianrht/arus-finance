@@ -12,7 +12,9 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
         'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
-    <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
         <div class="absolute inset-0 bg-white/5" aria-hidden="true"></div>
         <div class="relative flex items-start justify-between gap-4">
             <div class="min-w-0">
@@ -61,9 +63,9 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
                 <span>Siap Dicatat</span>
             </span>
         </div>
-    </section>
+            </section>
 
-    <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-3">
         <a href="<?= esc($activity['masuk_url']) ?>" class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950 shadow-sm">
             <span class="material-symbols-rounded text-base" aria-hidden="true">add</span>
             <span>Uang Masuk</span>
@@ -72,9 +74,9 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
             <span class="material-symbols-rounded text-base" aria-hidden="true">remove</span>
             <span>Uang Keluar</span>
         </a>
-    </div>
+            </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
                 <div class="flex items-center gap-2">
@@ -94,9 +96,9 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
                 </button>
             </div>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Rincian Biaya per Kategori</h2>
             <p class="text-xs text-zinc-500">Kegiatan aktif</p>
@@ -122,36 +124,9 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
                 ]) ?>
             <?php endif; ?>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
-        <div class="px-4 flex items-center justify-between">
-            <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
-            <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Bukan biaya</span>
-        </div>
-        <div class="mt-3 divide-y divide-zinc-100">
-            <?php if ($transferItems === []): ?>
-                <div class="px-4 pb-1">
-                    <?= view('partials/empty_state', [
-                        'icon' => 'swap_horiz',
-                        'title' => 'Belum ada pindah dana.',
-                        'description' => 'Pindah dana akan muncul di sini saat ada perpindahan antar rekening pada kegiatan ini.',
-                        'compact' => true,
-                    ]) ?>
-                </div>
-            <?php endif; ?>
-            <?php foreach ($transferItems as $transaction): ?>
-                <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
-            <?php endforeach; ?>
-        </div>
-        <?= view('partials/pagination_controls', [
-            'pagination' => $activityTransferPagination,
-            'prevUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'mutasi_page' => $activityTransferPagination['prevPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
-            'nextUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'mutasi_page' => $activityTransferPagination['nextPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
-        ]) ?>
-    </section>
-
-    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
+            <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-4">
             <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
         </div>
@@ -177,9 +152,9 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
                 </div>
             <?php endif; ?>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Rekening Terlibat</h2>
             <p class="text-xs text-zinc-500">Dipakai kegiatan ini</p>
@@ -197,9 +172,38 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
                 <?= view('partials/account_card', ['account' => $account, 'cardWidthClass' => 'w-full']) ?>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="px-4 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
+            <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Bukan biaya</span>
+        </div>
+        <div class="mt-3 divide-y divide-zinc-100">
+            <?php if ($transferItems === []): ?>
+                <div class="px-4 pb-1">
+                    <?= view('partials/empty_state', [
+                        'icon' => 'swap_horiz',
+                        'title' => 'Belum ada pindah dana.',
+                        'description' => 'Pindah dana akan muncul di sini saat ada perpindahan antar rekening pada kegiatan ini.',
+                        'compact' => true,
+                    ]) ?>
+                </div>
+            <?php endif; ?>
+            <?php foreach ($transferItems as $transaction): ?>
+                <?= view('partials/transaction_item', ['transaction' => $transaction]) ?>
+            <?php endforeach; ?>
+        </div>
+        <?= view('partials/pagination_controls', [
+            'pagination' => $activityTransferPagination,
+            'prevUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'mutasi_page' => $activityTransferPagination['prevPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
+            'nextUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'mutasi_page' => $activityTransferPagination['nextPage'], 'transaksi_page' => $activityTransactionPagination['page']]),
+        ]) ?>
+            </section>
+
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terakhir Kegiatan</h2>
             <p class="text-xs text-zinc-500"><?= esc($activity['name']) ?></p>
@@ -224,10 +228,12 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
             'prevUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'transaksi_page' => $activityTransactionPagination['prevPage'], 'mutasi_page' => $activityTransferPagination['page']]),
             'nextUrl' => route_query('kegiatan/' . $activity['slug'], ['periode' => service('request')->getGet('periode') ?: 'semua', 'unit' => service('request')->getGet('unit') ?: 'semua', 'transaksi_page' => $activityTransactionPagination['nextPage'], 'mutasi_page' => $activityTransferPagination['page']]),
         ]) ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 
-<div id="project-mode-modal" class="<?= $openProjectModeModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/50 px-4 py-6 transition sm:items-center" aria-hidden="<?= $openProjectModeModal ? 'false' : 'true' ?>">
+<div id="project-mode-modal" class="<?= $openProjectModeModal ? '' : 'pointer-events-none opacity-0' ?> fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/50 px-4 pb-6 pt-6 transition sm:pt-8" aria-hidden="<?= $openProjectModeModal ? 'false' : 'true' ?>">
     <div class="w-full max-w-2xl rounded-[2rem] bg-white p-5 shadow-2xl transition">
         <div class="flex items-start justify-between gap-4">
             <div>
