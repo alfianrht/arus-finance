@@ -15,6 +15,7 @@
 
     <form method="post" action="<?= site_url('catat/keluar/pindah-dana') ?>" enctype="multipart/form-data" class="space-y-4">
         <?= csrf_field() ?>
+        <input type="hidden" name="return_to" value="<?= esc(old('return_to', $returnTo ?? '')) ?>">
         <?= view('partials/capture_assist', [
             'captureKey' => 'pindah_dana',
             'title' => 'Bukti Transaksi',

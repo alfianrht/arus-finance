@@ -9,7 +9,7 @@
     ]) ?>
 
     <div class="space-y-3">
-        <a href="<?= esc($activeContext['biaya_url']) ?>" class="relative block rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
+        <a href="<?= esc($biayaUrl ?? $activeContext['biaya_url']) ?>" class="relative block rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-lg font-semibold">Biaya Operasional</p>
@@ -19,7 +19,7 @@
             </div>
         </a>
         
-        <a href="<?= esc(site_url('catat/keluar/honor-gaji')) ?>" class="relative block rounded-3xl bg-white p-5 shadow-sm">
+        <a href="<?= esc($honorUrl ?? site_url('catat/keluar/honor-gaji')) ?>" class="relative block rounded-3xl bg-white p-5 shadow-sm">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-lg font-semibold text-zinc-950">Honor & Gaji</p>
@@ -29,7 +29,7 @@
             </div>
         </a>
         
-        <a href="<?= esc($activeContext['pindah_dana_url']) ?>" class="relative block rounded-3xl bg-white p-5 shadow-sm">
+        <a href="<?= esc($pindahDanaUrl ?? $activeContext['pindah_dana_url']) ?>" class="relative block rounded-3xl bg-white p-5 shadow-sm">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-lg font-semibold text-zinc-950">Pindah Dana</p>

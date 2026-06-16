@@ -86,11 +86,13 @@ class TransactionController extends BaseController
         $activeContext = $this->buildActiveContext($units);
         $incomeCategories = $this->loadCategoriesByKind('Masuk');
         $accounts = $this->loadAccounts();
+        $returnTo = $this->resolveRequestedReturnTo(route_query('catat', $activeContext['query']));
 
         $data = [
             'pageTitle' => 'Uang Masuk',
             'activeNav' => 'catat',
-            'backUrl' => route_query('catat', $activeContext['query']),
+            'backUrl' => $returnTo,
+            'returnTo' => $returnTo,
             'units' => $units,
             'activitySummaries' => $this->flattenActivities($units),
             'incomeCategories' => $incomeCategories,
@@ -139,19 +141,25 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Uang masuk berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Uang masuk berhasil dicatat.');
+        return redirect()->to($this->resolvePostedReturnTo(route_query('catat', $this->contextQueryFromPost())))->with('success', 'Uang masuk berhasil dicatat.');
     }
 
     public function keluar(): string
     {
         $units = $this->loadUnitsWithActivities();
         $activeContext = $this->buildActiveContext($units);
+        $returnTo = $this->resolveRequestedReturnTo(route_query('catat', $activeContext['query']));
+        $returnQuery = ['return_to' => $returnTo];
 
         return view('pages/catat/keluar', [
             'pageTitle' => 'Uang Keluar',
             'activeNav' => 'catat',
-            'backUrl' => route_query('catat', $activeContext['query']),
+            'backUrl' => $returnTo,
             'activeContext' => $activeContext,
+            'returnTo' => $returnTo,
+            'biayaUrl' => route_query('catat/keluar/biaya', array_merge($activeContext['query'], $returnQuery)),
+            'honorUrl' => route_query('catat/keluar/honor-gaji', array_merge($activeContext['query'], $returnQuery)),
+            'pindahDanaUrl' => route_query('catat/keluar/pindah-dana', array_merge($activeContext['query'], $returnQuery)),
         ]);
     }
 
@@ -161,11 +169,13 @@ class TransactionController extends BaseController
         $activeContext = $this->buildActiveContext($units);
         $expenseCategories = $this->loadCategoriesByKind('Keluar');
         $selectedCategory = (string) ($this->request->getGet('kategori') ?? ($expenseCategories[0]['name'] ?? ''));
+        $returnTo = $this->resolveRequestedReturnTo(route_query('catat/keluar', $activeContext['query']));
 
         return view('pages/catat/biaya', [
             'pageTitle' => 'Biaya / Belanja',
             'activeNav' => 'catat',
-            'backUrl' => route_query('catat/keluar', $activeContext['query']),
+            'backUrl' => $returnTo,
+            'returnTo' => $returnTo,
             'units' => $units,
             'activitySummaries' => $this->flattenActivities($units),
             'accounts' => $this->loadAccounts(),
@@ -212,7 +222,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Biaya berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Biaya berhasil dicatat.');
+        return redirect()->to($this->resolvePostedReturnTo(route_query('catat', $this->contextQueryFromPost())))->with('success', 'Biaya berhasil dicatat.');
     }
 
     public function honor(): string
@@ -220,11 +230,13 @@ class TransactionController extends BaseController
         $units = $this->loadUnitsWithActivities();
         $activeContext = $this->buildActiveContext($units);
         $honorCategory = $this->findHonorCategory();
+        $returnTo = $this->resolveRequestedReturnTo(route_query('catat/keluar', $activeContext['query']));
 
         return view('pages/catat/honor_gaji', [
             'pageTitle' => 'Honor & Gaji',
             'activeNav' => 'catat',
-            'backUrl' => route_query('catat/keluar', $activeContext['query']),
+            'backUrl' => $returnTo,
+            'returnTo' => $returnTo,
             'units' => $units,
             'accounts' => $this->loadAccounts(),
             'receivers' => $this->loadReceivers(),
@@ -276,18 +288,20 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Honor & gaji berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Honor & gaji berhasil dicatat.');
+        return redirect()->to($this->resolvePostedReturnTo(route_query('catat', $this->contextQueryFromPost())))->with('success', 'Honor & gaji berhasil dicatat.');
     }
 
     public function pindahDana(): string
     {
         $units = $this->loadUnitsWithActivities();
         $activeContext = $this->buildActiveContext($units);
+        $returnTo = $this->resolveRequestedReturnTo(route_query('catat/keluar', $activeContext['query']));
 
         return view('pages/catat/pindah_dana', [
             'pageTitle' => 'Pindah Dana',
             'activeNav' => 'catat',
-            'backUrl' => route_query('catat/keluar', $activeContext['query']),
+            'backUrl' => $returnTo,
+            'returnTo' => $returnTo,
             'units' => $units,
             'accounts' => $this->loadAccounts(),
             'activities' => $this->flattenActivities($units),
@@ -345,7 +359,7 @@ class TransactionController extends BaseController
             return redirect()->back()->with('success', 'Pindah dana berhasil dicatat. Silakan tambah lagi.');
         }
 
-        return redirect()->to(route_query('catat', $this->contextQueryFromPost()))->with('success', 'Pindah dana berhasil dicatat.');
+        return redirect()->to($this->resolvePostedReturnTo(route_query('catat', $this->contextQueryFromPost())))->with('success', 'Pindah dana berhasil dicatat.');
     }
 
     public function detail(string $id): string
@@ -825,7 +839,33 @@ class TransactionController extends BaseController
     private function resolveBackUrl(string $fallback): string
     {
         $from = (string) $this->request->getGet('from');
-        return ($from !== '' && str_starts_with($from, site_url())) ? $from : $fallback;
+        return $this->isSafeInternalUrl($from) ? $from : $fallback;
+    }
+
+    private function resolveRequestedReturnTo(string $fallback): string
+    {
+        $target = trim((string) $this->request->getGet('return_to'));
+        if ($this->isSafeInternalUrl($target)) {
+            return $target;
+        }
+
+        $referer = trim((string) ($this->request->getServer('HTTP_REFERER') ?? ''));
+        if ($this->isSafeInternalUrl($referer)) {
+            return $referer;
+        }
+
+        return $fallback;
+    }
+
+    private function resolvePostedReturnTo(string $fallback): string
+    {
+        $target = trim((string) $this->request->getPost('return_to'));
+        return $this->isSafeInternalUrl($target) ? $target : $fallback;
+    }
+
+    private function isSafeInternalUrl(string $url): bool
+    {
+        return $url !== '' && str_starts_with($url, site_url());
     }
 
     private function redirectBackWithTransactionError(Throwable $e, ?string $proofImage = null): RedirectResponse

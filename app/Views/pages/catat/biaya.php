@@ -10,6 +10,7 @@
 
     <form action="<?= esc(site_url('catat/keluar/biaya')) ?>" method="post" enctype="multipart/form-data" class="space-y-4">
         <?= csrf_field() ?>
+        <input type="hidden" name="return_to" value="<?= esc(old('return_to', $returnTo ?? '')) ?>">
         <?= view('partials/capture_assist', [
             'captureKey' => 'biaya_belanja',
             'title' => 'Bukti Transaksi',
