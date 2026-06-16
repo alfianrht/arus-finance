@@ -148,7 +148,7 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
         </div>
             </section>
 
-            <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm overflow-hidden">
+            <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm">
         <div class="flex items-center justify-between px-4">
             <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
         </div>
@@ -163,7 +163,7 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
                     ]) ?>
                 </div>
             <?php else: ?>
-                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 snap-x snap-mandatory scroll-p-4" style="scrollbar-width: none;">
+                <div class="flex flex-nowrap gap-3 overflow-x-auto px-4 pb-4 pt-2 snap-x snap-mandatory scroll-pl-4" style="scrollbar-width: none;">
                     <style>
                         .overflow-x-auto::-webkit-scrollbar { display: none; }
                     </style>

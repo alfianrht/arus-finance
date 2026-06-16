@@ -6,7 +6,7 @@ $totalAmount = (float) ($receiver['total_received'] ?? $receiver['total_amount']
 $metaLabel = $receiver['meta_label'] ?? 'Total terkait';
 ?>
 
-<a href="<?= esc($receiver['detail_url']) ?>" class="group relative flex <?= esc($widthClass) ?> shrink-0 snap-start overflow-hidden rounded-3xl border border-zinc-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-lime-400">
+<a href="<?= esc($receiver['detail_url']) ?>" class="group relative flex <?= esc($widthClass) ?> shrink-0 snap-start overflow-hidden rounded-3xl border border-zinc-100 bg-white p-4 text-left shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-lime-400 hover:shadow-md">
     <p class="pointer-events-none absolute -bottom-2 right-2 text-6xl font-black uppercase tracking-tight text-zinc-100" aria-hidden="true"><?= esc($surfaceText) ?></p>
 
     <div class="relative flex min-w-0 flex-1 flex-col">
