@@ -93,6 +93,7 @@ class TransactionController extends BaseController
             'activeNav' => 'catat',
             'backUrl' => $returnTo,
             'returnTo' => $returnTo,
+            'defaultTransactionDate' => $this->defaultTransactionDate(),
             'units' => $units,
             'activitySummaries' => $this->flattenActivities($units),
             'incomeCategories' => $incomeCategories,
@@ -133,6 +134,7 @@ class TransactionController extends BaseController
                 'created_by' => $this->currentUserId(),
             ];
             $this->transactionService->create($payload);
+            $this->rememberLastTransactionDate($payload['transaction_date']);
         } catch (Throwable $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
         }
@@ -157,6 +159,7 @@ class TransactionController extends BaseController
             'backUrl' => $returnTo,
             'activeContext' => $activeContext,
             'returnTo' => $returnTo,
+            'defaultTransactionDate' => $this->defaultTransactionDate(),
             'biayaUrl' => route_query('catat/keluar/biaya', array_merge($activeContext['query'], $returnQuery)),
             'honorUrl' => route_query('catat/keluar/honor-gaji', array_merge($activeContext['query'], $returnQuery)),
             'pindahDanaUrl' => route_query('catat/keluar/pindah-dana', array_merge($activeContext['query'], $returnQuery)),
@@ -176,6 +179,7 @@ class TransactionController extends BaseController
             'activeNav' => 'catat',
             'backUrl' => $returnTo,
             'returnTo' => $returnTo,
+            'defaultTransactionDate' => $this->defaultTransactionDate(),
             'units' => $units,
             'activitySummaries' => $this->flattenActivities($units),
             'accounts' => $this->loadAccounts(),
@@ -214,6 +218,7 @@ class TransactionController extends BaseController
                 'created_by' => $this->currentUserId(),
             ];
             $this->transactionService->create($payload);
+            $this->rememberLastTransactionDate($payload['transaction_date']);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
         }
@@ -237,6 +242,7 @@ class TransactionController extends BaseController
             'activeNav' => 'catat',
             'backUrl' => $returnTo,
             'returnTo' => $returnTo,
+            'defaultTransactionDate' => $this->defaultTransactionDate(),
             'units' => $units,
             'accounts' => $this->loadAccounts(),
             'receivers' => $this->loadReceivers(),
@@ -280,6 +286,7 @@ class TransactionController extends BaseController
                 'created_by' => $this->currentUserId(),
             ];
             $this->transactionService->create($payload);
+            $this->rememberLastTransactionDate($payload['transaction_date']);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
         }
@@ -302,6 +309,7 @@ class TransactionController extends BaseController
             'activeNav' => 'catat',
             'backUrl' => $returnTo,
             'returnTo' => $returnTo,
+            'defaultTransactionDate' => $this->defaultTransactionDate(),
             'units' => $units,
             'accounts' => $this->loadAccounts(),
             'activities' => $this->flattenActivities($units),
@@ -351,6 +359,7 @@ class TransactionController extends BaseController
                 'created_by' => $this->currentUserId(),
             ];
             $this->transactionService->create($payload);
+            $this->rememberLastTransactionDate($payload['transaction_date']);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
         }
@@ -455,6 +464,7 @@ class TransactionController extends BaseController
 
         try {
             (new TransactionModel())->update((int) $existing['id'], $payload);
+            $this->rememberLastTransactionDate($payload['transaction_date']);
         } catch (RuntimeException $e) {
             return $this->redirectBackWithTransactionError($e, $payload['proof_image'] ?? null);
         }
@@ -742,6 +752,24 @@ class TransactionController extends BaseController
     private function resolveAdminFee(string $preset, string $custom): float
     {
         return $preset === 'manual' ? $this->normalizeMoney($custom) : $this->normalizeMoney($preset);
+    }
+
+    private function defaultTransactionDate(): string
+    {
+        $lastUsed = trim((string) ($this->session->get('transaction_form_last_date') ?? ''));
+        if ($lastUsed !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $lastUsed) === 1) {
+            return $lastUsed;
+        }
+
+        return date('Y-m-d');
+    }
+
+    private function rememberLastTransactionDate(string $transactionDate): void
+    {
+        $transactionDate = trim($transactionDate);
+        if ($transactionDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $transactionDate) === 1) {
+            $this->session->set('transaction_form_last_date', $transactionDate);
+        }
     }
 
     private function buildProjectPocketFieldData(
