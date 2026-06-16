@@ -1085,6 +1085,7 @@ class ReportController extends BaseController
 
         $totalPocketBalance = 0.0;
         $mainPocketSummary = null;
+        $pocketCards = [];
         foreach ($pockets as $pocket) {
             $summary = $this->summarizePocketRows($recentRows, (int) $pocket['id']);
             $totalPocketBalance += (float) $summary['balance'];
@@ -1092,6 +1093,20 @@ class ReportController extends BaseController
             if ((string) ($pocket['pocket_type'] ?? '') === 'main') {
                 $mainPocketSummary = $summary;
             }
+
+            $pocketCards[] = [
+                'id' => (int) ($pocket['id'] ?? 0),
+                'name' => (string) ($pocket['name'] ?? ''),
+                'slug' => (string) ($pocket['slug'] ?? ''),
+                'pocket_type' => (string) ($pocket['pocket_type'] ?? ''),
+                'type_label' => (string) (($pocket['pocket_type'] ?? '') === 'main' ? 'Kantong Utama' : 'Pelaksanaan'),
+                'is_active' => (int) ($pocket['is_active'] ?? 0) === 1,
+                'income' => (float) ($summary['income'] ?? 0),
+                'expense' => (float) ($summary['expense'] ?? 0),
+                'balance' => (float) ($summary['balance'] ?? 0),
+                'transaction_count' => (int) ($summary['transaction_count'] ?? 0),
+                'detail_url' => site_url('kegiatan/' . ($activity['slug'] ?? '') . '/kantong/' . ($pocket['slug'] ?? '')),
+            ];
         }
 
         $mainPocketSummary = $mainPocketSummary ?? $this->summarizePocketRows($recentRows, (int) ($mainPocket['id'] ?? 0));
@@ -1114,6 +1129,7 @@ class ReportController extends BaseController
                 'execution_pocket_count' => count(array_filter($pockets, static fn(array $pocket): bool => ($pocket['pocket_type'] ?? '') === 'execution' && (int) ($pocket['is_active'] ?? 0) === 1)),
             ],
             'mainPocket' => $mainPocket,
+            'pocketCards' => $pocketCards,
             'projectTransactions' => $projectTransactionPagination['items'],
             'projectTransactionPagination' => $projectTransactionPagination,
             'projectFilters' => [
