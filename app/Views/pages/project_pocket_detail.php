@@ -13,6 +13,8 @@ $openPocketSettingsModal = old('form_scope') === 'pocket_settings';
         'backUrl' => $backUrl ?? site_url('rekap'),
     ]) ?>
 
+    <?= view('partials/project_scope_navigator', ['items' => $projectScopeNavigator ?? []]) ?>
+
     <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
         <div class="space-y-3">
             <section class="relative overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-sm">
