@@ -38,26 +38,32 @@
         </div>
             </section>
 
-            <div class="grid grid-cols-2 gap-2 sm:gap-3">
-        <div class="rounded-2xl bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lime-100 text-zinc-950 sm:h-8 sm:w-8">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">payments</span>
-                </div>
-                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Total Nominal</p>
+            <section class="rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-semibold text-zinc-950">Ringkasan Penerima</h2>
+                <p class="mt-1 text-xs text-zinc-500">Scope transaksi yang melibatkan penerima ini.</p>
             </div>
-            <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc(rupiah($receiver['total_amount'])) ?></p>
+            <span class="rounded-full border border-zinc-950/10 bg-zinc-50 px-3 py-1.5 text-[11px] font-semibold text-zinc-700"><?= esc($receiver['type']) ?></span>
         </div>
-        <div class="rounded-2xl bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 sm:h-8 sm:w-8">
-                    <span class="material-symbols-rounded text-[11px] sm:text-sm">receipt_long</span>
+
+        <div class="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-[16px] text-zinc-500" aria-hidden="true">payments</span>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Total Nominal</p>
                 </div>
-                <p class="truncate text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px]">Jumlah Transaksi</p>
+                <p class="mt-2 text-sm font-black tabular-nums text-zinc-950 sm:text-base"><?= esc(rupiah($receiver['total_amount'])) ?></p>
             </div>
-            <p class="mt-1.5 truncate text-sm font-black text-zinc-950 sm:mt-3 sm:text-base"><?= esc((string) $receiver['transaction_count']) ?></p>
+            <div class="rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-[16px] text-zinc-500" aria-hidden="true">receipt_long</span>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Jumlah Transaksi</p>
+                </div>
+                <p class="mt-2 text-sm font-black text-zinc-950 sm:text-base"><?= esc((string) $receiver['transaction_count']) ?></p>
+            </div>
         </div>
-            </div>
+            </section>
 
             <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
