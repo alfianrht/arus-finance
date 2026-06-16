@@ -133,6 +133,9 @@ trait LegacySettingsDashboardTrait
     {
         $data = [];
         $institution = $this->currentInstitution();
+        $user = $this->currentUser();
+        $googleLinked = trim((string) ($user['google_id'] ?? '')) !== '';
+        $googleEmail = trim((string) ($user['email'] ?? ''));
 
         $data['pageTitle'] = 'Profil Lembaga';
         $data['activeNav'] = 'beranda';
@@ -147,6 +150,14 @@ trait LegacySettingsDashboardTrait
             ['label' => 'Email Operasional', 'value' => $institution['email'] ?: '-'],
             ['label' => 'Nomor WhatsApp', 'value' => $institution['whatsapp'] ?: '-'],
             ['label' => 'Alamat Singkat', 'value' => $institution['address'] ?: '-'],
+        ];
+        $data['googleAuth'] = [
+            'isLinked' => $googleLinked,
+            'email' => $googleEmail !== '' ? $googleEmail : '-',
+            'provider' => trim((string) ($user['auth_provider'] ?? '')) ?: 'legacy_otp',
+            'providerLabel' => $googleLinked ? 'Google' : 'Legacy',
+            'avatarUrl' => trim((string) ($user['avatar_url'] ?? '')),
+            'linkUrl' => site_url('auth/google/link'),
         ];
 
         return view('pages/master/profile', $data);

@@ -2,20 +2,30 @@
 
 namespace App\Controllers;
 
-use App\Filters\RateLimitFilter;
 use App\Services\AuthService;
+use App\Services\GoogleAuthService;
 use CodeIgniter\HTTP\RedirectResponse;
-use CodeIgniter\I18n\Time;
 use RuntimeException;
 use Throwable;
 
 class Auth extends BaseController
 {
+    private const GOOGLE_STATE_SESSION_KEY = 'google_auth_state';
+
+    private const GOOGLE_REMEMBER_SESSION_KEY = 'google_auth_remember';
+
+    private const GOOGLE_FLOW_SESSION_KEY = 'google_auth_flow';
+
+    private const GOOGLE_LINK_USER_SESSION_KEY = 'google_auth_link_user_id';
+
     private AuthService $authService;
+
+    private GoogleAuthService $googleAuthService;
 
     public function __construct()
     {
         $this->authService = new AuthService();
+        $this->googleAuthService = new GoogleAuthService();
     }
 
     public function login(): string|RedirectResponse
@@ -24,132 +34,143 @@ class Auth extends BaseController
             return redirect()->to(site_url('beranda'));
         }
 
-        $data = [
+        return view('pages/auth/login', [
             'pageTitle' => 'Masuk',
-            'appName'   => 'Arus',
-        ];
-
-        return view('pages/auth/login', $data);
+            'appName' => 'Arus',
+            'googleEnabled' => $this->googleAuthService->isConfigured(),
+        ]);
     }
 
-    public function otp(): string|RedirectResponse
-    {
-        $pendingAuth = $this->session->get('pending_auth');
-
-        if (! is_array($pendingAuth)) {
-            return redirect()->to(site_url('auth/login'))->with('warning', 'Minta kode OTP dulu sebelum verifikasi.');
-        }
-
-        $data = [
-            'pageTitle' => 'Verifikasi OTP',
-            'appName'   => 'Arus',
-            'pendingAuth' => $pendingAuth,
-            'otpPreview' => $this->authService->currentOtpPreview((int) $pendingAuth['user_id'])
-                ?? $this->session->getFlashdata('otp_preview')
-                ?? $this->session->get('otp_preview'),
-        ];
-
-        return view('pages/auth/otp', $data);
-    }
-
-    public function register(): string|RedirectResponse
+    public function google(): RedirectResponse
     {
         if ($this->session->get('auth_user_id') !== null) {
             return redirect()->to(site_url('beranda'));
         }
 
-        $data = [
-            'pageTitle' => 'Daftar',
-            'appName'   => 'Arus',
-        ];
-
-        return view('pages/auth/register', $data);
-    }
-
-    public function forgotPassword(): string|RedirectResponse
-    {
-        $data = [
-            'pageTitle' => 'Lupa Sandi',
-            'appName'   => 'Arus',
-        ];
-
-        return view('pages/auth/forgot_password', $data);
-    }
-
-    public function requestOtp(): \CodeIgniter\HTTP\RedirectResponse
-    {
-        $flow = (string) $this->request->getPost('flow');
-        $whatsapp = (string) $this->request->getPost('whatsapp');
-        $name = trim((string) $this->request->getPost('name'));
-        $rememberDevice = $this->request->getPost('remember_device') !== null;
+        if (! $this->googleAuthService->isConfigured()) {
+            return redirect()->to(site_url('auth/login'))
+                ->with('error', 'Google Sign-In belum siap. Hubungi admin untuk melengkapi konfigurasi.');
+        }
 
         try {
-            $normalized = $this->authService->normalizeWhatsapp($whatsapp);
+            $authorization = $this->googleAuthService->buildAuthorizationRequest();
+            $rememberDevice = $this->request->getGet('remember_device') !== null;
 
-            if (! $this->authService->isValidWhatsapp($normalized)) {
-                throw new RuntimeException('Nomor WhatsApp belum valid. Gunakan format Indonesia yang aktif.');
-            }
+            $this->session->set(self::GOOGLE_STATE_SESSION_KEY, $authorization['state']);
+            $this->session->set(self::GOOGLE_REMEMBER_SESSION_KEY, $rememberDevice);
 
-            if ($flow === 'register') {
-                if ($name === '') {
-                    throw new RuntimeException('Nama lengkap wajib diisi untuk pendaftaran.');
+            return redirect()->to($authorization['url']);
+        } catch (Throwable $exception) {
+            log_message('error', 'Google auth redirect failed: {message}', ['message' => $exception->getMessage()]);
+
+            return redirect()->to(site_url('auth/login'))
+                ->with('error', 'Google Sign-In belum bisa dibuka sekarang. Coba lagi sebentar lagi.');
+        }
+    }
+
+    public function linkGoogle(): RedirectResponse
+    {
+        $authUserId = (int) ($this->session->get('auth_user_id') ?? 0);
+        if ($authUserId <= 0) {
+            return redirect()->to(site_url('auth/login'))
+                ->with('warning', 'Login dulu untuk menautkan akun Google.');
+        }
+
+        if (! $this->googleAuthService->isConfigured()) {
+            return redirect()->back()
+                ->with('error', 'Google Sign-In belum siap. Hubungi admin untuk melengkapi konfigurasi.');
+        }
+
+        try {
+            $authorization = $this->googleAuthService->buildAuthorizationRequest();
+            $this->session->set(self::GOOGLE_STATE_SESSION_KEY, $authorization['state']);
+            $this->session->set(self::GOOGLE_FLOW_SESSION_KEY, 'link');
+            $this->session->set(self::GOOGLE_LINK_USER_SESSION_KEY, $authUserId);
+
+            return redirect()->to($authorization['url']);
+        } catch (Throwable $exception) {
+            log_message('error', 'Google account link redirect failed: {message}', ['message' => $exception->getMessage()]);
+
+            return redirect()->back()
+                ->with('error', 'Google Sign-In belum bisa dibuka sekarang. Coba lagi sebentar lagi.');
+        }
+    }
+
+    public function googleCallback(): RedirectResponse
+    {
+        if (! $this->googleAuthService->isConfigured()) {
+            return redirect()->to(site_url('auth/login'))
+                ->with('error', 'Google Sign-In belum siap. Hubungi admin untuk melengkapi konfigurasi.');
+        }
+
+        $expectedState = (string) $this->session->get(self::GOOGLE_STATE_SESSION_KEY);
+        $receivedState = trim((string) $this->request->getGet('state'));
+        $code = trim((string) $this->request->getGet('code'));
+        $providerError = trim((string) $this->request->getGet('error'));
+        $flow = (string) $this->session->get(self::GOOGLE_FLOW_SESSION_KEY);
+        $linkUserId = (int) ($this->session->get(self::GOOGLE_LINK_USER_SESSION_KEY) ?? 0);
+        $failureRedirect = $flow === 'link' ? site_url('pengaturan/profil-lembaga') : site_url('auth/login');
+
+        $this->session->remove([
+            self::GOOGLE_STATE_SESSION_KEY,
+            self::GOOGLE_FLOW_SESSION_KEY,
+            self::GOOGLE_LINK_USER_SESSION_KEY,
+        ]);
+
+        if ($providerError !== '') {
+            return redirect()->to($failureRedirect)
+                ->with('error', 'Masuk dengan Google dibatalkan atau ditolak.');
+        }
+
+        if ($expectedState === '' || $receivedState === '' || ! hash_equals($expectedState, $receivedState)) {
+            return redirect()->to($failureRedirect)
+                ->with('error', 'Sesi Google Sign-In tidak valid. Silakan coba lagi.');
+        }
+
+        if ($code === '') {
+            return redirect()->to($failureRedirect)
+                ->with('error', 'Google Sign-In belum mengirim kode login yang valid.');
+        }
+
+        try {
+            $profile = $this->googleAuthService->fetchProfileFromCallback($code);
+
+            if ($flow === 'link') {
+                if ($linkUserId <= 0) {
+                    throw new RuntimeException('Sesi tautkan Google tidak valid. Coba lagi dari halaman profil.');
                 }
 
-                $result = $this->authService->registerAndRequestOtp($name, $normalized);
-            } elseif ($flow === 'recovery') {
-                $result = $this->authService->requestRecoveryOtp($normalized);
-            } else {
-                $result = $this->authService->requestLoginOtp($normalized);
+                $user = $this->googleAuthService->linkUser($linkUserId, $profile);
+                $this->session->set([
+                    'auth_user_id' => $user['id'],
+                    'auth_user_name' => $user['name'],
+                    'auth_institution_id' => $user['institution_id'],
+                    'auth_role' => $user['role'],
+                ]);
+
+                return redirect()->to(site_url('pengaturan/profil-lembaga'))
+                    ->with('success', 'Akun Google berhasil ditautkan.');
             }
 
-            $this->session->set('pending_auth', [
-                'user_id' => $result['user']['id'],
-                'name' => $result['user']['name'],
-                'whatsapp' => $result['user']['whatsapp'],
-                'flow' => $result['flow'],
-                'expires_at' => $result['expires_at'],
-                'remember_device' => $rememberDevice,
-            ]);
-            $this->session->setFlashdata('success', 'Kode OTP sudah dibuat. Untuk tahap development, kode ditampilkan di halaman berikutnya.');
-            $this->session->setFlashdata('otp_preview', $result['otp']);
-            $this->session->set('otp_preview', $result['otp']);
+            $user = $this->googleAuthService->findOrCreateUser($profile);
 
-            return redirect()->to(site_url('auth/otp'));
-        } catch (RuntimeException $exception) {
-            return redirect()->back()->withInput()->with('error', $exception->getMessage());
-        } catch (Throwable $exception) {
-            return redirect()->back()->withInput()->with('error', 'Fondasi database auth belum siap. Jalankan migrasi dan seeder lebih dulu.');
-        }
-    }
-
-    public function verifyOtp(): \CodeIgniter\HTTP\RedirectResponse
-    {
-        $pendingAuth = $this->session->get('pending_auth');
-        $otp = trim((string) $this->request->getPost('otp_code'));
-
-        if (! is_array($pendingAuth) || ! isset($pendingAuth['user_id'])) {
-            return redirect()->to(site_url('auth/login'))->with('warning', 'Sesi OTP tidak ditemukan. Silakan minta kode lagi.');
-        }
-
-        try {
-            if ($otp === '') {
-                throw new RuntimeException('Kode OTP wajib diisi.');
+            if (! is_array($user) || ! isset($user['id'], $user['institution_id'], $user['role'])) {
+                throw new RuntimeException('Data akun Google tidak lengkap.');
             }
 
-            $user = $this->authService->verifyOtp((int) $pendingAuth['user_id'], $otp);
-
-            $this->session->remove(['pending_auth', 'otp_preview']);
+            $rememberDevice = (bool) $this->session->get(self::GOOGLE_REMEMBER_SESSION_KEY);
+            $this->session->remove(self::GOOGLE_REMEMBER_SESSION_KEY);
+            $this->session->regenerate(true);
             $this->session->set([
                 'auth_user_id' => $user['id'],
                 'auth_user_name' => $user['name'],
                 'auth_institution_id' => $user['institution_id'],
                 'auth_role' => $user['role'],
             ]);
-            RateLimitFilter::clearForWhatsapp((string) ($pendingAuth['whatsapp'] ?? ''));
 
             $redirect = redirect()->to(site_url('beranda'))->with('success', 'Login berhasil.');
 
-            if ((bool) ($pendingAuth['remember_device'] ?? false)) {
+            if ($rememberDevice) {
                 $remember = $this->authService->issueRememberToken(
                     (int) $user['id'],
                     $this->request->getUserAgent()?->getAgentString(),
@@ -171,41 +192,46 @@ class Auth extends BaseController
 
             return $redirect;
         } catch (RuntimeException $exception) {
-            return redirect()->back()->withInput()->with('error', $exception->getMessage());
+            return redirect()->to($failureRedirect)->with('error', $exception->getMessage());
         } catch (Throwable $exception) {
-            return redirect()->back()->withInput()->with('error', 'Verifikasi gagal karena fondasi auth belum siap.');
+            log_message('error', 'Google auth callback failed: {message}', ['message' => $exception->getMessage()]);
+
+            return redirect()->to($failureRedirect)
+                ->with('error', 'Google Sign-In belum bisa diproses. Silakan coba lagi.');
         }
     }
 
-    public function resendOtp(): \CodeIgniter\HTTP\RedirectResponse
+    public function otp(): RedirectResponse
     {
-        $pendingAuth = $this->session->get('pending_auth');
-
-        if (! is_array($pendingAuth) || ! isset($pendingAuth['flow'], $pendingAuth['whatsapp'], $pendingAuth['name'])) {
-            return redirect()->to(site_url('auth/login'))->with('warning', 'Sesi OTP tidak ditemukan.');
-        }
-
-        try {
-            $result = $this->authService->resendOtpForUser((int) $pendingAuth['user_id'], (string) $pendingAuth['flow']);
-
-            $this->session->set('pending_auth', [
-                'user_id' => $result['user']['id'],
-                'name' => $result['user']['name'],
-                'whatsapp' => $result['user']['whatsapp'],
-                'flow' => $result['flow'],
-                'expires_at' => $result['expires_at'],
-            ]);
-            $this->session->setFlashdata('success', 'Kode OTP baru sudah dibuat.');
-            $this->session->setFlashdata('otp_preview', $result['otp']);
-            $this->session->set('otp_preview', $result['otp']);
-
-            return redirect()->to(site_url('auth/otp'));
-        } catch (Throwable $exception) {
-            return redirect()->back()->with('error', 'Kode OTP gagal dikirim ulang.');
-        }
+        return $this->redirectLegacyAuth('Login sekarang memakai Google Sign-In.');
     }
 
-    public function logout(): \CodeIgniter\HTTP\RedirectResponse
+    public function register(): RedirectResponse
+    {
+        return $this->redirectLegacyAuth('Pendaftaran sekarang memakai Google Sign-In.');
+    }
+
+    public function forgotPassword(): RedirectResponse
+    {
+        return $this->redirectLegacyAuth('Pemulihan akun sekarang dibantu lewat login Google.');
+    }
+
+    public function requestOtp(): RedirectResponse
+    {
+        return $this->redirectLegacyAuth('Kode OTP tidak dipakai lagi. Lanjutkan dengan Google.');
+    }
+
+    public function verifyOtp(): RedirectResponse
+    {
+        return $this->redirectLegacyAuth('Verifikasi OTP tidak dipakai lagi. Lanjutkan dengan Google.');
+    }
+
+    public function resendOtp(): RedirectResponse
+    {
+        return $this->redirectLegacyAuth('Kode OTP tidak dipakai lagi. Lanjutkan dengan Google.');
+    }
+
+    public function logout(): RedirectResponse
     {
         $this->authService->revokeRememberToken($this->request->getCookie(AuthService::REMEMBER_COOKIE));
         $this->session->destroy();
@@ -214,5 +240,10 @@ class Auth extends BaseController
         $redirect->deleteCookie(AuthService::REMEMBER_COOKIE);
 
         return $redirect;
+    }
+
+    private function redirectLegacyAuth(string $message): RedirectResponse
+    {
+        return redirect()->to(site_url('auth/login'))->with('warning', $message);
     }
 }

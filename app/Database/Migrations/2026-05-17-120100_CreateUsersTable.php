@@ -24,9 +24,30 @@ class CreateUsersTable extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
             ],
+            'email' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 255,
+                'null'       => true,
+            ],
             'whatsapp' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 20,
+                'null'       => true,
+            ],
+            'google_id' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 191,
+                'null'       => true,
+            ],
+            'auth_provider' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 50,
+                'null'       => true,
+            ],
+            'avatar_url' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 255,
+                'null'       => true,
             ],
             'otp_code' => [
                 'type'       => 'VARCHAR',
@@ -70,7 +91,9 @@ class CreateUsersTable extends Migration
         ]);
 
         $this->forge->addKey('id', true);
+        $this->forge->addUniqueKey('email');
         $this->forge->addUniqueKey('whatsapp');
+        $this->forge->addUniqueKey('google_id');
         $this->forge->addKey('institution_id');
         $this->forge->addForeignKey('institution_id', 'institutions', 'id', 'CASCADE', 'RESTRICT');
         $this->forge->createTable('users');

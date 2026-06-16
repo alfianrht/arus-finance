@@ -6,6 +6,9 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 $routes->get('auth/login', 'Auth::login');
+$routes->get('auth/google', 'Auth::google');
+$routes->get('auth/google/link', 'Auth::linkGoogle', ['filter' => 'auth']);
+$routes->get('auth/google/callback', 'Auth::googleCallback');
 $routes->post('auth/request-otp', 'Auth::requestOtp', ['filter' => 'rateLimit']);
 $routes->get('auth/register', 'Auth::register');
 $routes->get('auth/otp', 'Auth::otp');

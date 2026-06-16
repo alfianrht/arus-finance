@@ -17,6 +17,7 @@ use App\Models\ReceiverModel;
 use App\Models\ReportPositionModel;
 use App\Models\TransactionCategoryModel;
 use App\Models\UnitModel;
+use App\Models\UserModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -42,6 +43,28 @@ class LegacySettingsController extends BaseController
             'whatsapp' => '',
             'address' => '',
             'logo' => '',
+        ];
+    }
+
+    private function currentUser(): array
+    {
+        $userId = (int) ($this->session->get('auth_user_id') ?? 0);
+        $user = $userId > 0 ? (new UserModel())->find($userId) : null;
+
+        if (is_array($user)) {
+            return $user;
+        }
+
+        return [
+            'id' => $userId,
+            'name' => (string) ($this->session->get('auth_user_name') ?? 'Pengguna Arus'),
+            'email' => '',
+            'whatsapp' => '',
+            'google_id' => '',
+            'auth_provider' => '',
+            'avatar_url' => '',
+            'role' => (string) ($this->session->get('auth_role') ?? 'admin'),
+            'institution_id' => $this->currentInstitutionId(),
         ];
     }
 
