@@ -13,6 +13,11 @@ $showPinModal = $latestPin !== '';
         'title' => 'Bagikan Laporan',
         'subtitle' => 'Unit / Program',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Rekap', 'url' => site_url('rekap')],
+            ['label' => $unit['name'], 'url' => site_url('unit/' . $unit['slug'])],
+            ['label' => 'Bagikan Laporan'],
+        ],
     ]) ?>
 
     <section class="rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm">

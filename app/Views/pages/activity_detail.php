@@ -10,6 +10,11 @@ $openProjectModeModal = old('contract_value') !== null || old('contract_terms_co
         'title' => $activity['name'],
         'subtitle' => $activity['unit_name'],
         'backUrl' => $backUrl ?? site_url('rekap'),
+        'breadcrumbs' => [
+            ['label' => 'Rekap', 'url' => site_url('rekap')],
+            ['label' => $activity['unit_name'], 'url' => site_url('unit/' . ($activity['unit_slug'] ?? ''))],
+            ['label' => $activity['name']],
+        ],
     ]) ?>
 
     <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">

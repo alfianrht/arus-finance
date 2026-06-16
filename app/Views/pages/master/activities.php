@@ -11,6 +11,10 @@
         'title' => 'Kegiatan',
         'subtitle' => 'Master Data',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => 'Kegiatan'],
+        ],
     ]) ?>
 
     <div class="flex justify-end">

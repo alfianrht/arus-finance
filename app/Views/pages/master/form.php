@@ -6,6 +6,10 @@
         'title' => $formTitle ?? $pageTitle,
         'subtitle' => $formMode ?? 'Form Dummy',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => $formTitle ?? $pageTitle],
+        ],
     ]) ?>
 
     <section class="rounded-3xl border border-zinc-950 bg-white p-5">

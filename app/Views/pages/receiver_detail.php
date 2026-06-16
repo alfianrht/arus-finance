@@ -6,6 +6,11 @@
         'title' => $receiver['name'],
         'subtitle' => 'Penerima',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Rekap', 'url' => site_url('rekap')],
+            ['label' => 'Penerima', 'url' => site_url('pengaturan/penerima')],
+            ['label' => $receiver['name']],
+        ],
     ]) ?>
 
     <?php $surfaceText = surface_label($receiver['name']); ?>

@@ -6,6 +6,10 @@
         'title' => 'Kategori Transaksi',
         'subtitle' => 'Master Data',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => 'Kategori Transaksi'],
+        ],
     ]) ?>
 
     <div class="flex justify-end">

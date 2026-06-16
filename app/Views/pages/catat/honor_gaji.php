@@ -6,6 +6,11 @@
         'title' => 'Honor & Gaji',
         'subtitle' => 'Pembayaran untuk SDM, tim, atau narasumber.',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pencatatan', 'url' => site_url('catat')],
+            ['label' => 'Uang Keluar', 'url' => site_url('catat/keluar')],
+            ['label' => 'Honor & Gaji'],
+        ],
     ]) ?>
     
     <form method="post" action="<?= site_url('catat/keluar/honor-gaji') ?>" enctype="multipart/form-data" class="space-y-4">

@@ -6,6 +6,10 @@
         'title' => $transaction['badge_label'],
         'subtitle' => $isEditMode ? 'Edit Transaksi' : 'Detail Transaksi',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pencatatan', 'url' => site_url('catat')],
+            ['label' => $isEditMode ? 'Edit Transaksi' : 'Detail Transaksi'],
+        ],
     ]) ?>
 
     <?php if ($transaction['type'] === 'pindah'): ?>

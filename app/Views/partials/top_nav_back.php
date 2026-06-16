@@ -6,8 +6,9 @@ $showBackButton = $showBackButton ?? true;
 $showSettingsButton = $showSettingsButton ?? true;
 $showLogoutButton = $showLogoutButton ?? false;
 $bookPeriodLabel = $bookPeriodLabel ?? 'Tahun Buku Aktif';
+$breadcrumbs = is_array($breadcrumbs ?? null) ? $breadcrumbs : [];
 ?>
-<header class="px-2 flex items-start justify-between gap-4 h-16">
+<header class="px-2 flex min-h-16 items-start justify-between gap-4">
     <div class="flex min-w-0 items-center gap-3">
         <?php if ($showBackButton): ?>
             <a href="<?= esc($backUrl) ?>" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm" aria-label="Kembali">
@@ -16,6 +17,26 @@ $bookPeriodLabel = $bookPeriodLabel ?? 'Tahun Buku Aktif';
         <?php endif; ?>
         
         <div class="min-w-0 space-y-0">
+            <?php if ($breadcrumbs !== []): ?>
+                <nav aria-label="Breadcrumb" class="mb-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] font-medium text-zinc-400">
+                    <?php foreach ($breadcrumbs as $index => $crumb): ?>
+                        <?php
+                        $isLast = $index === array_key_last($breadcrumbs);
+                        $label = (string) ($crumb['label'] ?? '');
+                        $url = (string) ($crumb['url'] ?? '');
+                        ?>
+                        <?php if ($index > 0): ?>
+                            <span class="material-symbols-rounded text-[14px] text-zinc-300" aria-hidden="true">chevron_right</span>
+                        <?php endif; ?>
+
+                        <?php if (! $isLast && $url !== ''): ?>
+                            <a href="<?= esc($url) ?>" class="truncate transition hover:text-zinc-700"><?= esc($label) ?></a>
+                        <?php else: ?>
+                            <span class="truncate <?= $isLast ? 'text-zinc-600' : '' ?>"><?= esc($label) ?></span>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </nav>
+            <?php endif; ?>
             <div class="flex items-center gap-2">
                 <p class="truncate text-2xl font-semibold tracking-tight text-zinc-950"><?= esc($title) ?></p>
                 <span class="shrink-0 whitespace-nowrap rounded-full border border-lime-200 bg-lime-100 px-2 py-1 text-[10px] font-medium text-lime-950 shadow-sm"><?= esc($bookPeriodLabel) ?></span>

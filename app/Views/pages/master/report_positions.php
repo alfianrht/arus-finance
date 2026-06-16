@@ -12,6 +12,10 @@
         'title' => 'Pos Laporan',
         'subtitle' => 'Fondasi Laporan Tahunan',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => 'Pos Laporan'],
+        ],
     ]) ?>
 
     <div class="flex justify-end">

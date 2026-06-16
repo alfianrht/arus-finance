@@ -6,6 +6,10 @@
         'title' => 'Pindah Dana',
         'subtitle' => 'Perpindahan saldo internal yang tidak masuk biaya.',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pencatatan', 'url' => site_url('catat')],
+            ['label' => 'Pindah Dana'],
+        ],
     ]) ?>
 
     <section class="rounded-2xl border border-sky-100 bg-sky-50 p-4">

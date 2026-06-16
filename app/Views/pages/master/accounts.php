@@ -11,6 +11,10 @@
         'title' => 'Rekening / Dompet',
         'subtitle' => 'Master Data',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => 'Rekening / Dompet'],
+        ],
     ]) ?>
 
     <div class="flex justify-end">

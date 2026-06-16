@@ -6,6 +6,11 @@
         'title' => 'Biaya / Belanja',
         'subtitle' => 'Untuk pengeluaran operasional yang mengurangi surplus.',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pencatatan', 'url' => site_url('catat')],
+            ['label' => 'Uang Keluar', 'url' => site_url('catat/keluar')],
+            ['label' => 'Biaya / Belanja'],
+        ],
     ]) ?>
 
     <form action="<?= esc(site_url('catat/keluar/biaya')) ?>" method="post" enctype="multipart/form-data" class="space-y-4">

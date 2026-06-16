@@ -6,6 +6,10 @@
         'title' => 'Saldo Awal',
         'subtitle' => 'Fondasi Laporan Tahunan',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => 'Saldo Awal'],
+        ],
     ]) ?>
 
     <div class="flex justify-end">

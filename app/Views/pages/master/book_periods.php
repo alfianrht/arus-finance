@@ -6,6 +6,10 @@
         'title' => 'Tahun Buku',
         'subtitle' => 'Fondasi Laporan Tahunan',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => 'Tahun Buku'],
+        ],
     ]) ?>
 
     <div class="flex justify-end">

@@ -10,6 +10,10 @@
         'title' => 'Penerima',
         'subtitle' => 'Master Data',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pengaturan', 'url' => site_url('pengaturan')],
+            ['label' => 'Penerima'],
+        ],
     ]) ?>
 
     <div class="flex justify-end">

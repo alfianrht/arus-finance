@@ -6,6 +6,10 @@
         'title' => 'Uang Masuk',
         'subtitle' => 'Form singkat, unit dan kegiatan mengikuti konteks aktif.',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pencatatan', 'url' => site_url('catat')],
+            ['label' => 'Uang Masuk'],
+        ],
     ]) ?>
 
     <form action="<?= esc(site_url('catat/masuk')) ?>" method="post" enctype="multipart/form-data" class="space-y-4">

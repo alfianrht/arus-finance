@@ -6,6 +6,10 @@
         'title' => 'Uang Keluar',
         'subtitle' => 'Pilih dulu jenis pengeluaran agar form tetap pendek.',
         'backUrl' => $backUrl,
+        'breadcrumbs' => [
+            ['label' => 'Pencatatan', 'url' => site_url('catat')],
+            ['label' => 'Uang Keluar'],
+        ],
     ]) ?>
 
     <div class="space-y-3">

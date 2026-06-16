@@ -798,6 +798,7 @@ class ReportController extends BaseController
             'name' => $act['name'],
             'short_name' => $act['short_name'] ?? substr($act['name'], 0, 4),
             'unit_name' => $unit['name'] ?? '',
+            'unit_slug' => $unit['slug'] ?? '',
             'income' => $actInc,
             'expense' => $actExp,
             'surplus' => $actInc - $actExp,
@@ -1103,7 +1104,6 @@ class ReportController extends BaseController
             'backUrl' => site_url('rekap'),
             'activity' => $activity,
             'unit' => $unit,
-            'projectScopeNavigator' => $this->buildProjectScopeNavigator($activity, $unit, $pockets, null),
             'projectSummary' => [
                 'contract_value' => $contractValue,
                 'contract_terms_count' => (int) ($mainPocket['contract_terms_count'] ?? 0),
@@ -1187,13 +1187,15 @@ class ReportController extends BaseController
             'pageTitle' => $pocket['name'],
             'activeNav' => 'rekap',
             'backUrl' => site_url('kegiatan/' . $activity['slug']),
-            'projectScopeNavigator' => $this->buildProjectScopeNavigator($activity, $unit, $this->projectPocketService->getByActivity($this->currentInstitutionId(), (int) $activity['id'], false), (int) $pocket['id']),
             'activity' => [
                 'slug' => $activity['slug'],
                 'project_slug' => $activity['slug'],
                 'name' => $pocket['name'],
+                'activity_label' => $activity['name'],
                 'short_name' => ($pocket['pocket_type'] ?? '') === 'main' ? 'UTM' : substr((string) $pocket['name'], 0, 4),
                 'unit_name' => $activity['name'],
+                'unit_label' => $unit['name'] ?? '',
+                'unit_slug' => $unit['slug'] ?? '',
                 'income' => (float) $summary['income'],
                 'expense' => (float) $summary['expense'],
                 'surplus' => (float) $summary['balance'],
@@ -1212,34 +1214,6 @@ class ReportController extends BaseController
             'involvedAccounts' => $this->getInvolvedAccounts($db, $recentRows),
             'pocketSummary' => $summary,
         ];
-    }
-
-    private function buildProjectScopeNavigator(array $activity, array $unit, array $pockets, ?int $activePocketId): array
-    {
-        $items = [[
-            'scope_type' => 'activity',
-            'label' => 'Kegiatan',
-            'title' => (string) ($activity['name'] ?? ''),
-            'meta' => (string) ($unit['name'] ?? ''),
-            'target_url' => site_url('kegiatan/' . ($activity['slug'] ?? '')),
-            'is_active' => $activePocketId === null,
-            'is_inactive' => false,
-        ]];
-
-        foreach ($pockets as $pocket) {
-            $isMainPocket = (string) ($pocket['pocket_type'] ?? '') === 'main';
-            $items[] = [
-                'scope_type' => $isMainPocket ? 'main_pocket' : 'execution_pocket',
-                'label' => $isMainPocket ? 'Kantong Utama' : 'Pelaksanaan',
-                'title' => (string) ($pocket['name'] ?? ''),
-                'meta' => $isMainPocket ? 'Kontrak & termin' : 'Biaya operasional',
-                'target_url' => site_url('kegiatan/' . ($activity['slug'] ?? '') . '/kantong/' . ($pocket['slug'] ?? '')),
-                'is_active' => $activePocketId !== null && (int) ($pocket['id'] ?? 0) === $activePocketId,
-                'is_inactive' => (int) ($pocket['is_active'] ?? 0) !== 1,
-            ];
-        }
-
-        return $items;
     }
 
     private function summarizePocketRows(array $rows, int $pocketId): array
