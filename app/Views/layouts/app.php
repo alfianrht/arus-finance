@@ -112,7 +112,7 @@
 <body class="bg-zinc-50 text-zinc-950">
     <div class="min-h-screen bg-zinc-50">
         <?= $this->include('partials/flash_toast') ?>
-        <main class="mx-auto max-w-4xl px-4 pb-28 pt-4 sm:px-5 md:px-6 md:pt-5">
+        <main class="mx-auto max-w-7xl px-4 pb-28 pt-4 sm:px-5 md:px-6 md:pt-5 xl:px-8">
             <?= $this->renderSection('content') ?>
         </main>
     </div>

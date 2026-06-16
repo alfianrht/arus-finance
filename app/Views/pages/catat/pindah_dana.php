@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
-<div class="mx-auto max-w-xl space-y-3">
+<div class="space-y-3">
     <?= view('partials/top_nav_back', [
         'title' => 'Pindah Dana',
         'subtitle' => 'Perpindahan saldo internal yang tidak masuk biaya.',

@@ -20,43 +20,45 @@
             <p class="text-xl font-semibold tracking-tight text-zinc-950"><?= esc($institutionName) ?></p>
         </div>
     </header>
-    
+
     <?= $this->include('partials/active_context') ?>
 
-    <section class="rounded-3xl bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-2 text-zinc-500">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">account_balance_wallet</span>
-            <p class="text-sm">Saldo Total</p>
-        </div>
-        <p class="mt-3 text-4xl font-semibold tracking-tight text-zinc-950 tabular-nums"><?= esc(rupiah($summary['balance'])) ?></p>
-        <div class="mt-4 grid grid-cols-3 gap-3">
-            <div>
-                <p class="text-xs text-zinc-500">Masuk Bulan Ini</p>
-                <p class="mt-2 text-sm font-semibold text-emerald-600"><?= esc(rupiah($summary['income'])) ?></p>
-            </div>
-            <div>
-                <p class="text-xs text-zinc-500">Keluar Bulan Ini</p>
-                <p class="mt-2 text-sm font-semibold text-rose-500"><?= esc(rupiah($summary['expense'])) ?></p>
-            </div>
-            <div>
-                <p class="text-xs text-zinc-500">Laba Sementara</p>
-                <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc(rupiah($summary['surplus'])) ?></p>
-            </div>
-        </div>
-    </section>
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white p-5 shadow-sm">
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="material-symbols-rounded text-base" aria-hidden="true">account_balance_wallet</span>
+                    <p class="text-sm">Saldo Total</p>
+                </div>
+                <p class="mt-3 text-4xl font-semibold tracking-tight text-zinc-950 tabular-nums"><?= esc(rupiah($summary['balance'])) ?></p>
+                <div class="mt-4 grid grid-cols-3 gap-3">
+                    <div>
+                        <p class="text-xs text-zinc-500">Masuk Bulan Ini</p>
+                        <p class="mt-2 text-sm font-semibold text-emerald-600"><?= esc(rupiah($summary['income'])) ?></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-zinc-500">Keluar Bulan Ini</p>
+                        <p class="mt-2 text-sm font-semibold text-rose-500"><?= esc(rupiah($summary['expense'])) ?></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-zinc-500">Laba Sementara</p>
+                        <p class="mt-2 text-sm font-semibold text-zinc-950"><?= esc(rupiah($summary['surplus'])) ?></p>
+                    </div>
+                </div>
+            </section>
 
-    <div class="grid grid-cols-2 gap-3">
-        <a href="<?= esc($activeContext['masuk_url']) ?>" class="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-lime-400 px-4 text-sm font-semibold text-zinc-950">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_downward</span>
-            <span>Uang Masuk</span>
-        </a>
-        <a href="<?= esc($activeContext['keluar_url']) ?>" class="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white">
-            <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_outward</span>
-            <span>Uang Keluar</span>
-        </a>
-    </div>
+            <div class="grid grid-cols-2 gap-3">
+                <a href="<?= esc($activeContext['masuk_url']) ?>" class="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-lime-400 px-4 text-sm font-semibold text-zinc-950">
+                    <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_downward</span>
+                    <span>Uang Masuk</span>
+                </a>
+                <a href="<?= esc($activeContext['keluar_url']) ?>" class="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white">
+                    <span class="material-symbols-rounded text-base" aria-hidden="true">arrow_outward</span>
+                    <span>Uang Keluar</span>
+                </a>
+            </div>
 
-    <section class="space-y-3">
+            <section class="space-y-3">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Unit / Program</h2>
             <p class="text-xs text-zinc-500">Ringkasan bulan ini</p>
@@ -74,9 +76,9 @@
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-    </section>
+            </section>
 
-    <section class="rounded-3xl border border-zinc-950 bg-white p-4">
+            <section class="rounded-3xl border border-zinc-950 bg-white p-4">
         <div class="flex items-start justify-between gap-3">
             <div>
                 <p class="text-base font-semibold text-zinc-950">Pengaturan & Master Data</p>
@@ -96,9 +98,11 @@
                 </a>
             <?php endforeach; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
         <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terakhir</h2>
             <a href="<?= site_url('rekap') ?>" class="text-xs font-medium text-zinc-500">Lihat rekap</a>
@@ -124,6 +128,8 @@
                 'nextUrl' => route_query('beranda', ['transaksi_page' => $homeTransactionPagination['nextPage']]),
             ]) ?>
         <?php endif; ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 <?= $this->endSection() ?>

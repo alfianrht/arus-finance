@@ -70,7 +70,9 @@
         </form>
     </section>
 
-    <section class="rounded-3xl bg-white p-5 shadow-sm">
+    <div class="space-y-3 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.92fr)] xl:items-start xl:gap-4 xl:space-y-0">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white p-5 shadow-sm">
         <div class="flex items-center gap-2 text-zinc-500">
             <span class="material-symbols-rounded text-base" aria-hidden="true">account_balance_wallet</span>
             <p class="text-sm">Saldo Total</p>
@@ -90,9 +92,9 @@
                 <p class="mt-2 text-sm font-semibold text-zinc-950 tabular-nums"><?= esc(rupiah($rekapSummary['surplus'])) ?></p>
             </div>
         </div>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Saldo per Rekening / Dompet</h2>
             <p class="text-xs text-zinc-500">Ketuk kartu untuk rincian</p>
@@ -114,9 +116,9 @@
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-    </section>
+            </section>
 
-    <section class="space-y-3 rounded-3xl bg-white p-4 shadow-sm">
+            <section class="space-y-3 rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Ringkasan per Unit / Program</h2>
             <p class="text-xs text-zinc-500">Sesuai filter</p>
@@ -135,9 +137,9 @@
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white p-4 shadow-sm">
+            <section class="rounded-3xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Ringkasan per Kegiatan</h2>
             <p class="text-xs text-zinc-500">Masuk, biaya, dan surplus</p>
@@ -158,9 +160,9 @@
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm">
+            <section class="rounded-3xl bg-white pt-4 pb-1 shadow-sm">
         <div class="flex items-center justify-between px-4">
             <h2 class="text-base font-semibold text-zinc-950">Penerima Terlibat</h2>
         </div>
@@ -187,9 +189,11 @@
                 </div>
             <?php endif; ?>
         </div>
-    </section>
+            </section>
+        </div>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
+        <div class="space-y-3">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
         <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Pindah Dana</h2>
             <span class="rounded-full bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">Tidak dihitung biaya</span>
@@ -214,9 +218,9 @@
             'prevUrl' => route_query('rekap', ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug, 'kegiatan' => $selectedActivitySlug, 'mutasi_page' => $rekapTransferPagination['prevPage'], 'transaksi_page' => $rekapTransactionPagination['page']]),
             'nextUrl' => route_query('rekap', ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug, 'kegiatan' => $selectedActivitySlug, 'mutasi_page' => $rekapTransferPagination['nextPage'], 'transaksi_page' => $rekapTransactionPagination['page']]),
         ]) ?>
-    </section>
+            </section>
 
-    <section class="rounded-3xl bg-white py-4 shadow-sm">
+            <section class="rounded-3xl bg-white py-4 shadow-sm">
         <div class="px-4 flex items-center justify-between">
             <h2 class="text-base font-semibold text-zinc-950">Transaksi Terbaru</h2>
             <p class="text-xs text-zinc-500">Hasil filter saat ini</p>
@@ -241,7 +245,9 @@
             'prevUrl' => route_query('rekap', ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug, 'kegiatan' => $selectedActivitySlug, 'transaksi_page' => $rekapTransactionPagination['prevPage'], 'mutasi_page' => $rekapTransferPagination['page']]),
             'nextUrl' => route_query('rekap', ['periode' => $selectedPeriodSlug, 'unit' => $selectedUnitSlug, 'kegiatan' => $selectedActivitySlug, 'transaksi_page' => $rekapTransactionPagination['nextPage'], 'mutasi_page' => $rekapTransferPagination['page']]),
         ]) ?>
-    </section>
+            </section>
+        </div>
+    </div>
 </div>
 
 <script>

@@ -12,7 +12,7 @@ $quickActions = [
 $showQuickActions = ($activeNav ?? '') !== 'catat';
 ?>
 <div class="fixed inset-x-0 bottom-0 z-50 px-4 pb-4">
-    <div class="mx-auto max-w-4xl space-y-2 relative">
+    <div class="mx-auto max-w-7xl space-y-2 relative xl:px-4">
         <?php if ($showQuickActions): ?>
             <div class="absolute bottom-20 right-0" aria-label="Aksi cepat pencatatan">
                 <?php foreach ($quickActions as $action): ?>
